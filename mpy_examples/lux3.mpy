@@ -1,0 +1,286 @@
+######################################################################
+#
+# lux2.mpy  
+# 
+# Program to animate the anglepoise lamp
+# ( Mike Asker 5-may-2012 www.mpyprojects.com)
+# 
+######################################################################
+
+define_micro('msp430g2553')   # Tell the compiler which msp430 microcontroller to program
+
+
+# There are 3 separate pwm blocks pwm_a, pwm_b, pwm_c, each pwm can be 
+# connected to following pins  
+# pwm_a()  can connect to  P1_2, P1_6
+# pwm_b()  can connect to  P2_1, P2_2
+# pwm_c()  can connect to  P2_4, P2_5      
+# Use the the dirpwm() command to connect the pwm to the pin
+
+macro(SERVO_A, P1_6)        # enables pwm_a() to output to p1_6 
+macro(SERVO_B, P2_2)        # enables pwm_b() to output to p2_2 
+macro(SERVO_C, P2_4)        # enables pwm_c() to output to p2_4   
+
+
+macro( SW_YES,   P1_4 )
+macro( SW_NO,    P1_5 )
+
+macro( SW_LOOK_LEFT,        P1_7 ) 
+macro( SW_LOOK_RIGHT,       P2_0 ) 
+macro( SW_CLOCKWISE,        P2_1 ) 
+macro( SW_ANTICLOCKWISE,    P1_3 ) 
+macro( SW_JIG,    P1_2 ) 
+
+macro( A, 0 )
+macro( B, 1 )
+macro( C, 2 )
+macro( MID_POS_A, 59 )
+macro( MID_POS_B, 50 )
+macro( MID_POS_C, 50 )
+
+
+def servo( servo_number, position ):
+    '''moves the position of the servo
+    servo_number = 0 is pwm_a
+    servo_number = 1 is pwm_b
+    position is a number between 0 and 100
+    
+    Servo 0 (pwm_a) and 1 (pwm_b) use a constant duty cycle and varies the period to move the position
+    Servo 2 (pwm_c) varies the duty cycle (pulse width) to move
+    '''
+    period_min = 6200
+    period_max = 25000
+    period_scale = (period_max - period_min) / 100
+    if position < 0:
+        position = - position
+    a = period_min + position * (period_scale)
+    adiv = a/10
+    if servo_number == 0:
+       period_a(a)
+       pwm_a(adiv)
+    elif servo_number == 1:
+       period_b(a)
+       pwm_b(adiv)
+    elif servo_number == 2:
+       pwm_c(adiv)
+        
+    
+
+def position_increment( pos, inc, lim_min, lim_max ):
+    '''position_increment will increment 'pos' by 'inc'
+    if pos is positive and is greater than lim_max, pos is negated to be -lim_max
+      which means it will start incrementing upwards from -lim_max
+    if pos is negative and is greater than lim_min, pos is negated to be +lim_min
+      which means it will start incrementing upwards from +lim_min
+
+    This function is intended to to create a increasing and then decreasing value
+    The value of pos needs to be made positve when it is used.
+    The sign of pos indicates whether it is incrementing or decrementing.
+    '''
+
+    pos += inc
+    if pos >= 0:
+        if pos > lim_max:
+            pos = - lim_max
+    else:
+        if pos > -lim_min:
+            pos = lim_min
+            
+    return pos
+            
+
+def move( servo_number, start, finish, number_of_steps, move_time ):
+    '''moves the specified servo from start to finish position
+    using the number of steps specified taking the time specified
+    '''
+    
+    # scale the positions by 100 to get a larger range
+    pos = start*100
+    inc = (finish-start)*100/number_of_steps
+    
+    delay_per_step = move_time / number_of_steps
+    
+    for i in range(number_of_steps):
+        
+        
+        servo(servo_number, pos/100)
+        wait(delay_per_step)
+        
+        pos += inc
+    servo(servo_number, finish)
+        
+def move2( servo1_number, servo2_number, start1, finish1, start2, finish2, number_of_steps, move_time ):
+    '''moves the specified servo from start to finish position
+    using the number of steps specified taking the time specified
+    '''
+    
+    # scale the positions by 100 to get a larger range
+    pos1 = start1*100
+    inc1 = (finish1-start1)*100/number_of_steps
+    pos2 = start2*100
+    inc2 = (finish2-start2)*100/number_of_steps
+    delay_per_step = move_time / number_of_steps
+    
+    for i in range(number_of_steps):
+        
+        
+        servo(servo1_number, pos1/100)
+        servo(servo2_number, pos2/100)
+        wait(delay_per_step)
+        
+        pos1 += inc1
+        pos2 += inc2
+        
+    servo(servo1_number, finish1)
+    servo(servo2_number, finish2)
+    
+    
+def do_move_yes(down,up, num_nods, move_time):
+    
+    step_time = move_time / (num_nods*2)
+    for i in range(num_nods):
+        move(B, down, up, 5, step_time )     
+        move(B, up,down,  5, step_time )     
+    
+
+def do_move_no(left,right, num_nods, move_time):
+    
+    step_time = move_time / (num_nods*2)
+    for i in range(num_nods):
+        move(C, left, right, 5, step_time )     
+        move(C, right, left, 5, step_time )     
+
+
+def do_move_look_sideways(sway, turn, move_time):
+
+    step_time = move_time/2
+    move2(A,C, MID_POS_A, sway, MID_POS_C, turn, 10, step_time )     
+    move2(A,C, sway, MID_POS_A, turn, MID_POS_C, 10, step_time )     
+
+
+def do_move_circle(clockwise, number_of_rotations, time_per_rotation):
+    '''Move the lamp in a circular pattern
+    '''
+    
+# macro( MID_POS_A, 59 )  15 59 100
+# macro( MID_POS_B, 50 )  10 50 100
+    
+    amin = 30
+    amax = 70
+    bmin = 0
+    bmax = 100
+    
+
+    num_steps = 20
+    # twice this for a full rotation
+    time_per_step = time_per_rotation / (num_steps*2)  
+    
+    ainc = (amax-amin)/num_steps
+    binc = (bmax-bmin)/num_steps
+    
+    amax = amin + (num_steps*ainc)
+    bmax = bmin + (num_steps*binc)
+    bstart = bmin + (num_steps*binc)/2
+
+    if clockwise:
+      apos = amax
+      bpos = bstart
+    else:
+      apos = amax
+      bpos = -bstart
+
+    num_steps_total = num_steps*2*number_of_rotations
+    for i in range( num_steps_total ):
+    #                           position increment min_limit max_limit
+        apos = position_increment( apos,    ainc,    amin,    amax )
+        bpos = position_increment( bpos,    binc,    bmin,    bmax )
+        servo(A, apos )
+        servo(B, bpos )
+        wait(time_per_step)
+    
+#    servo(A, MID_POS_A )
+#    servo(B, MID_POS_B )
+    
+
+    
+def do_jig():
+    
+
+
+pwm_enable(10000)  # configure Timer0 and Timer1 for PWM with a period of 20000 clocks
+
+# There are 3 separate pwm blocks pwm_a, pwm_b, pwm_c, each pwm can be 
+# connected to following pins  
+# pwm_a()  can connect to  P1_2, P1_6
+# pwm_b()  can connect to  P2_1, P2_2
+# pwm_c()  can connect to  P2_4, P2_5      
+# Use the the dirpwm() command to connect the pwm to the pin
+
+dirpwm(SERVO_A)        # enables pwm_a() to output to p1_6 
+dirpwm(SERVO_B)        # enables pwm_b() to output to p2_2 
+dirpwm(SERVO_C)        # enables pwm_c() to output to p2_4   
+
+dirinpd(SW_YES)
+dirinpd(SW_NO)
+dirinpd(SW_LOOK_LEFT)
+dirinpd(SW_LOOK_RIGHT)
+dirinpd(SW_CLOCKWISE)
+dirinpu(SW_ANTICLOCKWISE)
+
+
+
+
+apos = 50
+bpos = 50 
+cpos = 50
+
+
+
+dirinpu(SW_JIG)
+
+
+while 1:
+        
+        
+    if inp(SW_YES)==1:
+        do_move_yes(40, 60, 4, 1000)    
+
+    if inp(SW_NO)==1:
+        do_move_no(40, 60, 4, 1000)    
+
+    if inp(SW_LOOK_LEFT)==1:
+        do_move_look_sideways(15, 75, 1000)    
+
+    if inp(SW_LOOK_RIGHT)==1:
+        do_move_look_sideways(100, 0, 1000)    
+
+    if inp(SW_CLOCKWISE)==1:
+        do_move_circle(1, 2, 1000)    
+
+    if inp(SW_ANTICLOCKWISE)==0:
+        do_move_circle(0, 2, 1000)    
+
+    if inp(SW_JIG)==0:
+        do_jig()    
+
+
+#    apos = position_increment( apos, 2, 20, 60 )
+#    bpos = position_increment( bpos, 24, 10, 90 )
+#    cpos = position_increment( cpos, 10, 20, 50 )
+
+#    servo(0, apos )
+#    servo(1, bpos )
+#    servo(2, cpos )
+    
+#    print_value( 'apos' , apos )
+#    print_value( 'bpos' , bpos )
+#    print_value( 'cpos' , cpos )
+    
+    
+    wait(50)
+
+
+
+
+halt() 
+   

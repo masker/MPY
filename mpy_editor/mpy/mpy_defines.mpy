@@ -1,0 +1,57 @@
+
+# Pin to Port defs
+
+macro( PIN2,  P1_0 )
+macro( PIN3,  P1_1 )
+macro( PIN4,  P1_2 )
+macro( PIN5,  P1_3 )
+macro( PIN6,  P1_4 )
+macro( PIN7,  P1_5 )
+macro( PIN14, P1_6 )
+macro( PIN15, P1_7 )
+macro( PIN8,  P2_0 )
+macro( PIN9,  P2_1 )
+macro( PIN10, P2_2 )
+macro( PIN11, P2_3 )
+macro( PIN12, P2_4 )
+macro( PIN13, P2_5 )
+macro( PIN19, P2_6 )
+macro( PIN18, P2_7 )
+macro( PIN16, RSTB )
+macro( PIN17, TEST )
+
+macro( GREENLED, P1_6 )
+macro( REDLED,   P1_0 )
+macro( SWITCH,   P1_3 )
+
+
+macro( setbit(reg,bit),   'reg |=   bit' )
+macro( resetbit(reg,bit), 'reg &= ~ bit' )  
+macro( testbit(reg,bit,pos),  '(reg & bit) >> pos'    ) 
+
+
+
+macro( inp(portpin),   'testbit(PxxxIN, BITyyy, yyy)' )
+macro( out0(portpin),  'resetbit(PxxxOUT, BITyyy)'    )
+macro( out1(portpin),  'setbit(PxxxOUT, BITyyy)'      )
+
+macro( out(portpin,value), 'if(value): out1(portpin) else: out0(portpin)' )
+
+
+
+macro( dirout(portpin),  'setbit(PxxxDIR, BITyyy);   resetbit(PxxxSEL,BITyyy); resetbit(PxxxREN,BITyyy)' )
+macro( dirinp(portpin),  'resetbit(PxxxDIR, BITyyy); resetbit(PxxxSEL,BITyyy); resetbit(PxxxREN,BITyyy)' )
+macro( dirinpd(portpin), 'resetbit(PxxxDIR, BITyyy); setbit(PxxxREN,BITyyy);   resetbit(PxxxOUT, BITyyy)')
+macro( dirinpu(portpin), 'resetbit(PxxxDIR, BITyyy); setbit(PxxxREN,BITyyy);   setbit(PxxxOUT, BITyyy)'  )
+macro( dirsel(portpin),  'setbit(PxxxSEL,BITyyy)'  )
+macro( dirsel2(portpin), 'setbit(PxxxSEL2,BITyyy)' )
+
+macro( enablepininterrupt(portpin),  'resetbit(PxxxIES,BITyyy); setbit(PxxxIE,BITyyy)' )
+macro( enablepininterruptr(portpin), 'resetbit(PxxxIES,BITyyy); setbit(PxxxIE,BITyyy)' )
+macro( enablepininterruptf(portpin), 'setbit(PxxxIES,BITyyy);   setbit(PxxxIE,BITyyy)' )
+macro( setpininterrupt(portpin),     'setbit(PxxxIFG,BITyyy)' )
+macro( getpininterrupt(portpin),     'testbit(PxxxIFG,BITyyy)')
+
+
+
+

@@ -1,0 +1,73 @@
+WHAT IS UPY
+-----------
+
+UPY is micro python. It is a small subset of the python computer language that 
+can be used to program a microcontroller.
+
+The file extention .upy is used for UPY files. 
+
+UPY provides a set of predefined functions to setup, intialize, and control
+the hardware on a microcontroller.  
+
+The purpose of UPY is to provide a simplified means of programming a 
+microcontroller. It does this by providing the following features:
+    A library of functions for setting up hardware periferals like timers, clocks etc
+    A library of fucntions to controlling the IOs of the microcontroller
+    Use of the Python language instead of the more normal C
+    Uses the same microcontroller predefined names as used by the standard C include files 
+     
+Using the Python language as its base simplifies the code needed.
+Python being less verbose than the more normally used C language makes 
+it easier and quicker to create working code. Plus the addition of the
+the predefined hardware functions allows users to write microcontroller programs 
+more simply and more quickly.
+
+UPY is intended to allow novice users to quickly learn and program a microcontroller.
+
+The UPYDEV software application is a complete microcontroller programming tool. It is an all 
+in one code editor, compiler, and flash programmer.  
+The user writes his .upy in the UPYDEV code editor and hits the compile button and the
+firmware is compiled and downloaded into the microcontroller flash memory, and then the
+microcontroller runs the users program. 
+
+
+UPY Rules
+---------
+
+UPY language is Python but with the following restrictions:
+
+1) Only integers and strings values, no floats, no lists, no dictionaries
+
+2) No dot notation or objects, no classes
+
+3) No imports
+
+4) No complex syntax
+        generators
+        etc
+
+5) Functions are allowed, but they can only return a single value
+
+6) For loops use one of:
+      for <var> in range( <stop> ):
+      for <var> in range( <start>, <stop> ):
+      for <var> in range( <start>, <stop>, <inc> ):
+        
+
+
+TODO LIST
+---------
+
+1) Create new 'op' data structure   
+  Currently self.op is a string buffer
+  Will change this to be an ordered list of tokens that contains the textual C code for each fragment but also 
+  other information that describes the code, such as fields for denoting variable declaration. 
+
+    self.op = [ <tokdata>, <tokdata>, ... ]
+    <tokdata> = [ <C_code_text>, <block_name>, <type> ] 
+
+2)  For loop conversion
+
+    change "for i in range(a,b,c)" to "for( i=a; i<b; i+=c)"
+    
+3) Make functions for setting up the micro variable declarations.

@@ -1,0 +1,162 @@
+WHAT IS UPY
+-----------
+
+UPY is micro python. It is a small subset of the python computer language that 
+can be used to program a microcontroller.
+
+So far only the TI Launchpad MSP430 microcontrol is supported, but in the future
+more microcontrollers may be added.
+
+The file extention .upy is used for UPY files. 
+
+UPY provides a set of predefined functions to setup, intialize, and control
+the hardware on a microcontroller.  
+
+The purpose of UPY is to provide a simplified means of programming a 
+microcontroller. It does this by providing the following features:
+    A library of functions for setting up hardware peripherals like timers, clocks etc
+    A library of functions to control the IOs of the microcontroller
+    Use of the Python language instead of the more normal C
+    Uses the same microcontroller predefined names as used by the standard C include files 
+     
+Using the Python language as its base simplifies the code needed.
+Python being less verbose than the more normally used C language makes 
+it easier and quicker to create working code. Plus the addition of the
+the predefined hardware functions allows users to write microcontroller programs 
+more simply and more quickly.
+
+UPY is intended to allow novice users to quickly learn and program a microcontroller.
+
+The UPYDEV software application is a complete microcontroller programming tool. It is an all 
+in one code editor, compiler, and flash programmer.  
+The user writes his or her .upy file in the UPYDEV code editor and hits the compile button and the
+firmware is compiled and downloaded into the microcontroller flash memory, and then the
+microcontroller runs the users program. 
+
+BEHIND THE SCENES
+-----------------
+
+UPDDEV uses an editor called 'Editra' for the main gui application. This being open source and is designed
+to be used for developing editor based applications. Editra is a full featured multitabbed editor, with syntax
+highlighting, and is very extendable. It supports pluggin applications.
+Within the Editra framework UPYDEV uses Python functions to convert the .upy code into a conventional
+.c micro code. This .c code is then compiled using open source 'mspgcc' c compiler, then 'mspdebug'
+is used to download the firmware into the microcontroller flash, the user can then run the code by 
+pressing the Run button on the Editra gui. Progress of the compilation, download and flashing is shown 
+on the Editra Log window. When the microcontroller code is running it may write data back to the PC
+and this output is displayed on the Editra Log window.
+
+
+UPY Rules
+---------
+
+UPY language is based on Python but with the following restrictions:
+
+1) Only integers and strings values, no floats, no lists, no dictionaries
+
+2) no classes, no objects, no dot notation
+
+3) No imports
+
+4) No complicated syntax
+        generators
+        etc
+
+5) Functions are allowed, but they can only return a single value
+
+6) For loops use one of:
+      for <var> in range( <stop> ):
+      for <var> in range( <start>, <stop> ):
+      for <var> in range( <start>, <stop>, <inc> ):
+        
+7) Function arguments must use fixed number of arguments and keywords are not allowed,(ie no *args, or **kwargs) 
+
+This means that UPY is a very restrictive subset of Python.
+
+TODO LIST
+---------
+
+1) DONE Create new 'op' data structure   
+  Currently self.op is a string buffer
+  Will change this to be an ordered list of tokens that contains the textual C code for each fragment but also 
+  other information that describes the code, such as fields for denoting variable declaration. 
+
+    self.op   = [ <tokdata>, <tokdata>, ... ]
+    <tokdata> = [ <C_code_text>, <block_name>, <type>, <line_number> ] 
+    
+1) DONE  Tag variables needed  for declaration
+    all variables used within the function scope are defined
+    
+
+2) DONE  For loop conversion
+
+    change "for i in range(a,b,c)" to "for( i=a; i<b; i+=c;)"
+    
+3) DONE  Make functions for setting up the micro variable declarations.
+    define_micro( 'msp430G2111')
+    
+
+4)  Translate pin Input and Output functions into #define  
+
+ a) a function def of the form
+
+    def motor1_pin(level) : OUT(2,2,level)
+   
+   is replaced by these #defines
+
+   #define  motor1_pin_LOW    P2OUT &= ~BIT2
+   #define  motor1_pin_HIGH   P2OUT |=  BIT2
+   #define  motor1_pin(level) (if (level) { P2OUT |=  BIT2 } else { P2OUT &= ~BIT2 }
+
+ b) then in the code any occurance of 
+
+        motor1_pin(0)     is replaced with   motor1_pin_LOW
+        motor1_pin(1)     is replaced with   motor1_pin_HIGH
+        motor1_pin(level) is not replaced (it already is the correct value to be replaced by the above #define)
+        
+5) Translate single line def's into #define's
+
+        def  ANALOG_P1_6() : 2
+    
+    maps to
+    
+        #define ANALOG_P1_6			2
+
+    and
+    
+       def  ADD(x,y) : return x+y
+       
+    maps to
+    
+       #define ADD(x,y)  (x+y)
+
+define( 'name',  'value')
+- will be removed, 
+- an inline definition will be created
+- go through all code replacing all occurances of 'name' with 'value'
+
+define( 'name(arg,...)',  'value(arg...)')
+- will be removed, 
+- an inline definition will be created
+- go through all code replacing all occurances of 'name' with 'value'
+   args used in the code are inserted into the value args
+
+
+
+      
+6) A function which has a return value should cause the function definition to declared with
+
+    " unsigned short Read_IR( ... "
+    
+    if there is no return value then use
+    
+    " void  configGPIO( ... " 
+    
+7) A function declaration with no parameters should use the void value
+
+    " unsigned short Read_IR( void ) { "
+    
+8) Functions with the 
+
+9) Variable declarations should be checked againsts all the defines (if a define matches a variable then
+     don't write out a definition for it)

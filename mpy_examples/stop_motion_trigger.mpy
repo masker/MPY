@@ -1,0 +1,54 @@
+######################################################################
+#
+# blinky.mpy  
+# 
+# Program to flash the green led on the MSP430 Launchpad board
+# ( Mike Asker 14-Apr-2012 www.mpyprojects.com)
+# 
+######################################################################
+
+define_micro('msp430g2452')   # Tell the compiler which msp430 microcontroller to program
+
+
+
+dirout(GREENLED)   # GREENLED = P1_6,  Setup pin 14 to be an output (connected to the green led)
+dirout(P1_5)       # Setup pin 7 as an output
+dirinpd(P2_0)
+dirinpd(P2_1)
+dirinpd(P2_2)
+dirinpd(P2_3)
+#P2OUT &= 0x00  # 0 --> PD when REN = 1
+#P2DIR &= 0x00  # input 
+#P2REN |= 0x1F  # enable PU/PD resistor
+
+print("\n P2OUT = ")
+print_hex(P2OUT)
+print("     P2DIR = ")
+print_hex(P2DIR)
+print("\n P2REN = ")
+print_hex(P2REN)
+print("     P2IN = ")
+print_hex(P2IN)
+print("\n P2SEL = ")
+print_hex(P2SEL)
+print("     P2SEL2 = ")
+print_hex(P2SEL2)
+print("\n")
+
+
+
+scale = 1000  # 1 Second increments 
+#delay = 1700 + scale * (P2IN & 0x1F)
+
+#print_value( "delay between shots = 1700 ms +", delay ) 
+
+while 1:           # Do the following lines forever and ever
+   delay = 1700 + scale * (P2IN & 0x1F)
+   out1(GREENLED)  # turn the green led on
+   out1(P1_5)      # enable the solenoid 
+   wait(1300)       # wait 1.3 seconds for camera shutter allows time for focusing
+   out0(GREENLED)  # turn the green led off
+   out0(P1_5)      # disable the solenoid 
+   wait(delay)       # wait delay miliseconds 
+
+   

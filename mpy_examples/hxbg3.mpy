@@ -1,0 +1,380 @@
+
+
+define_micro('msp430g2553')
+
+
+macro( M1CE_HIGH,   'out1(P1_3)' )
+macro( M1CE_LOW,    'out0(P1_3)' )
+
+macro( M2CE_HIGH,   'out1(P1_2)' )
+macro( M2CE_LOW,    'out0(P1_2)' )
+
+macro( M1IN_HIGH,   'out1(P1_4)' )
+macro( M1IN_LOW,    'out0(P1_4)' )
+
+macro( M2IN_HIGH,   'out1(P2_2)' )
+macro( M2IN_LOW,    'out0(P2_2)' )
+
+macro( FAN_INIT_P1,  BIT3 | BIT2 | BIT4  )
+macro( FAN_INIT_P2,  BIT2            )
+
+macro( TURN_MOTORCE_HIGH,   M2CE_HIGH )
+macro( TURN_MOTORCE_LOW,    M2CE_LOW  )
+macro( TURN_MOTORIN_HIGH,   M2IN_HIGH )
+macro( TURN_MOTORIN_LOW,    M2IN_LOW  )
+
+macro( WALK_MOTORCE_HIGH,   M1CE_HIGH )
+macro( WALK_MOTORCE_LOW,    M1CE_LOW  )
+macro( WALK_MOTORIN_HIGH,   M1IN_HIGH )
+macro( WALK_MOTORIN_LOW,    M1IN_LOW  )
+
+macro( ANALOG_P1_0,         0 )
+macro( ANALOG_P1_1,         1 )
+macro( ANALOG_P1_6,         2 )
+macro( ANALOG_P1_7,         3 )
+macro( DIGITAL_P2_3,        4 )
+macro( DIGITAL_P2_5,        5 )
+macro( DIGITAL_P2_6,        6 )
+macro( DIGITAL_P2_7,        7 )
+
+
+#macro( IR_LED,              DIGITAL_P2_6 )
+#macro( IR_ANALOG,           ANALOG_P1_7  )
+
+macro( IR_ANALOG, P1_7 )
+macro( IR_LED,    P2_6 )
+
+macro( PWM, PIN12 )
+macro( RANGE_LED, PIN7 )
+#macro( ir_led_on(x) , out1(x) )
+
+################################################################################
+def ConfigureUserGPIO():
+    '''setup the ios'''
+    
+    
+    P2SEL  = 0
+    P2SEL2 = 0
+#    P2DIR  = -1
+    
+    P1SEL  = 0
+    P1SEL2 = 0
+#    P1DIR  = -1  # all ones
+    
+    P2SEL  = 0;
+    P2DIR = BIT6;
+
+    
+    CACTL1 = 0
+    CACTL2 = 0
+    
+
+
+################################################################################
+def ConfigureFAN8200():
+    P1DIR |= FAN_INIT_P1
+    P1OUT = 0
+    P2DIR |= FAN_INIT_P2
+    P2OUT = 0
+    
+    dirout(RANGE_LED)
+    
+################################################################################
+def ConfigurePWM():
+    '''Setup the Timer TA1 to control a servo. The PWM period is 20ms and
+    the pulse varies between 700us to 2200us to give a 180 deg rotation of the servo'''
+    
+#    dirout(PWM)               # Enable output of timer TA1 CCR2 (TA1.2) onto pin 12 
+#    dirsel(PWM)    
+    dirinp(PWM)                # Disable output only enable it when we want to do an arm flip
+   
+    TA1CCR0  = 20000             # Set the TA1 counter to count upto 10000, sets the PWM period
+    TA1CCTL2 = OUTMOD_7          # Put  TA1CCR2 output into Set/Reset mode
+    TA1CCR2  = 1300              # Set the initial duty cycle to 1300/20000 = 1.3ms high pulse 700us-2200us
+    TA1CTL   = TASSEL_2 + MC_1   # Use the SMCLK for the TA1 timer clock, and set counter to up-mode (counts to TA1CCR0 and resets)
+
+################################################################################
+def arm_move(pulse_duration):
+    
+    TA1CCR2  = pulse_duration
+    
+
+################################################################################
+def arm_onoff(onoff):
+
+    if onoff == 1:
+        dirout(PWM)                # Enable output of timer TA1 CCR2 (TA1.2) onto pin 12 
+        dirsel(PWM)
+        print('      ARM 1\n')
+    else:
+        dirinp(PWM)
+        print('      ARM 0\n')
+
+
+################################################################################
+def arm_flip():
+
+    arm_move(1300)
+    arm_onoff(1)
+    wait(1000)
+    arm_move(2000)
+    wait(1000)
+    arm_move(1300)
+    wait(1000)
+    arm_onoff(0)
+
+
+#################################################################################
+#def ConfigureADC10( user_pin ):
+#    # Disable ADC10 during initialization 
+#    ADC10CTL0 &= ~ENC
+#    ADC10CTL0 = ADC10SHT_2 + ADC10ON   #  ADC10ON, interrupt enabled
+
+#    if user_pin == ANALOG_P1_0:
+#        ADC10CTL1 = INCH_0         # input A0
+#        ADC10AE0 |= 0x01           # PA.0 ADC option select	
+
+#    elif user_pin == ANALOG_P1_1:
+#        ADC10CTL1 = INCH_1         # input A1
+#        ADC10AE0 |= 0x02           # PA.1 ADC option select	
+
+#    elif user_pin == ANALOG_P1_6:
+#        ADC10CTL1 = INCH_6         # input A6
+#        ADC10AE0 |= 0x40          # PA.6 ADC option select	
+
+#    elif user_pin == ANALOG_P1_7:
+#        ADC10CTL1 = INCH_7         # input A7
+#        ADC10AE0 |= 0x80           # PA.7 ADC option select	
+
+
+
+#    def nop_delay():
+#        _NOP(); _NOP(); _NOP(); _NOP(); _NOP(); _NOP(); _NOP(); _NOP(); _NOP(); _NOP(); _NOP();
+
+
+
+#    def Delay( dly ):
+#        for i in range(dly) :
+#            for k in range(10):
+#                nop_delay()
+
+
+################################################################################
+def stop():
+    WALK_MOTORCE_LOW
+    WALK_MOTORIN_LOW
+    TURN_MOTORCE_LOW
+    TURN_MOTORIN_LOW
+
+################################################################################
+def forward():
+    print( '  forward\n')
+    stop()
+    WALK_MOTORCE_HIGH
+    WALK_MOTORIN_HIGH
+    
+################################################################################
+def backward():
+    print( '  backward\n')
+    stop()
+    WALK_MOTORCE_HIGH
+
+def turn_right():            # clockwise
+    print( '  turn_right\n')    
+    stop()
+    TURN_MOTORCE_HIGH
+    TURN_MOTORIN_HIGH
+
+################################################################################
+def turn_left():             # anti-clockwise
+    print( '  turn_left\n')    
+    stop()
+    TURN_MOTORCE_HIGH
+    
+ 
+################################################################################
+def ir_led_on( user_pin ):
+
+    # Turn on LED
+    if user_pin == DIGITAL_P2_3:
+        P2OUT |= BIT3
+    elif user_pin == DIGITAL_P2_5:
+        P2OUT |= BIT5
+    elif user_pin == DIGITAL_P2_6:
+        P2OUT |= BIT6
+    elif user_pin == DIGITAL_P2_7:
+        P2OUT |= BIT7
+
+ 
+################################################################################
+    
+def ir_led_off( user_pin ):
+
+    # Turn off LED
+    if user_pin == DIGITAL_P2_3:
+        P2OUT &= ~BIT3
+    elif user_pin == DIGITAL_P2_5:
+        P2OUT &= ~BIT5
+    elif user_pin == DIGITAL_P2_6:
+        P2OUT &= ~BIT6
+    elif user_pin == DIGITAL_P2_7:
+        P2OUT &= ~BIT7
+
+
+
+################################################################################
+
+#Voltage goes down as IR Transistor sees IR
+def Read_IR(analog_pin, led_pin ):
+
+#    adc_enable(analog_pin)      # Enable A/D converter 	
+    out1(IR_LED)                # Turn on IR LED
+    wait(2)
+    out1(PWM)
+    min = adc(IR_ANALOG)
+    out0(PWM)
+    out0(IR_LED)          # Turn off IR LED
+    wait(2)
+    out1(PWM)
+    max = adc(IR_ANALOG)
+    out0(PWM)
+
+    diff = ((max - min)*3)/2
+    if( max > min ):
+        dist = (max*30)/diff;
+        dist = dist * 30 / 10
+    else:
+        dist = 31000
+
+    print( 'the IR sensor value is')
+    print_num( dist )
+    print_num( min  )
+    print_num( max  )
+    print('\n')
+    
+    if dist > 900:
+        out1(RANGE_LED)
+    elif dist > 400:
+        out0(RANGE_LED)
+    else:
+        out1(RANGE_LED)
+
+    return dist
+    
+    
+    
+################################################################################
+def turn_towards_object():
+    '''Turn round 360deg in 30deg steps and look for the direction which has the
+    has the least distance'''
+    
+    obj_distance = 30000
+    obj_angle    = 0
+    for angle in range(12):
+        
+       dist = Read_IR(IR_ANALOG, IR_LED)
+       if dist < obj_distance:
+           obj_distance = dist
+           obj_angle = angle            
+       
+       turn_right()
+       wait(300)     # 4seconds to turn 360, therfore 4000/12 for each step
+       stop()
+
+    print_value( 'min distance detected = ', obj_distance)
+    print_value( 'direction =', obj_angle )
+    
+    wait(1000)
+    
+    for angle in range(obj_angle):
+       dist = Read_IR(IR_ANALOG, IR_LED)
+       if dist < obj_distance:
+           obj_distance = dist
+           obj_angle = angle            
+       
+       turn_right()
+       wait(300)     # 4seconds to turn 360, therfore 4000/12 for each step
+       stop()
+        
+    
+    
+
+################################################################################
+
+
+print( 'hexbug1 has started\n' )
+
+
+# Initialize Clocks
+BCSCTL1 = CALBC1_1MHZ            # Set range
+DCOCTL = CALDCO_1MHZ;
+BCSCTL2 &= ~(DIVS_3)             # SMCLK = DCO = 1MHz  
+
+
+ConfigureUserGPIO()              # Init GPIO
+ConfigureFAN8200()               # Init GPIO for FAN8200
+
+ConfigurePWM()
+
+
+wait(3000)
+
+print( 'hexbug1 has started 7\n' )
+
+
+
+# test motion
+if 0:
+    wait(2000)
+    forward()
+    wait(500)
+    turn_right()
+#    wait(2000)               # Approximately 180 degrees
+    wait(500)               # Approximately 180 degrees
+    backward()
+    wait(500)
+    turn_left()
+    wait(500)
+
+    stop()
+
+
+
+    
+
+
+
+
+while 1:
+    print( 'hexbug1 while 1\n' )
+    # Obstruction detection
+    dist = Read_IR(IR_ANALOG, IR_LED) # Read obstruction IR
+    print( 'hexbug1 while 2\n' )
+
+    if    dist < 300 :       
+        arm_flip()
+        backward()
+    elif  dist < 400:
+        stop()
+    elif  dist < 1000:
+        forward()
+    else:                       # if we are a long way from an object turn randomly and move forward
+    
+        turn_towards_object()
+        wait(2000)
+        forward()
+    
+#        S = random(S)
+#        if S > 0:
+#            turn_right()
+#        else:
+#            turn_left()
+#        wait( S/10 )
+#        stop()
+#        forward()
+    
+    wait(2000)
+    arm_onoff(0)
+
+
+

@@ -1,0 +1,258 @@
+
+
+define_micro('msp430g2553')
+
+
+define( M1CE_HIGH,   'out1(P1_3)' )
+define( M1CE_LOW,    'out0(P1_3)' )
+
+define( M2CE_HIGH,   'out1(P1_2)' )
+define( M2CE_LOW,    'out0(P1_2)' )
+
+define( M1IN_HIGH,   'out1(P1_4)' )
+define( M1IN_LOW,    'out0(P1_4)' )
+
+define( M2IN_HIGH,   'out1(P2_2)' )
+define( M2IN_LOW,    'out0(P2_2)' )
+
+define( FAN_INIT_P1,  BIT3 | BIT2 | BIT4  )
+define( FAN_INIT_P2,  BIT2            )
+
+define( TURN_MOTORCE_HIGH,   M1CE_HIGH )
+define( TURN_MOTORCE_LOW,    M1CE_LOW  )
+define( TURN_MOTORIN_HIGH,   M1IN_HIGH )
+define( TURN_MOTORIN_LOW,    M1IN_LOW  )
+define( WALK_MOTORCE_HIGH,   M2CE_HIGH )
+define( WALK_MOTORCE_LOW,    M2CE_LOW  )
+define( WALK_MOTORIN_HIGH,   M2IN_HIGH )
+define( WALK_MOTORIN_LOW,    M2IN_LOW  )
+
+define( ANALOG_P1_0,         0 )
+define( ANALOG_P1_1,         1 )
+define( ANALOG_P1_6,         2 )
+define( ANALOG_P1_7,         3 )
+define( DIGITAL_P2_3,        4 )
+define( DIGITAL_P2_5,        5 )
+define( DIGITAL_P2_6,        6 )
+define( DIGITAL_P2_7,        7 )
+
+
+define( IR_LED,              DIGITAL_P2_6 )
+define( IR_ANALOG,           ANALOG_P1_7  )
+
+
+def ConfigureUserGPIO():
+    P2SEL  = 0
+    P2SEL2 = 0
+#    P2DIR  = -1
+    
+    P1SEL  = 0
+    P1SEL2 = 0
+#    P1DIR  = -1  # all ones
+    
+    P2SEL  = 0;
+    P2DIR = BIT6;
+
+    
+    CACTL1 = 0
+    CACTL2 = 0
+    
+
+
+def ConfigureFAN8200():
+    P1DIR |= FAN_INIT_P1
+    P1OUT = 0
+    P2DIR |= FAN_INIT_P2
+    P2OUT = 0
+
+def ConfigureADC10( user_pin ):
+    # Disable ADC10 during initialization 
+    ADC10CTL0 &= ~ENC
+    ADC10CTL0 = ADC10SHT_2 + ADC10ON   #  ADC10ON, interrupt enabled
+
+    if user_pin == ANALOG_P1_0:
+        ADC10CTL1 = INCH_0         # input A0
+        ADC10AE0 |= 0x01           # PA.0 ADC option select	
+
+    elif user_pin == ANALOG_P1_1:
+        ADC10CTL1 = INCH_1         # input A1
+        ADC10AE0 |= 0x02           # PA.1 ADC option select	
+
+    elif user_pin == ANALOG_P1_6:
+        ADC10CTL1 = INCH_6         # input A6
+        ADC10AE0 |= 0x40           # PA.6 ADC option select	
+
+    elif user_pin == ANALOG_P1_7:
+        ADC10CTL1 = INCH_7         # input A7
+        ADC10AE0 |= 0x80           # PA.7 ADC option select	
+
+
+
+def nop_delay():
+    _NOP(); _NOP(); _NOP(); _NOP(); _NOP(); _NOP(); _NOP(); _NOP(); _NOP(); _NOP(); _NOP();
+
+
+
+def Delay( dly ):
+    for i in range(dly) :
+        for k in range(10):
+            nop_delay()
+
+
+def stop():
+    WALK_MOTORCE_LOW
+    WALK_MOTORIN_LOW
+    TURN_MOTORCE_LOW
+    TURN_MOTORIN_LOW
+
+def forward():
+    print( '  forward\n')
+    stop()
+    WALK_MOTORCE_HIGH
+    
+def backward():
+    print( '  backward\n')
+    stop()
+    WALK_MOTORCE_HIGH
+    WALK_MOTORIN_HIGH
+
+def turn_right():
+    print( '  turn_right\n')    
+    stop()
+    TURN_MOTORCE_HIGH
+
+def turn_left():
+    print_string( '  turn_left\n')    
+    stop()
+    TURN_MOTORCE_HIGH
+    TURN_MOTORIN_HIGH
+    
+ 
+def ir_led_on( user_pin ):
+
+    # Turn on LED
+    if user_pin == DIGITAL_P2_3:
+        P2OUT |= BIT3
+    elif user_pin == DIGITAL_P2_5:
+        P2OUT |= BIT5
+    elif user_pin == DIGITAL_P2_6:
+        P2OUT |= BIT6
+    elif user_pin == DIGITAL_P2_7:
+        P2OUT |= BIT7
+
+ 
+    
+def ir_led_off( user_pin ):
+
+    # Turn off LED
+    if user_pin == DIGITAL_P2_3:
+        P2OUT &= ~BIT3
+    elif user_pin == DIGITAL_P2_5:
+        P2OUT &= ~BIT5
+    elif user_pin == DIGITAL_P2_6:
+        P2OUT &= ~BIT6
+    elif user_pin == DIGITAL_P2_7:
+        P2OUT &= ~BIT7
+
+
+
+
+#Voltage goes down as IR Transistor sees IR
+def Read_IR( analog_pin, led_pin ):
+
+    ConfigureADC10(analog_pin)      # Enable A/D converter 	
+    ir_led_off(led_pin)              # Turn on LED
+    Delay(2)
+    OUT1(PIN12)
+    ADC10CTL0 |= ENC + ADC10SC      # Start A/D conversion
+    while (ADC10CTL1 & BUSY):        # Wait if ADC10 core is active
+        pass
+    min = ADC10MEM                  # min voltage with IR LED on
+    OUT0(PIN12)
+    ir_led_on(led_pin)             # Turn off LED
+    Delay(2);
+    OUT1(PIN12)
+    ADC10CTL0 |= ENC + ADC10SC      # Start A/D conversion
+    while (ADC10CTL1 & BUSY):       # Wait if ADC10 core is active
+        pass
+    max = ADC10MEM
+    OUT0(PIN12)
+
+    dist = 0xffff
+    if( max > min ):
+        dist = max - min;
+        if( dist > 1000 ):           # 1000 is arbitrary, this should be
+            dist = 0                 # measured using a calibration process
+        else:
+            dist = 1000 - dist
+    else:
+        # LED on voltage equal LED off voltage - Object too far 
+        pass
+
+    print( 'the IR sensor value is')
+    print_num( dist )
+    print_num( min  )
+    print_num( max  )
+    print('\n')
+    
+
+    return dist
+    
+
+
+print( 'hexbug1 has started\n' )
+
+
+# Initialize Clocks
+BCSCTL1 = CALBC1_1MHZ            # Set range
+DCOCTL = CALDCO_1MHZ;
+BCSCTL2 &= ~(DIVS_3)             # SMCLK = DCO = 1MHz  
+
+print( 'hexbug1 has started 2\n' )
+
+
+ConfigureUserGPIO()              # Init GPIO
+ConfigureFAN8200()               # Init GPIO for FAN8200
+
+# test motion
+if 0:
+    forward()
+    Delay( 4*0x1800 )
+    turn_right()
+    Delay( 2*0x1800 )                # Approximately 180 degrees
+    backward()
+    Delay( 4*0x1800 )
+    turn_left()
+    Delay( 4*0x1800 )                # Approximately 360 degrees
+
+
+
+
+
+
+while 1:
+
+#    forward()                      # Move forward  	  	 	
+    # Obstruction detection
+    dist = Read_IR(IR_ANALOG, IR_LED) # Read obstruction IR
+    wait(500)
+    if( dist < 900 ):              # if we are within about 1 footof an object turn
+        # turn for a set time
+#        if( dist & 0x04 ):
+#            turn_right()
+#        else:
+#            turn_left()
+        pass
+
+if 0:
+        dist = dist >> 4
+        dist &= 0x0f
+        if( dist == 0 ):
+            Delay( 0x1800 )
+        else:
+            Delay( dist * 0x0100 )	# Random turn
+
+
+
+
+

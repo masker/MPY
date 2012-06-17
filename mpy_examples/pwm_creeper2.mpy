@@ -1,0 +1,128 @@
+# /* ========================================================================== */
+# /*                                                                            */
+# /*   Filename.c                                                               */
+# /*   (c) 2001 Author                                                          */
+# /*                                                                            */
+# /*   Description                                                              */
+# /*                                                                            */
+# /* ========================================================================== */
+# 
+# //#include <io.h>
+# ////#include "msp430.h"
+# //#include "msp430g2231.h"
+
+
+define_micro('msp430g2553')
+
+# const int  MASK2047 = (1<<11)-1;
+# const int  MASK1023 = (1<<10)-1;
+# const int  MASK8    = (1<<8);
+# 
+# 
+# 
+# // int rand( int S) {
+# //     S = S * 181 + 359;
+# //     return S;
+# // }
+
+
+def rand( S ):
+    S = S * 181 + 359
+    return S
+
+
+
+
+def main():
+
+    MASK2047 = (1<<11)-1
+    MASK1023 = (1<<10)-1
+    MASK8    = (1<<8)
+
+
+  
+    pwm = 2000
+    S   = 1000
+    k   = 0
+    pwm_random  = 0
+
+    WDTCTL = WDTPW | WDTHOLD   # may want have this done automatically
+
+    P1DIR = 0x00
+    P1DIR |= BIT2 # P1.2 to output
+    P1DIR |= BIT0 # P1.0 to output led 1 red
+    P1DIR |= BIT6 # P1.6 to output led 2 green
+    P1DIR |= BIT7 # P1.7 to output led creeper eyes
+    
+    P1SEL = 0x00
+    P1SEL |= BIT2  # P1.2 to output TA0.1
+
+    P1REN = 0x00
+    P1REN |= BIT1  # P1.1 pullup input
+    P1REN |= BIT5  # P1.3 pullup input
+    P1OUT = BIT1 + BIT5 
+  
+    CCR0 = 10000-1          # PWM Period
+    CCTL1 = OUTMOD_7        # CCR1 reset/set
+    CCR1 = pwm              # CCR1 PWM duty cycle
+    TACTL = TASSEL_2 + MC_1 # SMCLK, up mode
+   
+
+
+    while 1:
+    
+        k += 1
+
+        # Calculate a new random pwm value
+        if (k%30) == 0 :
+            S = rand(S);
+            rval = S & MASK1023
+            rval = rval - 1000
+
+        # slowly increment or decrement the pwm value
+        # to wards the pwm_random value so that it increments
+        # or decrements in 100 unit steps until it hits get to
+        # the value of rval
+        if (rval - pwm_random >  100) :
+           pwm_random = pwm_random + 100
+        if (rval - pwm_random < -100) :
+           pwm_random = pwm_random - 100
+
+
+        # Look to see if either of the switches are activated
+        # Add a small 0.1 sec delay and set the pwm output
+        for j in range( 500 ):
+            # in the inner loop we will randomly flash the creeper eyes
+            if (j % 100 == 0) :
+                S = rand(S)
+                if ((S | MASK8 ) > 0) :     # if bit 8 happens to be set then light up led7 and led6
+                    led7 = BIT7
+                    led6 = BIT6
+                else:
+                    led7 = 0x00
+                    led6 = 0x00
+                            
+               # short delay
+    
+
+        # Look to see if any of the switches are high. 
+        if (P1IN & BIT1): 
+            pwm = pwm + 100  # If BIT1 switch is active then increment the base pwm variable by 100
+    
+        if (P1IN & BIT5) :
+            pwm = pwm - 100;  # If BIT1 switch is active then decrement the base pwm variable by 100
+
+
+
+        P1OUT = BIT1 + BIT5 + led0 + led6 + led7
+            
+        # Write the pwm value into CCR1 (condition count register 1) which sets the
+        # on duty time for the servo. The value is the sum of the base pwm value
+        # and the random pwm value
+        pwm_sum = pwm + pwm_random
+        if pwm_sum > 3200:  pwm_sum = 3200
+        if (pwm_sum < 400): pwm_sum = 400
+
+        CCR1 = pwm_sum
+      
+        

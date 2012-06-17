@@ -1,0 +1,20 @@
+######################################################################
+#
+# blinky.mpy  
+# 
+# Program that runs the ADC (Analog to Digital Converter) 
+# and prints the value out to the UART
+# Note: this only works on chips that have an ADC block (msp430g2553, msp430gxxxx)
+# ( Mike Asker 5-May-2012 www.mpyprojects.com)
+# 
+######################################################################
+
+define_micro('msp430g2231')   # Tell the compiler which msp430 microcontroller to program
+
+adc_enable()       # Setup the ADC block
+
+while 1:           # Do the following lines forever and ever
+   
+   v7 = adc(7)     # Run ADC on pin P1_7
+   print_value( 'ADC value on p1_7', v7 )
+   wait(1000)      # Wait a 1 second

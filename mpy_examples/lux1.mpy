@@ -1,0 +1,38 @@
+######################################################################
+#
+# lux1.mpy  
+# 
+# Program to animate the anglepoise lamp
+# ( Mike Asker 5-may-2012 www.mpyprojects.com)
+# 
+######################################################################
+
+define_micro('msp430g2553')   # Tell the compiler which msp430 microcontroller to program
+
+
+pwm_enable(20000)  # configure Timer0 and Timer1 for PWM with a period of 20000 clocks
+
+# There are 3 separate pwm blocks pwm_a, pwm_b, pwm_c, each pwm can be 
+# connected to following pins  
+# pwm_a()  can connect to  P1_2, P1_6
+# pwm_b()  can connect to  P2_1, P2_2
+# pwm_c()  can connect to  P2_4, P2_5      
+# Use the the dirpwm() command to connect the pwm to the pin
+
+dirpwm(P1_2)        # enables pwm_a() to output to p1_2   
+dirpwm(P1_6)        # enables pwm_a() to output to p1_6 
+
+dirpwm(P2_1)        # enables pwm_b() to output to p2_1 
+dirpwm(P2_2)        # enables pwm_b() to output to p2_2 
+
+dirpwm(P2_4)        # enables pwm_c() to output to p2_4   
+dirpwm(P2_5)        # enables pwm_c() to output to p2_5 
+ 
+
+pwm_a( 1000 )        # set the pwm_a pulse width to 1000 clocks (P1_2,P1_6,P2_60
+pwm_b( 2000 )        # set the pwm_b PWM pulse width to 1000 clocks (P1_2,P1_6,P2_60
+pwm_c( 3000 )        # set the pwm_c PWM pulse width to 1000 clocks (P1_2,P1_6,P2_60
+
+
+halt() 
+   

@@ -1,0 +1,15 @@
+######################################################################
+#
+# hello_world.mpy  
+# 
+# Program to print Hello World to the UART (COM port 9600 baud)
+# ( Mike Asker 14-Apr-2012 www.mpyprojects.com)
+# 
+######################################################################
+
+
+define_micro('msp430g2231')
+
+print( 'Hello World\n')    # Prints to the Launchpad PIN2 (P1_1 TXD)
+
+

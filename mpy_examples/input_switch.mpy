@@ -1,0 +1,32 @@
+######################################################################
+#
+# input_switch.mpy  
+# 
+# Program to flash the green led on the MSP430 Launchpad board
+# ( Mike Asker 14-Apr-2012 www.mpyprojects.com)
+# 
+######################################################################
+
+define_micro('msp430g2553')   # Tell the compiler which msp430 microcontroller to program
+
+dirout(PIN14)      # Setup pin 14 to be an output (connected to the green led)
+dirout(REDLED)      # Setup pin 14 to be an output (connected to the green led)
+dirinpu(SWITCH)
+
+last_sw = 0
+
+while 1:           # Do the following lines forever and ever
+   
+   out1(PIN14)     # turn the green led on
+   out0(REDLED)
+   wait(50)       # wait 500 miliseconds (0.5 sec)
+   out0(PIN14)     # tunr the green led off
+   out1(REDLED)
+   wait(50)
+   
+   sw = inp(SWITCH)
+   if sw != last_sw:
+       print_value( 'The switch is :', sw )
+   last_sw = sw
+   
+   

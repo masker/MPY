@@ -1,0 +1,68 @@
+
+
+define_micro('msp430g2231')   # we are using this microcontroller, MPY needs to know
+
+
+macro( flash(led), 'out1(led); wait(100); out0(led); wait(100)' )  # Macro to flash an led
+
+macro(GRNLED, GREENLED)
+   
+# Set the direction of the pins
+dirout(GRNLED)               # Set the LED pin to be an output
+dirout(REDLED)               # Set the LED pin to be an output
+dirinpu(SWITCH)              # Set the switch pin to be an input with a pull-up resistor. 1 == not pressed, 0 == pressed
+
+#dirpwm(P1_2)                 # speaker output connected to timer0_1 pwm_a
+pwm_enable_a(20000)            # configure both timers (Timer0 and Timer1) for PWM with a period of 20000 clocks
+period_a(20000)
+pwm_a(1000)
+
+flash(GRNLED)              # Flash the green led to test it
+
+for i in range(10):          # Flash the red led 10 times to test it
+        flash(REDLED)      
+        
+        
+
+while 1:  
+
+    r = random( r )           # Make up a random delay number (random will give a number between -32000 and +32000)
+    print_value( 'delay =', r )
+
+    wait( r/8 )         # wait will wait for dly/8 milliseconds, (1000 = 1 second) a -ve delay is the same as a +ve delay
+
+    if inp(SWITCH) == 1:    # First check that the player is not pressing the button, before we flash one of the leds
+
+        if r > 0:           # +ve numbers will light the green led, -ve for the red led
+            flash(GRNLED)        
+        else:
+            flash(REDLED)
+        
+        wait(200)           # wait another 0.2 s and check if the player has pressed the switch in time 
+        
+        if inp(SWITCH) == 0:  # if pressed, Go wild and flash the leds 
+            
+
+            wait(1000)
+            dirpwm(P1_2)                 # speaker output connected to timer0_1 pwm_a
+            for i in range(10):
+                period_a(3000)
+                flash(GRNLED)
+                period_a(2000)
+                flash(REDLED)
+        else:
+            wait(1000)
+ 
+#            for i in range(3):
+#                flash(REDLED)
+            dirpwm(P1_2)                 # speaker output connected to timer0_1 pwm_a
+            period_a(3000)
+            wait(300)
+            period_a(4000)
+            wait(700)
+        dirinpu(P1_2)                 # speaker output connected to timer0_1 pwm_a
+
+        period_a(20000)
+   
+        wait(1000)            # wait a second before trying again
+    

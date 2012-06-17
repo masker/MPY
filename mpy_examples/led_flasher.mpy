@@ -1,0 +1,39 @@
+
+
+define_micro("msp430g2553")
+
+
+
+
+def delay( dly ):       
+    
+    # inserts a delay of 'dly' milliseconds
+	for i in range(dly) :
+		for k in range(280):
+			_NOP()
+
+
+def main():
+
+    WDTCTL = WDTPW | WDTHOLD   # may want have this done automatically
+
+    BCSCTL1 = CALBC1_1MHZ
+    DCOCTL  = CALDCO_1MHZ
+
+    P1DIR = 0x00  # 
+    P1DIR |= BIT0 # P1.0 to output led 1 red
+    P1DIR |= BIT6 # P1.6 to output led 2 green
+    
+
+
+    for k in range(10):
+    
+        delay(100)
+        
+        P1OUT = BIT0
+            
+        delay(100)
+        
+        P1OUT = BIT6
+        
+  

@@ -1,0 +1,33 @@
+######################################################################
+#
+# blinky.mpy  
+# 
+# Program to flash the green led on the MSP430 Launchpad board
+# ( Mike Asker 14-Apr-2012 www.mpyprojects.com)
+# 
+######################################################################
+
+define_micro('msp430g2231')   # Tell the compiler which msp430 microcontroller to program
+
+dirout(GREENLED)   # Setup pin 14 to be an output (connected to the green led)
+dirout(REDLED)  
+
+dly_big = 0
+while 1:           # Do the following lines forever and ever
+   
+   dly_big = random( dly_big )
+   dly = dly_big/30
+   
+   if dly > 0:
+       out1(GREENLED)  # turn the green led on
+       wait(dly)       # wait 500 miliseconds (0.5 sec)
+       out0(GREENLED)  # turn the green led off
+       wait(dly)
+   else:
+       out1(REDLED)  # turn the green led on
+       wait(dly)       # wait 500 miliseconds (0.5 sec)
+       out0(REDLED)  # turn the green led off
+       wait(dly)
+       
+   
+   
