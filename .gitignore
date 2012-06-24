@@ -3,6 +3,8 @@
 mspgcc*/
 devcon/
 *.ppr
+*.elf
+*.c
 
 #################
 ## Eclipse

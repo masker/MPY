@@ -111,8 +111,8 @@ macro( _pulse_enable0(),  'TA0CTL = TASSEL_2 + MC_1;  TA0CCTL1 = OUTMOD_7;' )
 macro( _pulse_enable1(),  'TA1CTL = TASSEL_2 + MC_1;  TA1CCTL1 = OUTMOD_7;' ) 
 macro( _pulse_enable2(),  'TA1CTL = TASSEL_2 + MC_1;  TA1CCTL2 = OUTMOD_7;' ) 
 
-macro( pulse_period(pulse,clocks), 'if(pulse==0): TA0CCR1 = clocks; elif(pulse==1): TA1CCR1 = clocks; elif(pulse==2): TA1CCR2 = width;' )
-macro( pulse_width(pulse,clocks),  'if(pulse==0): TA0CCR1 = clocks; elif(pulse==1): TA1CCR1 = clocks; elif(pulse==2): TA1CCR2 = width;' )
+macro( pulse_period(pulse,clocks), 'if(pulse==0): TA0CCR0 = clocks; elif(pulse==1): TA1CCR0 = clocks; elif(pulse==2): TA1CCR0 = clocks;' )
+macro( pulse_width(pulse,clocks),  'if(pulse==0): TA0CCR1 = clocks; elif(pulse==1): TA1CCR1 = clocks; elif(pulse==2): TA1CCR2 = clocks;' )
 
 
 
