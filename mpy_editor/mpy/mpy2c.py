@@ -657,6 +657,7 @@ void main (void) {
                 macro_state = 'value'
 #                mpy_value = elem_n                
                 mpy_value_sub = re.sub( 'else:', '\nelse:', mpy_value )
+                mpy_value_sub = re.sub( 'elif',  '\nelif', mpy_value_sub )
                 
                 duc = mpy2c( mpy_value_sub, full_conversion=False)
                 duc.remove_trailing_semicolon()
@@ -1130,7 +1131,7 @@ void main (void) {
 
         ######   FUNCTION    ########
 #        if node_name in ['While', 'For', 'FunctionDef', 'Return', 'Print' ]:
-        if node_name in ['While', 'For', 'Return', 'Print' ]:
+        if node_name in ['While', 'For', 'Return', 'Print', 'Break', 'Continue' ]:
             self.add_element( '%s' % node_name.lower() )
             
         #####  IF ELSEIF  ELSE  #######
@@ -1260,7 +1261,7 @@ void main (void) {
 
         ####    ;;;;;  #########
         if parent_node_name == 'list' and \
-           node_name in ['AugAssign', 'Assign', 'Print', 'Return', 'Call', 'Expr'] :
+           node_name in ['AugAssign', 'Assign', 'Print', 'Return', 'Call', 'Expr', 'Break', 'Continue'] :
                 if node_name != 'Call' or self.level == 1:
                    self.add_element( ';' )
 

@@ -1,5 +1,24 @@
 
-# Pin to Port defs
+# PORTPIN DEFINITIONS
+
+macro( P1_0, 0x10 )
+macro( P1_1, 0x11 )
+macro( P1_2, 0x12 )
+macro( P1_3, 0x13 )
+macro( P1_4, 0x14 )
+macro( P1_5, 0x15 )
+macro( P1_6, 0x16 )
+macro( P1_7, 0x17 )
+macro( P2_0, 0x20 )
+macro( P2_1, 0x21 )
+macro( P2_2, 0x22 )
+macro( P2_3, 0x23 )
+macro( P2_4, 0x24 )
+macro( P2_5, 0x25 )
+macro( P2_6, 0x26 )
+macro( P2_7, 0x27 )
+
+# Pin to Port defs  (warning, these are chip dependant 14pin vs 20pin chips differ)
 
 macro( PIN2,  P1_0 )
 macro( PIN3,  P1_1 )
@@ -20,52 +39,81 @@ macro( PIN18, P2_7 )
 macro( PIN16, RSTB )
 macro( PIN17, TEST )
 
+# COMMON IO FUNCTIONS
+
 macro( GREENLED, P1_6 )
 macro( REDLED,   P1_0 )
 macro( SWITCH,   P1_3 )
 
 
-macro( setbit(reg,bit),   'reg |=   bit' )
-macro( resetbit(reg,bit), 'reg &= ~ bit' )  
-macro( testbit(reg,bit,pos),  '(reg & bit) >> pos'    ) 
+# SET, RESET, and TEST COMMANDS
+
+macro( setbit(reg,bit),   'reg |=   ( 1 << (bit & 15))' )
+macro( resetbit(reg,bit), 'reg &= ~ ( 1 << (bit & 15))' )  
+macro( testbit(reg,bit),  '((reg & (1 << (bit & 15))) >> (bit & 15))'   ) 
 
 
-
-macro( inp(portpin),   'testbit(PxxxIN, BITyyy, yyy)' )
-macro( out0(portpin),  'resetbit(PxxxOUT, BITyyy)'    )
-macro( out1(portpin),  'setbit(PxxxOUT, BITyyy)'      )
-
-macro( out(portpin,value), 'if(value): out1(portpin) else: out0(portpin)' )
+# OUTPUT COMMANDS
 
 
+macro( out(portpin,value), 'if(value): out1(portpin); else: out0(portpin);' )
+macro( out0(portpin),  'if(portpin<0x20): resetbit(P1OUT,portpin) else: resetbit(P2OUT,portpin)')
+macro( out1(portpin),  'if(portpin<0x20):   setbit(P1OUT,portpin) else:   setbit(P2OUT,portpin)')
 
-macro( dirout(portpin),  'setbit(PxxxDIR, BITyyy);   resetbit(PxxxSEL,BITyyy); resetbit(PxxxREN,BITyyy)' )
-macro( dirinp(portpin),  'resetbit(PxxxDIR, BITyyy); resetbit(PxxxSEL,BITyyy); resetbit(PxxxREN,BITyyy)' )
-macro( dirinpd(portpin), 'resetbit(PxxxDIR, BITyyy); setbit(PxxxREN,BITyyy);   resetbit(PxxxOUT, BITyyy)')
-macro( dirinpu(portpin), 'resetbit(PxxxDIR, BITyyy); setbit(PxxxREN,BITyyy);   setbit(PxxxOUT, BITyyy)'  )
-macro( dirsel(portpin),  'setbit(PxxxSEL,BITyyy)'  )
-macro( dirsel2(portpin), 'setbit(PxxxSEL2,BITyyy)' )
-macro( dirpwm(portpin),  'setbit(PxxxDIR, BITyyy); setbit(PxxxSEL,BITyyy); resetbit(PxxxREN,BITyyy)')
+macro( dirout(portpin),  'if(portpin<0x20): _dirout1(portpin) else: _dirout2(portpin)' )
+macro( _dirout1(portpin),  'setbit(P1DIR, portpin);   resetbit(P1SEL,portpin); resetbit(P1REN,portpin)' )
+macro( _dirout2(portpin),  'setbit(P2DIR, portpin);   resetbit(P2SEL,portpin); resetbit(P2REN,portpin)' )
 
-macro( enablepininterrupt(portpin),  'resetbit(PxxxIES,BITyyy); setbit(PxxxIE,BITyyy)' )
-macro( enablepininterruptr(portpin), 'resetbit(PxxxIES,BITyyy); setbit(PxxxIE,BITyyy)' )
-macro( enablepininterruptf(portpin), 'setbit(PxxxIES,BITyyy);   setbit(PxxxIE,BITyyy)' )
-macro( setpininterrupt(portpin),     'setbit(PxxxIFG,BITyyy)' )
-macro( getpininterrupt(portpin),     'testbit(PxxxIFG,BITyyy)')
 
-#macro( adc_enable(portpin), 'ADC10CTL0 &= ~ENC; ADC10CTL0 = ADC10SHT_2 + ADC10ON; ADC10CTL1 = INCH_yyy; ADC10AE0 |= BITyyy;')
+# INPUT COMMANDS
+
+#macro( inp(portpin),   'if(portpin<0x20):   testbit(P1IN,portpin) else:   testbit(P2IN,portpin)')
+
+#   portpin
+#   76543210
+#   0021bbbb
+   
+#macro( inp(portpin),  '((portpin & 0x10 & P1IN) | (portpin & 0x20 & P2IN)) >> (portpin & 15)')  
+macro( inp(portpin),  '((((portpin & 0x10) >> 4) & (P1IN >> (portpin & 15))) | (((portpin & 0x20) >> 5) & (P2IN >> (portpin & 15))))' )  
+
+
+macro( dirinp(portpin),    'if(portpin<0x20): _dirinp1(portpin) else: _dirinp2(portpin)' )
+macro( _dirinp1(portpin),  'resetbit(P1DIR, portpin); resetbit(P1SEL,portpin); resetbit(P1REN,portpin)' )
+macro( _dirinp2(portpin),  'resetbit(P2DIR, portpin); resetbit(P2SEL,portpin); resetbit(P2REN,portpin)' )
+
+macro( dirinpd(portpin),    'if(portpin<0x20): _dirinpd1(portpin) else: _dirinpd2(portpin)' )
+macro( _dirinpd1(portpin),  'resetbit(P1DIR, portpin); setbit(P1REN,portpin);   resetbit(P1OUT, portpin)')
+macro( _dirinpd2(portpin),  'resetbit(P2DIR, portpin); setbit(P2REN,portpin);   resetbit(P2OUT, portpin)')
+
+macro( dirinpu(portpin),    'if(portpin<0x20): _dirinpu1(portpin) else: _dirinpu2(portpin)' )
+macro( _dirinpu1(portpin),  'resetbit(P1DIR, portpin); setbit(P1REN,portpin);   setbit(P1OUT, portpin)')
+macro( _dirinpu2(portpin),  'resetbit(P2DIR, portpin); setbit(P2REN,portpin);   setbit(P2OUT, portpin)')
+
+macro( dirsel(portpin),  'if(portpin<0x20): _dirsel1(portpin) else: _dirsel2(portpin)' )
+macro( _dirsel1(portpin),  'setbit(P1SEL,portpin)'  )
+macro( _dirsel2(portpin),  'setbit(P2SEL,portpin)'  )
+
+macro( dirsel2(portpin),  'if(portpin<0x20): _dirsel12(portpin) else: _dirsel22(portpin)' )
+macro( _dirsel12(portpin),  'setbit(P1SEL2,portpin)'  )
+macro( _dirsel22(portpin),  'setbit(P2SEL2,portpin)'  )
+
+
+# ADC AND PULSE COMMANDS
+
+macro( dirpulse(portpin),    'if(portpin<0x20): _dirpulse1(portpin) else: _dirpulse2(portpin)' )
+macro( _dirpulse1(portpin),  'setbit(P1DIR, portpin); setbit(P1SEL, portpin); resetbit(P1REN,portpin)')
+macro( _dirpulse2(portpin),  'setbit(P2DIR, portpin); setbit(P2SEL, portpin); resetbit(P2REN,portpin)')
+
 macro( adc_enable(), 'ADC10CTL0 &= ~ENC; ADC10CTL0 = ADC10SHT_2 + ADC10ON;')
 
-macro( pwm_enable(period),    'TA0CTL = TASSEL_2 + MC_1;  TA0CCTL1 = OUTMOD_7; TA0CCTL2 = OUTMOD_7; TA0CCR0 = period; TA1CTL = TASSEL_2 + MC_1;  TA1CCTL1 = OUTMOD_7; TA1CCTL2 = OUTMOD_7; TA1CCR0 = period;' )
-macro( pwm_enable_a(period),  'TA0CTL = TASSEL_2 + MC_1;  TA0CCTL1 = OUTMOD_7; TA0CCR0 = period;' )
-macro( pwm_enable_bc(period), 'TA1CTL = TASSEL_2 + MC_1;  TA1CCTL1 = OUTMOD_7; TA1CCTL2 = OUTMOD_7; TA1CCR0 = period;' )
-macro( pwm_a(width),       'TA0CCR1 = width;' )
-macro( pwm_b(width),       'TA1CCR1 = width;' )
-macro( pwm_c(width),       'TA1CCR2 = width;' )
-macro( period_a(period),   'TA0CCR0 = period;' )
-macro( period_b(period),   'TA1CCR0 = period;' )
-macro( period_c(period),   'TA1CCR0 = period;' )
-macro( period_bc(period),  'TA1CCR0 = period;' )
+macro( pulse_enable(pulse), 'if(pulse<1): _pulse_enable0() elif(pulse==1): _pulse_enable1() elif(pulse==2): _pulse_enable2()' )
+macro( _pulse_enable0(),  'TA0CTL = TASSEL_2 + MC_1;  TA0CCTL1 = OUTMOD_7;' ) 
+macro( _pulse_enable1(),  'TA1CTL = TASSEL_2 + MC_1;  TA1CCTL1 = OUTMOD_7;' ) 
+macro( _pulse_enable2(),  'TA1CTL = TASSEL_2 + MC_1;  TA1CCTL2 = OUTMOD_7;' ) 
+
+macro( pulse_period(pulse,clocks), 'if(pulse==0): TA0CCR1 = clocks; elif(pulse==1): TA1CCR1 = clocks; elif(pulse==2): TA1CCR2 = width;' )
+macro( pulse_width(pulse,clocks),  'if(pulse==0): TA0CCR1 = clocks; elif(pulse==1): TA1CCR1 = clocks; elif(pulse==2): TA1CCR2 = width;' )
+
 
 
 
