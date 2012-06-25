@@ -304,12 +304,33 @@ class mpy2c( object ):
                     self.var_d[scope][v][1] = 'done'
         
             opn.append(t)
-            if t[5] == 'body_start':
+            scope = t[2]
+#            if t[5] == 'body_start':
+            # Add the variable declarations at the start of each function definition
+            # but if we are in the the top_level do the  main then add the main variables as globals
+            # in the __top_level__ at the define_micro_end position
+            if t[5] == 'body_start'       and scope != '__top_level__' and scope != 'main' or \
+               t[5] == 'define_micro_end' and scope == '__top_level__' :
                 scope = t[2]
+                
+                # pretend we are in the main scope when we are actually in the top_level
+                if t[5] == 'define_micro_end' and scope == '__top_level__' : 
+                    scope = 'main'
+                    t_newline  = t[:]                  
+                    t_newline[6] = 0                
+                    t_newline[0] = '\n'
+                    t_newline[5] = ''
+                    opn.append(t_newline)
+                    
                 if debug:
                     print 'found body_start for ', scope
                 if scope in self.var_d:
                     for v in self.var_d[scope]:
+                    
+                        # Skip this variable definition if a global ('main') variable of the same name has been defined 
+                        if scope != 'main' and v in  self.var_d['main']:
+                            continue
+                    
                         typ = self.var_d[scope][v][0]
                         if self.var_d[scope][v][1] == None:
                             if debug:
@@ -325,10 +346,13 @@ class mpy2c( object ):
                             tv = t[:]
                             tv[0] = ';'
                             tv[5] = None
-                            opn.append(tv)
-                            
-                            
+                            opn.append(tv)                            
                             self.var_d[scope][v][1] = 'done'
+
+                # pretend we are in the main scope when we are actually in the top_level
+                if t[5] == 'define_micro_end' and scope == 'main' : 
+                    opn.append(t_newline)
+
         self.op = opn
         
         if debug:
