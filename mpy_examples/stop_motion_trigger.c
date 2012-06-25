@@ -23,12 +23,12 @@ int delay ; int scale ;
 
 
       
-      P1DIR |= BIT6 ; P1SEL &= ~ BIT6 ; P1REN &= ~ BIT6 ; 
-      P1DIR |= BIT5 ; P1SEL &= ~ BIT5 ; P1REN &= ~ BIT5 ; 
-      P2DIR &= ~ BIT0 ; P2REN |= BIT0 ; P2OUT &= ~ BIT0 ; 
-      P2DIR &= ~ BIT1 ; P2REN |= BIT1 ; P2OUT &= ~ BIT1 ; 
-      P2DIR &= ~ BIT2 ; P2REN |= BIT2 ; P2OUT &= ~ BIT2 ; 
-      P2DIR &= ~ BIT3 ; P2REN |= BIT3 ; P2OUT &= ~ BIT3 ; 
+      if ( 22 < 32 ) { P1DIR |= ( 1 << ( 22 & 15 ) ) ; P1SEL &= ~ ( 1 << ( 22 & 15 ) ) ; P1REN &= ~ ( 1 << ( 22 & 15 ) ) ; } else { P2DIR |= ( 1 << ( 22 & 15 ) ) ; P2SEL &= ~ ( 1 << ( 22 & 15 ) ) ; P2REN &= ~ ( 1 << ( 22 & 15 ) ) ; } ; 
+      if ( 21 < 32 ) { P1DIR |= ( 1 << ( 21 & 15 ) ) ; P1SEL &= ~ ( 1 << ( 21 & 15 ) ) ; P1REN &= ~ ( 1 << ( 21 & 15 ) ) ; } else { P2DIR |= ( 1 << ( 21 & 15 ) ) ; P2SEL &= ~ ( 1 << ( 21 & 15 ) ) ; P2REN &= ~ ( 1 << ( 21 & 15 ) ) ; } ; 
+      if ( 32 < 32 ) { P1DIR &= ~ ( 1 << ( 32 & 15 ) ) ; P1REN |= ( 1 << ( 32 & 15 ) ) ; P1OUT &= ~ ( 1 << ( 32 & 15 ) ) ; } else { P2DIR &= ~ ( 1 << ( 32 & 15 ) ) ; P2REN |= ( 1 << ( 32 & 15 ) ) ; P2OUT &= ~ ( 1 << ( 32 & 15 ) ) ; } ; 
+      if ( 33 < 32 ) { P1DIR &= ~ ( 1 << ( 33 & 15 ) ) ; P1REN |= ( 1 << ( 33 & 15 ) ) ; P1OUT &= ~ ( 1 << ( 33 & 15 ) ) ; } else { P2DIR &= ~ ( 1 << ( 33 & 15 ) ) ; P2REN |= ( 1 << ( 33 & 15 ) ) ; P2OUT &= ~ ( 1 << ( 33 & 15 ) ) ; } ; 
+      if ( 34 < 32 ) { P1DIR &= ~ ( 1 << ( 34 & 15 ) ) ; P1REN |= ( 1 << ( 34 & 15 ) ) ; P1OUT &= ~ ( 1 << ( 34 & 15 ) ) ; } else { P2DIR &= ~ ( 1 << ( 34 & 15 ) ) ; P2REN |= ( 1 << ( 34 & 15 ) ) ; P2OUT &= ~ ( 1 << ( 34 & 15 ) ) ; } ; 
+      if ( 35 < 32 ) { P1DIR &= ~ ( 1 << ( 35 & 15 ) ) ; P1REN |= ( 1 << ( 35 & 15 ) ) ; P1OUT &= ~ ( 1 << ( 35 & 15 ) ) ; } else { P2DIR &= ~ ( 1 << ( 35 & 15 ) ) ; P2REN |= ( 1 << ( 35 & 15 ) ) ; P2OUT &= ~ ( 1 << ( 35 & 15 ) ) ; } ; 
       print ( "\n P2OUT = " ) ; 
       print_hex ( P2OUT ) ; 
       print ( "     P2DIR = " ) ; 
@@ -45,9 +45,9 @@ int delay ; int scale ;
       scale = 1000 ; 
       while ( 1 ) { 
           delay = ( 1700 + ( scale * ( P2IN & 31 ) ) ) ; 
-          P1OUT |= BIT6 ; 
-          P1OUT |= BIT5 ; 
+          if ( 22 < 32 ) { P1OUT |= ( 1 << ( 22 & 15 ) ) ; } else { P2OUT |= ( 1 << ( 22 & 15 ) ) ; } ; 
+          if ( 21 < 32 ) { P1OUT |= ( 1 << ( 21 & 15 ) ) ; } else { P2OUT |= ( 1 << ( 21 & 15 ) ) ; } ; 
           wait ( 1300 ) ; 
-          P1OUT &= ~ BIT6 ; 
-          P1OUT &= ~ BIT5 ; 
+          if ( 22 < 32 ) { P1OUT &= ~ ( 1 << ( 22 & 15 ) ) ; } else { P2OUT &= ~ ( 1 << ( 22 & 15 ) ) ; } ; 
+          if ( 21 < 32 ) { P1OUT &= ~ ( 1 << ( 21 & 15 ) ) ; } else { P2OUT &= ~ ( 1 << ( 21 & 15 ) ) ; } ; 
           wait ( delay ) ; } } 

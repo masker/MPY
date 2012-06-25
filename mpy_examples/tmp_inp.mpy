@@ -1,0 +1,6 @@
+define_micro('msp430g2231')    # <<< Change >>>  tell mpyEditor which msp430 to program
+dirout(P1_0)                   # Set port P1_0 as an output (this is the Launchpad red led)
+dirinpu(P1_3)                  # Set port P1_3 as an input with pull down resistor (SW2)
+while 1:                       # do forever
+   switch_input = inp(P1_3)    # read the input from pin P1_3 (switch SW2)
+   out(P1_0, switch_input)     # set the output pin P1_0 (red led) to the switch 
