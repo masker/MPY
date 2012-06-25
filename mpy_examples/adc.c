@@ -27,6 +27,6 @@ void main (void) {
       
       ADC10CTL0 &= ~ ENC ; ADC10CTL0 = ( ADC10SHT_2 + ADC10ON ) ; 
       while ( 1 ) { 
-          v7 = adc ( 21 ) ; 
+          v7 = adc ( 23 ) ; 
           print_value ( "ADC value on p1_7" , v7 ) ; 
           wait ( 1000 ) ; } } 

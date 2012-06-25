@@ -1229,6 +1229,8 @@ void main (void) {
         
         if isinstance( node, types.ListType ):
             done = False
+            node_len = len(node)
+            node_count = 1
             for nd in node:
  #                           parent_node_name, node,  parent_arg_name, arg_name, first_node_name, node_or_field):
                 self.walk_node(  node_name,     nd,      arg_name,       None,   parent_node_name, 'NOD', filename=filename )
@@ -1247,10 +1249,12 @@ void main (void) {
                     self.add_mpy_include( '%s\mpy_macros_%s.mpy' % (script_dir, self.micro_name) )
 
                 
-                if not done and parent_node_name == 'BoolOp' and node_name in ['list'] and parent_arg_name in ['test', None] and node0_name in ['Compare', 'Num']:
+                if node_count < node_len and parent_node_name == 'BoolOp' and node_name in ['list'] and parent_arg_name in ['test', None] and node0_name in ['Compare', 'Num']:
                     idx = self.op_names.index( first_node_name )
                     self.add_element( '%s' % (self.op_chars[idx]) )
                     done = True
+                 
+                node_count += 1
                  
         if hasattr( node, '_fields'):
                  done = False
