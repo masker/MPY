@@ -28,6 +28,9 @@ class mpy2c( object ):
         self.op_chars = ['+',   '-',   '+',  '-',  '*',   '/',  '%',  '**', '<<',    '>>',    '|',    '^',     '&',     '//',       \
                                '==', '!=',    '<',  '<=',  '>',  '>=',  'Is', 'IsNot', 'In', 'NotIn', '&&',  '||', '~']  
 
+        if full_conversion:
+            self.micro_name = None        
+
 
         # if the code is surrounded by quotes then remove them if there is a '=' char
         # (when running get_macros() we need to process the macros without quotes,
@@ -1216,7 +1219,8 @@ void main (void) {
                 if parent_node_name == 'Module' and first_node_name == 'list' and self.define_micro_flag != None:
                     self.define_micro_flag = None
                     self.add_marker('define_micro_end')
-                    self.add_mpy_include( '%s\mpy_macros.mpy' % script_dir )
+                    self.add_mpy_include( '%s\mpy_macros_common.mpy' % script_dir )
+                    self.add_mpy_include( '%s\mpy_macros_%s.mpy' % (script_dir, self.micro_name) )
 
                 
                 if not done and parent_node_name == 'BoolOp' and node_name in ['list'] and parent_arg_name in ['test', None] and node0_name in ['Compare', 'Num']:
@@ -1309,6 +1313,9 @@ void main (void) {
         if parent_node_name == 'Str' and self.include_flag == True:
             self.include_name = node
 
+        # when we encounter the define_micro command then we will be adding the main() function
+        if self.define_micro_flag == True and node_name == 'str' and self.scope == '__top_level__':
+            self.micro_name = node.lower()
 
 
         # when we encounter the define_micro command then we will be adding the main() function

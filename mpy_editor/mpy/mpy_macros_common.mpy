@@ -1,0 +1,85 @@
+
+# PORTPIN DEFINITIONS
+
+macro( P1_0, 0x10 )
+macro( P1_1, 0x11 )
+macro( P1_2, 0x12 )
+macro( P1_3, 0x13 )
+macro( P1_4, 0x14 )
+macro( P1_5, 0x15 )
+macro( P1_6, 0x16 )
+macro( P1_7, 0x17 )
+macro( P2_0, 0x20 )
+macro( P2_1, 0x21 )
+macro( P2_2, 0x22 )
+macro( P2_3, 0x23 )
+macro( P2_4, 0x24 )
+macro( P2_5, 0x25 )
+macro( P2_6, 0x26 )
+macro( P2_7, 0x27 )
+
+
+
+# COMMON IO FUNCTIONS
+
+macro( GREENLED, P1_6 )
+macro( REDLED,   P1_0 )
+macro( SWITCH,   P1_3 )
+
+
+# SET, RESET, and TEST COMMANDS
+
+macro( setbit(reg,bit),   'reg |=   ( 1 << (bit & 15))' )
+macro( resetbit(reg,bit), 'reg &= ~ ( 1 << (bit & 15))' )  
+macro( testbit(reg,bit),  '((reg & (1 << (bit & 15))) >> (bit & 15))'   ) 
+
+
+# OUTPUT COMMANDS
+
+
+macro( out(portpin,value), 'if(value): out1(portpin); else: out0(portpin);' )
+macro( out0(portpin),  'if(portpin<0x20): resetbit(P1OUT,portpin) else: resetbit(P2OUT,portpin)')
+macro( out1(portpin),  'if(portpin<0x20):   setbit(P1OUT,portpin) else:   setbit(P2OUT,portpin)')
+
+macro( dirout(portpin),  'if(portpin<0x20): _dirout1(portpin) else: _dirout2(portpin)' )
+macro( _dirout1(portpin),  'setbit(P1DIR, portpin);   resetbit(P1SEL,portpin); resetbit(P1REN,portpin)' )
+macro( _dirout2(portpin),  'setbit(P2DIR, portpin);   resetbit(P2SEL,portpin); resetbit(P2REN,portpin)' )
+
+
+# INPUT COMMANDS
+
+#macro( inp(portpin),   'if(portpin<0x20):   testbit(P1IN,portpin) else:   testbit(P2IN,portpin)')
+
+#   portpin
+#   76543210
+#   0021bbbb
+   
+#macro( inp(portpin),  '((portpin & 0x10 & P1IN) | (portpin & 0x20 & P2IN)) >> (portpin & 15)')  
+macro( inp(portpin),  '((((portpin & 0x10) >> 4) & (P1IN >> (portpin & 15))) | (((portpin & 0x20) >> 5) & (P2IN >> (portpin & 15))))' )  
+
+
+macro( dirinp(portpin),    'if(portpin<0x20): _dirinp1(portpin) else: _dirinp2(portpin)' )
+macro( _dirinp1(portpin),  'resetbit(P1DIR, portpin); resetbit(P1SEL,portpin); resetbit(P1REN,portpin)' )
+macro( _dirinp2(portpin),  'resetbit(P2DIR, portpin); resetbit(P2SEL,portpin); resetbit(P2REN,portpin)' )
+
+macro( dirinpd(portpin),    'if(portpin<0x20): _dirinpd1(portpin) else: _dirinpd2(portpin)' )
+macro( _dirinpd1(portpin),  'resetbit(P1DIR, portpin); setbit(P1REN,portpin);   resetbit(P1OUT, portpin)')
+macro( _dirinpd2(portpin),  'resetbit(P2DIR, portpin); setbit(P2REN,portpin);   resetbit(P2OUT, portpin)')
+
+macro( dirinpu(portpin),    'if(portpin<0x20): _dirinpu1(portpin) else: _dirinpu2(portpin)' )
+macro( _dirinpu1(portpin),  'resetbit(P1DIR, portpin); setbit(P1REN,portpin);   setbit(P1OUT, portpin)')
+macro( _dirinpu2(portpin),  'resetbit(P2DIR, portpin); setbit(P2REN,portpin);   setbit(P2OUT, portpin)')
+
+macro( dirsel(portpin),  'if(portpin<0x20): _dirsel1(portpin) else: _dirsel2(portpin)' )
+macro( _dirsel1(portpin),  'setbit(P1SEL,portpin)'  )
+macro( _dirsel2(portpin),  'setbit(P2SEL,portpin)'  )
+
+macro( dirsel2(portpin),  'if(portpin<0x20): _dirsel12(portpin) else: _dirsel22(portpin)' )
+macro( _dirsel12(portpin),  'setbit(P1SEL2,portpin)'  )
+macro( _dirsel22(portpin),  'setbit(P2SEL2,portpin)'  )
+
+
+
+
+
+

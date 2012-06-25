@@ -1,0 +1,40 @@
+
+
+# Pin to Port defs  (warning, these are chip dependant 14pin vs 20pin chips differ)
+
+macro( PIN2,  P1_0 )
+macro( PIN3,  P1_1 )
+macro( PIN4,  P1_2 )
+macro( PIN5,  P1_3 )
+macro( PIN6,  P1_4 )
+macro( PIN7,  P1_5 )
+macro( PIN14, P1_6 )
+macro( PIN15, P1_7 )
+macro( PIN8,  P2_0 )
+macro( PIN9,  P2_1 )
+macro( PIN10, P2_2 )
+macro( PIN11, P2_3 )
+macro( PIN12, P2_4 )
+macro( PIN13, P2_5 )
+macro( PIN19, P2_6 )
+macro( PIN18, P2_7 )
+macro( PIN16, RSTB )
+macro( PIN17, TEST )
+
+
+
+macro( dirpulse(portpin),    'if(portpin<0x20): _dirpulse1(portpin) else: _dirpulse2(portpin)' )
+macro( _dirpulse1(portpin),  'setbit(P1DIR, portpin); setbit(P1SEL, portpin); resetbit(P1REN,portpin)')
+macro( _dirpulse2(portpin),  'setbit(P2DIR, portpin); setbit(P2SEL, portpin); resetbit(P2REN,portpin)')
+
+
+macro( pulse_enable(pulse), 'TA0CTL = TASSEL_2 + MC_1;  TA0CCTL1 = OUTMOD_7;' ) 
+macro( pulse_period(pulse,clocks), 'TA0CCR0 = clocks;' )
+macro( pulse_width(pulse,clocks),  'TA0CCR1 = clocks;' )
+
+
+
+
+
+
+
