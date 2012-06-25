@@ -4,6 +4,8 @@
 #include "msp430g2231.h"
 #include "C:\MPY\mpy_editor\mpy\mpy_functions.c"
 
+int v7 ; 
+
                         
 void main (void) { 
 
@@ -19,12 +21,12 @@ void main (void) {
     P2REN = 0xFF;
     P2OUT = 0;
    
-int v7 ; 
+
 
 
       
       ADC10CTL0 &= ~ ENC ; ADC10CTL0 = ( ADC10SHT_2 + ADC10ON ) ; 
       while ( 1 ) { 
-          v7 = adc ( 7 ) ; 
+          v7 = adc ( 21 ) ; 
           print_value ( "ADC value on p1_7" , v7 ) ; 
           wait ( 1000 ) ; } } 

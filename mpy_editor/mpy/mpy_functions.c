@@ -14,8 +14,8 @@ void print_value(char *string, int num);
 
 
 int adc(int pin) {
-    ADC10CTL1 = pin << 12;
-    ADC10AE0  = 1 << pin;
+    ADC10CTL1 = (pin & 15) << 12;
+    ADC10AE0  = 1 << (pin & 15);
     ADC10CTL0 |= ENC + ADC10SC;     // Start A/D conversion
     while (ADC10CTL1 & BUSY);       // Wait if ADC10 core is active
     return ADC10MEM; }              // min voltage with IR LED on
