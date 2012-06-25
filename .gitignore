@@ -5,6 +5,8 @@ devcon/
 *.ppr
 *.elf
 *.c
+mpy_setup/drivers/eZ430-UART/eZ430-UART/
+mpy_setup/drivers/libusb-win32-bin-1.2.5.0/libusb-win32-bin-1.2.5.0/
 
 #################
 ## Eclipse
