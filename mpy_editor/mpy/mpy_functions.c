@@ -14,11 +14,14 @@ void print_value(char *string, int num);
 
 
 int adc(int pin) {
+//    if ((pin & 15) > 7) { ADC10CTL0 |= (REFON | REF2_5V); } // turn on the Ref generator for the Temp sensor (shouldn't need to do this!)
     ADC10CTL1 = (pin & 15) << 12;
-    ADC10AE0  = 1 << (pin & 15);
+    ADC10AE0  = (1 << (pin & 15)) & 255;
     ADC10CTL0 |= ENC + ADC10SC;     // Start A/D conversion
     while (ADC10CTL1 & BUSY);       // Wait if ADC10 core is active
-    return ADC10MEM; }              // min voltage with IR LED on
+//    if ((pin & 15) > 7) { ADC10CTL0 &= ~(REFON | REF2_5V); }  // turn off the reference
+    ADC10CTL0 &= ~ENC;
+    return ADC10MEM; }              // return the result
     
 
 int   random( int  S ) { 

@@ -23,7 +23,7 @@ macro( PIN17, TEST )
 
 
 
-macro( adc_enable(), 'ADC10CTL0 &= ~ENC; ADC10CTL0 = ADC10SHT_2 + ADC10ON;')
+macro( adc_enable(), 'ADC10CTL0 &= ~ENC; ADC10CTL0 = (ADC10SHT_2 | ADC10ON | REFON | REF2_5V | SREF_1);')
 
 macro( dirpulse(portpin),    'if(portpin<0x20): _dirpulse1(portpin) else: _dirpulse2(portpin)' )
 macro( _dirpulse1(portpin),  'setbit(P1DIR, portpin); setbit(P1SEL, portpin); resetbit(P1REN,portpin)')
@@ -31,9 +31,9 @@ macro( _dirpulse2(portpin),  'setbit(P2DIR, portpin); setbit(P2SEL, portpin); re
 
 
 macro( pulse_enable(pulse), 'if(pulse<1): _pulse_enable0() elif(pulse==1): _pulse_enable1() elif(pulse==2): _pulse_enable2()' )
-macro( _pulse_enable0(),  'TA0CTL = TASSEL_2 + MC_1;  TA0CCTL1 = OUTMOD_7;' ) 
-macro( _pulse_enable1(),  'TA1CTL = TASSEL_2 + MC_1;  TA1CCTL1 = OUTMOD_7;' ) 
-macro( _pulse_enable2(),  'TA1CTL = TASSEL_2 + MC_1;  TA1CCTL2 = OUTMOD_7;' ) 
+macro( _pulse_enable0(),  'TA0CTL = TASSEL_2 | MC_1;  TA0CCTL1 = OUTMOD_7;' ) 
+macro( _pulse_enable1(),  'TA1CTL = TASSEL_2 | MC_1;  TA1CCTL1 = OUTMOD_7;' ) 
+macro( _pulse_enable2(),  'TA1CTL = TASSEL_2 | MC_1;  TA1CCTL2 = OUTMOD_7;' ) 
 
 macro( pulse_period(pulse,clocks), 'if(pulse==0): TA0CCR0 = clocks; elif(pulse==1): TA1CCR0 = clocks; elif(pulse==2): TA1CCR0 = clocks;' )
 macro( pulse_width(pulse,clocks),  'if(pulse==0): TA0CCR1 = clocks; elif(pulse==1): TA1CCR1 = clocks; elif(pulse==2): TA1CCR2 = clocks;' )

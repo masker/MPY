@@ -17,14 +17,15 @@ macro( PIN13, P2_6 )
 
 
 
-macro( adc_enable(), 'ADC10CTL0 &= ~ENC; ADC10CTL0 = ADC10SHT_2 + ADC10ON;')
+
+macro( adc_enable(), 'ADC10CTL0 &= ~ENC; ADC10CTL0 = (ADC10SHT_2 | ADC10ON | REFON | REF2_5V | SREF_1);')
 
 macro( dirpulse(portpin),    'if(portpin<0x20): _dirpulse1(portpin) else: _dirpulse2(portpin)' )
 macro( _dirpulse1(portpin),  'setbit(P1DIR, portpin); setbit(P1SEL, portpin); resetbit(P1REN,portpin)')
 macro( _dirpulse2(portpin),  'setbit(P2DIR, portpin); setbit(P2SEL, portpin); resetbit(P2REN,portpin)')
 
 
-macro( pulse_enable(pulse), 'TA0CTL = TASSEL_2 + MC_1;  TA0CCTL1 = OUTMOD_7;' ) 
+macro( pulse_enable(pulse), 'TA0CTL = TASSEL_2 | MC_1;  TA0CCTL1 = OUTMOD_7;' ) 
 macro( pulse_period(pulse,clocks), 'TA0CCR0 = clocks;' )
 macro( pulse_width(pulse,clocks),  'TA0CCR1 = clocks;' )
 

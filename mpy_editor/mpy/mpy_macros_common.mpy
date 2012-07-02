@@ -26,6 +26,9 @@ macro( GREENLED, P1_6 )
 macro( REDLED,   P1_0 )
 macro( SWITCH,   P1_3 )
 
+macro( TEMPERATURE, 10 )    # adc channel number for the Temperture sensor
+macro( VCC,         11 )    # adc channel number for the chip supply voltage
+
 
 # SET, RESET, and TEST COMMANDS
 
