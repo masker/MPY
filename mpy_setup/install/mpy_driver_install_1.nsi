@@ -11,7 +11,7 @@
 
 ; Global Variables
 !define PRODUCT_NAME "MpyDriverInstaller"
-!define PRODUCT_VERSION "0.1.a1"
+!define PRODUCT_VERSION "0.1.a2"
 !define PRODUCT_PUBLISHER "MpyProjects"
 !define PRODUCT_WEB_SITE "http://www.mpyprojects.com"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\${PRODUCT_NAME}.exe"
@@ -193,6 +193,10 @@ Section "MSP430 Uart" CDC430Section
   SetOverwrite try
   SetOutPath "$INSTDIR\mpy_setup\drivers\eZ430-UART"
   File /r "C:\MPY\mpy_setup\drivers\eZ430-UART"
+
+  ExecWait '"$INSTDIR\mpy_setup\drivers\eZ430-UART\preinstalCDC.exe"' $0
+  DetailPrint "MSP430 Uart preinstalCDC $0"
+
 
   ${If} ${RunningX64}
 #      ExecWait '"$INSTDIR\mpy_setup\drivers\eZ430-UART\dpinst64.exe" /c /q /sa /sw /f /PATH "$INSTDIR\mpy_setup\drivers\eZ430-UART"' $0

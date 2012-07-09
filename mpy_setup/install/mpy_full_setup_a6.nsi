@@ -11,7 +11,7 @@
 
 ; Global Variables
 !define PRODUCT_NAME "MpyEditor"
-!define PRODUCT_VERSION "0.1.a6"
+!define PRODUCT_VERSION "0.1.a7"
 !define PRODUCT_PUBLISHER "MpyProjects"
 !define PRODUCT_WEB_SITE "http://www.mpyprojects.com"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\${PRODUCT_NAME}.exe"
@@ -266,7 +266,13 @@ Section "MPY Editor" MpyEditorSection
   SetOutPath  "C:\Python27\Scripts"
   CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME}.lnk" "C:\Python27\Scripts\editra.bat" "" "$INSTDIR\mpy_setup\install\${MUI_ICON}"
   CreateShortCut "$DESKTOP\${PRODUCT_NAME}.lnk" "C:\Python27\Scripts\editra.bat" "" "$INSTDIR\mpy_setup\install\${MUI_ICON}"
-  WriteRegStr HKCR "*\shell\OpenWithEditra" "" "Edit with Editra"
+
+  ; setup the icon for .mpy files in explorer
+  WriteRegStr HKCR ".mpy" "" "MpyEditor.Document"
+  WriteRegStr HKCR "MpyEditor.Document\DefaultIcon" ""  "${MUI_FILEICON}"
+  WriteRegStr HKCR "MpyEditor.Document\shell\open\command" "" '"C:\Python27\Scripts\editra.bat"  "%1"'
+  
+  WriteRegStr HKCR "*\shell\OpenWithEditra" "" "Edit with Editra MpyEditor"
   WriteRegStr HKCR "*\shell\OpenWithEditra\command" "" '"C:\Python27\Scripts\editra.bat"  "%1"'
 ;  WriteRegStr HKCR "*\shell\OpenWithEditra\DefaultIcon" "" "${MUI_FILEICON}"
 
@@ -337,7 +343,7 @@ Section -Post
 
   ; run the driver installer
   SetOutPath  "C:\MPY"  
-  ExecWait "C:\MPY\mpy_driver_installer.0.1.a1.exe" $0
+  ExecWait "C:\MPY\mpy_driver_installer.0.1.a2.exe" $0
   
 
 
@@ -528,6 +534,8 @@ Section "un.MPY Editor" UNMpyEditorSection
   DeleteRegKey HKCR "*\shell\OpenWithEditra"
   DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}"
   DeleteRegKey HKLM "${PRODUCT_DIR_REGKEY}"
+  DeleteRegKey HKCR "MpyEditor.Document"
+
   SetAutoClose false
 SectionEnd
 
