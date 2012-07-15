@@ -9,7 +9,7 @@ index = []
 
 
 
-splashwarn_new = PyEmbeddedImage(
+splashwarn = PyEmbeddedImage(
     "iVBORw0KGgoAAAANSUhEUgAAAeUAAAHNCAYAAAAgz2M5AAAKRWlDQ1BJQ0MgUHJvZmlsZQAA"
     "eNqdU2dUU+kWPffe9EJLiICUS29SFQggUkKLgBSRJiohCRBKiCGh2RVRwRFFRQQbyKCIA46O"
     "gIwVUSwMigrYB+Qhoo6Do4iKyvvhe6Nr1rz35s3+tdc+56zznbPPB8AIDJZIM1E1gAypQh4R"

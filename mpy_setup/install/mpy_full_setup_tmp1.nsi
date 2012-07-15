@@ -11,7 +11,7 @@
 
 ; Global Variables
 !define PRODUCT_NAME "MpyEditor"
-!define PRODUCT_VERSION "0.1.a6"
+!define PRODUCT_VERSION "0.1.a7"
 !define PRODUCT_PUBLISHER "MpyProjects"
 !define PRODUCT_WEB_SITE "http://www.mpyprojects.com"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\${PRODUCT_NAME}.exe"
@@ -26,8 +26,9 @@ SetCompressor lzma
 
 ; MUI Settings
 !define MUI_ABORTWARNING
-!define MUI_ICON "pixmaps\mpy_logo.ico"
-!define MUI_UNICON "pixmaps\mpy_logo.ico"
+!define MUI_ICON     "pixmaps\mpy_logo.ico"
+!define MUI_UNICON   "pixmaps\mpy_logo.ico"
+!define MUI_FILEICON "pixmaps\mpy_logo.ico"
 
 
 
@@ -235,7 +236,7 @@ Section "MPY Tools" MpyToolsSection
   File /r "C:\MPY\devcon"
   File /r "C:\MPY\mspgcc-20120406"
   File /r "C:\MPY\mspdebug_v019"
-  File    "C:\MPY\mpy_driver_installer.0.1.a1.exe"
+  File    "C:\MPY\mpy_driver_installer.0.1.a2.exe"
 SectionEnd
 
 
@@ -258,6 +259,14 @@ Section "MPY Editor" MpyEditorSection
   SetOverwrite try  
   SetOutPath "C:\Python27\Lib\site-packages\Editra\plugins" 
   File       "C:\Python27\Lib\site-packages\Editra\plugins\*.*"
+
+
+  ; Copy the spash screen image from the mpy install directory into Editra's src dir. 
+  ; the splash screen image is generated from the image .png into a python file using png2py wx utility
+  SetOverwrite try  
+  SetOutPath "C:\Python27\Lib\site-packages\Editra\src" 
+  File       "C:\MPY\mpy_examples\install\edimage.py"
+
 
 
   ; Add the shortcuts to the start menu and desktop

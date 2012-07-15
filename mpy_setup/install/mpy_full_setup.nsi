@@ -31,14 +31,20 @@ SetCompressor lzma
 !define MUI_FILEICON "pixmaps\mpy_logo.ico"
 
 
+#-------------------------------------
+# Variables
+
+Var PythonDir
+Var MpyDir
 
 
 
-
-
-
-
-
+#!macro ConfigureMpyDirPage type var
+#!define MUI_DIRECTORYPAGE_VARIABLE ${var}
+#!define MUI_PAGE_HEADER_SUBTEXT "Choose the folder in which to install $(^NameDA) ${type}"
+#!define MUI_DIRECTORYPAGE_TEXT_TOP "Setup will install $(^NameDA) ${type} in the following folder. To install in a different folder, click Browse and select another folder. $_CLICK"
+#!define MUI_DIRECTORYPAGE_TEXT_DESTINATION "${type} $(^DirSubText)"
+#!macroend
 
 
 
@@ -56,7 +62,7 @@ SetCompressor lzma
 !insertmacro MUI_PAGE_COMPONENTS
 
 ; Directory page (Set Where to Install)
-### !insertmacro MUI_PAGE_DIRECTORY
+!insertmacro MUI_PAGE_DIRECTORY
 
 ; Instfiles page (Do the installation)
 !insertmacro MUI_PAGE_INSTFILES
@@ -150,11 +156,17 @@ RequestExecutionLevel admin
 ;------------------------------------------
 Section /o "Python 2.7" PythonSection
 
+    StrCpy $MpyDir $INSTDIR
+
+    DetailPrint "Instdir is : $INSTDIR ,    and MpyDir is :  $MpyDir , and PythonDir is : $PythonDir"
+    MessageBox MB_OK "PYTHONSECTION  START"  
+
+
   ; identify the python instalation file
 ;  MessageBox MB_OK "pyhon27 install"  
 
   ; Remove any vestiges of python27
-  RmDir /r "C:\Python27"
+  RmDir /r "$PythonDir"
   
   
   SetOverwrite try
@@ -175,6 +187,8 @@ SectionEnd
 ;------------------------------------------
 Section /o "WXPython" WXPythonSection
 
+  StrCpy $MpyDir $INSTDIR
+
   ; identify the wxpython installation exe
 ;  MessageBox MB_OK "WXpython install"
   SetOverwrite try
@@ -192,7 +206,7 @@ Section /o "WXPython" WXPythonSection
   SetOutPath "$TEMP\pyserial-2.5"
   File /r "C:\mpy_temp\pyserial-2.5.tar\pyserial-2.5\pyserial-2.5"
   SetOutPath "$TEMP\pyserial-2.5\pyserial-2.5"
-  ExecWait '"C:\python27\python.exe" setup.py install' $0
+  ExecWait '"$PythonDir\python.exe" setup.py install' $0
   DetailPrint "Pyserial installer returned $0"
 
 
@@ -205,7 +219,9 @@ SectionEnd
 ; Section to install Editra if necessary
 ;------------------------------------------
 Section /o "Editra" EditraSection
-  
+
+  StrCpy $MpyDir $INSTDIR
+ 
   ; identify the Editra instalation script
 ;  MessageBox MB_OK "Editra install"
   SetOverwrite try
@@ -215,7 +231,7 @@ Section /o "Editra" EditraSection
 
   ; install wxpython
   SetOutPath "$TEMP\Editra\Editra-0.7.01"
-  ExecWait '"C:\python27\python.exe" setup.py install' $0
+  ExecWait '"$PythonDir\python.exe" setup.py install' $0
   DetailPrint "Editra installer returned $0"
 ;  Delete "$TEMP\wxPython2.8-win32-unicode-2.8.12.1-py27.exe"
 
@@ -231,8 +247,10 @@ Section "MPY Tools" MpyToolsSection
   SectionIn 1 2
   ; Extract the files and make shortcuts
 
+  StrCpy $MpyDir $INSTDIR
+
   SetOverwrite try
-  SetOutPath "$INSTDIR"
+  SetOutPath "$MpyDir"
   File /r "C:\MPY\devcon"
   File /r "C:\MPY\mspgcc-20120406"
   File /r "C:\MPY\mspdebug_v019"
@@ -249,7 +267,7 @@ Section "MPY Editor" MpyEditorSection
   ; Extract the files and make shortcuts
 
   SetOverwrite try
-  SetOutPath "$INSTDIR"
+  SetOutPath "$MpyDir"
   File /r "C:\MPY\mpy_editor"
   File /r "C:\MPY\mpy_uart"
   File /r "C:\MPY\mpy_setup"
@@ -257,37 +275,37 @@ Section "MPY Editor" MpyEditorSection
 
 
   SetOverwrite try  
-  SetOutPath "C:\Python27\Lib\site-packages\Editra\plugins" 
+  SetOutPath "$PythonDir\Lib\site-packages\Editra\plugins" 
   File       "C:\Python27\Lib\site-packages\Editra\plugins\*.*"
 
 
   ; Copy the spash screen image from the mpy install directory into Editra's src dir. 
   ; the splash screen image is generated from the image .png into a python file using png2py wx utility
   SetOverwrite try  
-  SetOutPath "C:\Python27\Lib\site-packages\Editra\src" 
-  File       "C:\MPY\mpy_examples\install\edimage.py"
+  SetOutPath "$PythonDir\Lib\site-packages\Editra\src" 
+  File       "C:\MPY\mpy_setup\install\edimage.py"
 
 
 
   ; Add the shortcuts to the start menu and desktop
   SetShellVarContext all
   CreateDirectory "$SMPROGRAMS\${PRODUCT_NAME}"
-  SetOutPath  "C:\Python27\Scripts"
-  CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME}.lnk" "C:\Python27\Scripts\editra.bat" "" "$INSTDIR\mpy_setup\install\${MUI_ICON}"
-  CreateShortCut "$DESKTOP\${PRODUCT_NAME}.lnk" "C:\Python27\Scripts\editra.bat" "" "$INSTDIR\mpy_setup\install\${MUI_ICON}"
+  SetOutPath  "$PythonDir\Scripts"
+  CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME}.lnk" "$PythonDir\Scripts\editra.bat" "" "$PythonDir\mpy_setup\install\${MUI_ICON}"
+  CreateShortCut "$DESKTOP\${PRODUCT_NAME}.lnk" "$PythonDir\Scripts\editra.bat" "" "$MpyDir\mpy_setup\install\${MUI_ICON}"
 
   ; setup the icon for .mpy files in explorer
   WriteRegStr HKCR ".mpy" "" "MpyEditor.Document"
-  WriteRegStr HKCR "MpyEditor.Document\DefaultIcon" ""  "${MUI_FILEICON}"
-  WriteRegStr HKCR "MpyEditor.Document\shell\open\command" "" '"C:\Python27\Scripts\editra.bat"  "%1"'
+  WriteRegStr HKCR "MpyEditor.Document\DefaultIcon" ""  "$MpyDir\mpy_setup\install\${MUI_FILEICON}"
+  WriteRegStr HKCR "MpyEditor.Document\shell\open\command" "" '"$PythonDir\Scripts\editra.bat"  "%1"'
   
   WriteRegStr HKCR "*\shell\OpenWithEditra" "" "Edit with Editra MpyEditor"
-  WriteRegStr HKCR "*\shell\OpenWithEditra\command" "" '"C:\Python27\Scripts\editra.bat"  "%1"'
+  WriteRegStr HKCR "*\shell\OpenWithEditra\command" "" '"$PythonDir\Scripts\editra.bat"  "%1"'
 ;  WriteRegStr HKCR "*\shell\OpenWithEditra\DefaultIcon" "" "${MUI_FILEICON}"
 
 
-  SetOutPath  "C:\Python27\Scripts"
-  CreateShortCut "$QUICKLAUNCH\${PRODUCT_NAME}.lnk" "C:\Python27\Scripts\editra.bat" "" "$INSTDIR\mpy_setup\install\${MUI_ICON}"
+  SetOutPath  "$MpyDir"
+  CreateShortCut "$QUICKLAUNCH\${PRODUCT_NAME}.lnk" "$PythonDir\Scripts\editra.bat" "" "$MpyDir\mpy_setup\install\${MUI_ICON}"
 
 
 
@@ -334,12 +352,12 @@ SectionEnd
 ; Make/Install Shortcut links
 ;------------------------------------------
 Section -AdditionalIcons
-  WriteIniStr "$INSTDIR\${PRODUCT_NAME}.url" "InternetShortcut" "URL" "${PRODUCT_WEB_SITE}"
+  WriteIniStr "$MpyDir\${PRODUCT_NAME}.url" "InternetShortcut" "URL" "${PRODUCT_WEB_SITE}"
   SetShellVarContext all
-  SetOutPath  "C:\Python27\Scripts"
-  CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\Website.lnk" "$INSTDIR\${PRODUCT_NAME}.url" "" "$INSTDIR\mpy_setup\install\${MUI_UNICON}"
-  CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\MpyDriverInstaller.lnk" "$INSTDIR\mpy_driver_installer.0.1.a1.exe" "" "$INSTDIR\mpy_setup\install\${MUI_UNICON}}"
-  CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\Uninstall.lnk" "$INSTDIR\uninst.exe" "" "$INSTDIR\mpy_setup\install\${MUI_UNICON}}"
+  SetOutPath  "$MpyDir\Scripts"
+  CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\Website.lnk"            "$MpyDir\${PRODUCT_NAME}.url"             "" "$MpyDir\mpy_setup\install\${MUI_UNICON}"
+  CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\MpyDriverInstaller.lnk" "$MpyDir\mpy_driver_installer.0.1.a1.exe" "" "$MpyDir\mpy_setup\install\${MUI_UNICON}"
+  CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\Uninstall.lnk"          "$MpyDir\uninst.exe"                      "" "$MpyDir\mpy_setup\install\${MUI_UNICON}"
 SectionEnd
 
 
@@ -351,20 +369,20 @@ Section -Post
 
 
   ; run the driver installer
-  SetOutPath  "C:\MPY"  
-  ExecWait "C:\MPY\mpy_driver_installer.0.1.a2.exe" $0
+  SetOutPath "$MpyDir"
+  ExecWait "$MpyDir\mpy_driver_installer.0.1.a2.exe" $0
   
 
 
   ;---- Write registry keys for uninstaller
-  WriteUninstaller "$INSTDIR\uninst.exe"
-  WriteRegStr HKLM "${PRODUCT_DIR_REGKEY}" "" "$INSTDIR\${PRODUCT_NAME}.exe"
-  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayName" "$(^Name)"
-  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "UninstallString" "$INSTDIR\uninst.exe"
-  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayIcon" "$INSTDIR\mpy_setup\install\${MUI_UNICON}"
-  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayVersion" "${PRODUCT_VERSION}"
-  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "URLInfoAbout" "${PRODUCT_WEB_SITE}"
-  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "Publisher" "${PRODUCT_PUBLISHER}"
+  WriteUninstaller "$MpyDir\uninst.exe"
+  WriteRegStr HKLM "${PRODUCT_DIR_REGKEY}" "" "$MpyDir\${PRODUCT_NAME}.exe"
+  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayName"      "$(^Name)"
+  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "UninstallString"  "$MpyDir\uninst.exe"
+  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayIcon"      "$MpyDir\mpy_setup\install\${MUI_UNICON}"
+  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayVersion"   "${PRODUCT_VERSION}"
+  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "URLInfoAbout"     "${PRODUCT_WEB_SITE}"
+  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "Publisher"        "${PRODUCT_PUBLISHER}"
 SectionEnd
 ;###############################################################################################
 ;###############################################################################################
@@ -417,35 +435,44 @@ Function .onInit
   
 
   ; PYTHON
-  ; Look for the existance of the C:\Python27 exe file, this is sufficient
-  IfFileExists "C:\Python27\python.exe" DonePython27Check Python27DoesNotExist
-  Python27DoesNotExist:
-  !insertmacro SelectSection ${PythonSection}
-  DonePython27Check:
+  ; Look for the existance of the C:\Python26 exe file, this is sufficient to determine that the python26 is installed
+  
+  StrCpy $PythonDir "?"
+  ${If} ${FileExists} "C:\Python27\python.exe" 
+      StrCpy $PythonDir "C:\Python27"
+  ${ElseIf} ${FileExists} "C:\Python26\python.exe"
+      StrCpy $PythonDir "C:\Python26"
+  ${EndIf}
+  
+  ${If} $PythonDir == "?"
+      StrCpy $PythonDir "C:\Python27"
+      !insertmacro SelectSection ${PythonSection}
+  ${EndIf}
+  
 
   ; WXPYTHON
-  IfFileExists "C:\Python27\Lib\site-packages\wx-2.8-msw-unicode" DoneWXPythonCheck WXPython28DoesNotExist
+  IfFileExists "$PythonDir\Lib\site-packages\wx-2.8-msw-unicode" DoneWXPythonCheck WXPython28DoesNotExist
   WXPython28DoesNotExist:
-  IfFileExists "C:\Python27\Lib\site-packages\wx-2.9-msw-unicode" DoneWXPythonCheck WXPython29DoesNotExist
+  IfFileExists "$PythonDir\Lib\site-packages\wx-2.9-msw-unicode" DoneWXPythonCheck WXPython29DoesNotExist
   WXPython29DoesNotExist:
   !insertmacro SelectSection ${WXPythonSection}
   DoneWXPythonCheck:
 
   ; EDITRA
-  IfFileExists "C:\Python27\Lib\site-packages\Editra" DoneEditraCheck EditraDoesNotExist
+  IfFileExists "$PythonDir\Lib\site-packages\Editra" DoneEditraCheck EditraDoesNotExist
   EditraDoesNotExist:
   !insertmacro SelectSection ${EditraSection}
   DoneEditraCheck:
   
   ; MPYTOOLS
-  IfFileExists "C:\MPY\devcon" DoneMpyToolsCheck MpyToolsDoesNotExist
+  IfFileExists "$MpyDir\devcon" DoneMpyToolsCheck MpyToolsDoesNotExist
   MpyToolsDoesNotExist:
   !insertmacro SelectSection ${MpyToolsSection}
   DoneMpyToolsCheck:
 
 
   ; MPY_EDITOR
-  IfFileExists "C:\MPY\mpy_editor" DoneMpyEditorCheck MpyEditorDoesNotExist
+  IfFileExists "$MpyDir\mpy_editor" DoneMpyEditorCheck MpyEditorDoesNotExist
   MpyEditorDoesNotExist:
   !insertmacro SelectSection ${MpyEditorSection}
   DoneMpyEditorCheck:
@@ -463,7 +490,7 @@ FunctionEnd
 ; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 ; Called if Run Editra is checked on the last page of installer
 Function LaunchMpyEditor
-  Exec "C:\Python27\Scripts\editra.bat"
+  Exec "$PythonDir\Scripts\editra.bat"
 FunctionEnd
 
 
@@ -483,7 +510,7 @@ FunctionEnd
   !insertmacro MUI_DESCRIPTION_TEXT ${MpyEditorSettingsSection} "Mpy Load Default User Settings"
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
-ComponentText "Python will be installed in directory C:\Python27$\nMpy components will be installed in directory C:\MPY" 
+ComponentText "Python will be installed in directory $PythonDir$\nMpy components will be installed in directory C:\MPY" 
 
 
 ;------------------------------- End Installer --------------------------------
@@ -515,9 +542,9 @@ SectionEnd
 
 Section /o "un.MPY Tools" UNMpyToolsSection
   SectionIn  1
-  RmDir /r "$INSTDIR\devcon"
-  RmDir /r "$INSTDIR\mspdebug_v019"
-  RmDir /r "$INSTDIR\mspgcc-20120406"
+  RmDir /r "$MpyDir\devcon"
+  RmDir /r "$MpyDir\mspdebug_v019"
+  RmDir /r "$MpyDir\mspgcc-20120406"
 SectionEnd
 
 
@@ -525,10 +552,10 @@ SectionEnd
 Section "un.MPY Editor" UNMpyEditorSection
   ; Ensure shortcuts are removed from user directory as well
   
-  RmDir /r "$INSTDIR\mpy_editor"
-  RmDir /r "$INSTDIR\mpy_uart"
-  RmDir /r "$INSTDIR\mpy_examples"
-  RmDir /r "$INSTDIR\mpy_setup"
+  RmDir /r "$MpyDir\mpy_editor"
+  RmDir /r "$MpyDir\mpy_uart"
+  RmDir /r "$MpyDir\mpy_examples"
+  RmDir /r "$MpyDir\mpy_setup"
 
   
   RmDir /r "$SMPROGRAMS\${PRODUCT_NAME}"
