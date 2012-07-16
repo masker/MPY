@@ -22,8 +22,11 @@ def runcmd( command_line, log=False ):
 
         
         
-python_exe   = r'C:\Python27\python.exe'
-mpy_dir      = r'C:\MPY'
+python_exe   = r'C:\Python%s%s\python.exe' % ( sys.version_info.major, sys.version_info.minor )
+idx = sys.argv[0].index(  r'\mpy_editor\mpy\prog.py' )
+mpy_dir = sys.argv[0][:idx]
+
+
 mspgcc_ver   = r'mspgcc-20120406'
 mspdebug_ver = r'mspdebug_v019'
 

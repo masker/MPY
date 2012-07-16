@@ -193,8 +193,12 @@ def devcon( devcmd, confirm_str, interface,  max_loops=0, log=False ):
     if log : print '\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
     if log : print '@@(devcon %s command for %s)' % (devcmd, interface)
 
-    python_exe  = r'C:\Python27\python.exe'
-    mpy_dir     = r'C:\MPY'
+#     python_exe  = r'C:\Python27\python.exe'
+#     mpy_dir     = r'C:\MPY'
+
+    python_exe   = r'C:\Python%s%s\python.exe' % ( sys.version_info.major, sys.version_info.minor )
+    idx = sys.argv[0].index(  r'\mpy_uart\mpyuart' )
+    mpy_dir = sys.argv[0][:idx]
 
 
     # run the devcon command

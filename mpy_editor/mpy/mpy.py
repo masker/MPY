@@ -17,6 +17,7 @@ __revision__ = "$Revision: 67746 $"
 import os
 import wx
 import wx.stc
+import sys
 
 # Local Imports
 import handlers
@@ -92,8 +93,14 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         self._state = dict(file='', lang=0, cfile='', clang=0, last='', 
                            lastlang=0, prelang=0, largs='', lcmd='')
 
-        self.python_exe  = r'C:\Python27\python.exe'
-        self.mpy_dir     = r'C:\MPY'
+#         self.python_exe  = r'C:\Python27\python.exe'
+#         self.mpy_dir     = r'C:\MPY'
+
+        self.python_exe   = r'C:\Python%s%s\python.exe' % ( sys.version_info.major, sys.version_info.minor )
+        tstr = sys.modules[__name__].__file__
+        idx = tstr.index(  r'\mpy_editor\mpy' )
+        self.mpy_dir = tstr[:idx]
+
 
         # Setup
         self.__DoLayout()

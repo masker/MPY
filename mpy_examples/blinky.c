@@ -2,7 +2,9 @@
       
 #include <msp430.h>
 #include "msp430g2231.h"
-#include "C:\MPY\mpy_editor\mpy\mpy_functions.c"
+#include "c:\mpy\mpy_editor\mpy\mpy_functions.c"
+
+
 
                         
 void main (void) { 
@@ -23,9 +25,9 @@ void main (void) {
 
 
       
-      P1DIR |= BIT0 ; P1SEL &= ~ BIT0 ; P1REN &= ~ BIT0 ; 
+      if ( 16 < 32 ) { P1DIR |= ( 1 << ( 16 & 15 ) ) ; P1SEL &= ~ ( 1 << ( 16 & 15 ) ) ; P1REN &= ~ ( 1 << ( 16 & 15 ) ) ; } else { P2DIR |= ( 1 << ( 16 & 15 ) ) ; P2SEL &= ~ ( 1 << ( 16 & 15 ) ) ; P2REN &= ~ ( 1 << ( 16 & 15 ) ) ; } ; 
       while ( 1 ) { 
-          if ( 1 ) { P1OUT |= BIT0 ; } else { P1OUT &= ~ BIT0 ; } ; 
+          if ( 1 ) { if ( 16 < 32 ) { P1OUT |= ( 1 << ( 16 & 15 ) ) ; } else { P2OUT |= ( 1 << ( 16 & 15 ) ) ; } ; } else { if ( 16 < 32 ) { P1OUT &= ~ ( 1 << ( 16 & 15 ) ) ; } else { P2OUT &= ~ ( 1 << ( 16 & 15 ) ) ; } ; } ; 
           wait ( 100 ) ; 
-          if ( 0 ) { P1OUT |= BIT0 ; } else { P1OUT &= ~ BIT0 ; } ; 
+          if ( 0 ) { if ( 16 < 32 ) { P1OUT |= ( 1 << ( 16 & 15 ) ) ; } else { P2OUT |= ( 1 << ( 16 & 15 ) ) ; } ; } else { if ( 16 < 32 ) { P1OUT &= ~ ( 1 << ( 16 & 15 ) ) ; } else { P2OUT &= ~ ( 1 << ( 16 & 15 ) ) ; } ; } ; 
           wait ( 100 ) ; } } 

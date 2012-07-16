@@ -158,8 +158,8 @@ Section /o "Python 2.7" PythonSection
 
     StrCpy $MpyDir $INSTDIR
 
-    DetailPrint "Instdir is : $INSTDIR ,    and MpyDir is :  $MpyDir , and PythonDir is : $PythonDir"
-    MessageBox MB_OK "PYTHONSECTION  START"  
+#    DetailPrint "Instdir is : $INSTDIR ,    and MpyDir is :  $MpyDir , and PythonDir is : $PythonDir"
+#    MessageBox MB_OK "PYTHONSECTION  START"  
 
 
   ; identify the python instalation file
@@ -187,9 +187,25 @@ SectionEnd
 ;------------------------------------------
 Section /o "WXPython" WXPythonSection
 
+
+
+
   StrCpy $MpyDir $INSTDIR
 
-  ; identify the wxpython installation exe
+;;;;; install pywin32
+  SetOverwrite try
+  SetOutPath "$TEMP"
+  File  "C:\mpy_temp\pywin32-217.win32-py2.7.exe"
+#  nsExec::ExecToLog "$TEMP\pywin32-217.win32-py2.7.exe"
+#  ExecDos::exec /DETAILED "$TEMP\pywin32-217.win32-py2.7.exe"
+  ExecWait '"$TEMP\pywin32-217.win32-py2.7.exe"  /SILENT' $0
+  DetailPrint "pywin32 installer returned $0"
+;  Delete "$TEMP\pywin32-217.win32-py2.7.exe"
+;  MessageBox MB_OK "pywin32 install done"
+
+
+
+;;;; identify the wxpython installation exe
 ;  MessageBox MB_OK "WXpython install"
   SetOverwrite try
   SetOutPath "$TEMP"
@@ -200,7 +216,7 @@ Section /o "WXPython" WXPythonSection
   DetailPrint "WXpython installer returned $0"
 ;  Delete "$TEMP\wxPython2.8-win32-unicode-2.8.12.1-py27.exe"
 
-  ; install pyserial
+;;;; install pyserial
 ;  MessageBox MB_OK "Pyserial install"
   SetOverwrite try
   SetOutPath "$TEMP\pyserial-2.5"
@@ -208,6 +224,8 @@ Section /o "WXPython" WXPythonSection
   SetOutPath "$TEMP\pyserial-2.5\pyserial-2.5"
   ExecWait '"$PythonDir\python.exe" setup.py install' $0
   DetailPrint "Pyserial installer returned $0"
+
+
 
 
 
@@ -313,15 +331,6 @@ Section "MPY Editor" MpyEditorSection
   System::Call 'Shell32::SHChangeNotify(i ${SHCNE_ASSOCCHANGED}, i ${SHCNF_FLUSH}, i 0, i 0)'
 
 
-  ; install pywin32
-  SetOverwrite try
-  SetOutPath "$TEMP"
-  File  "C:\mpy_temp\pywin32-217.win32-py2.7.exe"
-  ExecWait '"$TEMP\pywin32-217.win32-py2.7.exe"  /SILENT' $0
-  DetailPrint "pywin32 installer returned $0"
-;  Delete "$TEMP\pywin32-217.win32-py2.7.exe"
-;  MessageBox MB_OK "pywin32 install done"
-
 
   
 SectionEnd
@@ -352,9 +361,9 @@ SectionEnd
 ; Make/Install Shortcut links
 ;------------------------------------------
 Section -AdditionalIcons
+  SetOutPath  "$MpyDir"
   WriteIniStr "$MpyDir\${PRODUCT_NAME}.url" "InternetShortcut" "URL" "${PRODUCT_WEB_SITE}"
   SetShellVarContext all
-  SetOutPath  "$MpyDir\Scripts"
   CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\Website.lnk"            "$MpyDir\${PRODUCT_NAME}.url"             "" "$MpyDir\mpy_setup\install\${MUI_UNICON}"
   CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\MpyDriverInstaller.lnk" "$MpyDir\mpy_driver_installer.0.1.a1.exe" "" "$MpyDir\mpy_setup\install\${MUI_UNICON}"
   CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\Uninstall.lnk"          "$MpyDir\uninst.exe"                      "" "$MpyDir\mpy_setup\install\${MUI_UNICON}"
@@ -422,7 +431,7 @@ Function .onInit
   ; Run the uninstaller
   ClearErrors
   ExecWait '$R0 _?=$INSTDIR' ; Do not copy the uninstaller to a temp file
-#  Abort
+  Abort
 
   done:
   
@@ -532,19 +541,26 @@ ComponentText "Python will be installed in directory $PythonDir$\nMpy components
 ;FunctionEnd
 
 
-
+# Only remove python27 stuff, this is the only version of python that this instalation installed
 Section /o "un.Python Modules" UNPythonModulesSection
   SectionIn 1
+
+
+  ExecWait '"C:\Python27\Lib\site-packages\wx-2.8-msw-unicode\unins000.exe"  /SILENT' $0 
   RmDir /r "C:\Python27"
+
+  DeleteRegKey HKLM "*\wxPython2.8-unicode-py27_is1"
+  DeleteRegKey HKLM "*\pywin32-py2.7"
+    
 SectionEnd
 
 
 
 Section /o "un.MPY Tools" UNMpyToolsSection
   SectionIn  1
-  RmDir /r "$MpyDir\devcon"
-  RmDir /r "$MpyDir\mspdebug_v019"
-  RmDir /r "$MpyDir\mspgcc-20120406"
+  RmDir /r "$INSTDIR\devcon"
+  RmDir /r "$INSTDIR\mspdebug_v019"
+  RmDir /r "$INSTDIR\mspgcc-20120406"
 SectionEnd
 
 
@@ -552,10 +568,15 @@ SectionEnd
 Section "un.MPY Editor" UNMpyEditorSection
   ; Ensure shortcuts are removed from user directory as well
   
-  RmDir /r "$MpyDir\mpy_editor"
-  RmDir /r "$MpyDir\mpy_uart"
-  RmDir /r "$MpyDir\mpy_examples"
-  RmDir /r "$MpyDir\mpy_setup"
+  RmDir /r "$INSTDIR\mpy_editor"
+  RmDir /r "$INSTDIR\mpy_uart"
+  RmDir /r "$INSTDIR\mpy_examples"
+  RmDir /r "$INSTDIR\mpy_setup"
+  Delete  "$INSTDIR/mpy_driver_installer.0.1.a2.exe"  
+  Delete  "$INSTDIR/Mpy*.*"  
+  
+#  RmDir "$INSTDIR"   ## Too dangerous !!  
+  
 
   
   RmDir /r "$SMPROGRAMS\${PRODUCT_NAME}"
@@ -571,6 +592,7 @@ Section "un.MPY Editor" UNMpyEditorSection
   DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}"
   DeleteRegKey HKLM "${PRODUCT_DIR_REGKEY}"
   DeleteRegKey HKCR "MpyEditor.Document"
+  DeleteRegKey HKCR ".mpy"
 
   SetAutoClose false
 SectionEnd
@@ -593,7 +615,7 @@ SectionEnd
   !insertmacro MUI_DESCRIPTION_TEXT ${UNUserSection}          "Delete User settings"
   !insertmacro MUI_DESCRIPTION_TEXT ${UNMpyEditorSection}     "Mpy Editor"
   !insertmacro MUI_DESCRIPTION_TEXT ${UNMpyToolsSection}      "Tools to program the Launchpad MSP430 (MSPGCC and MSPDEBUG)"
-  !insertmacro MUI_DESCRIPTION_TEXT ${UNPythonModulesSection} "Python Core Language"
+  !insertmacro MUI_DESCRIPTION_TEXT ${UNPythonModulesSection} "Python Core Language, PySerial, Pywin32, WxPython, Editra"
 !insertmacro MUI_UNFUNCTION_DESCRIPTION_END
 
 ;------------------------------ End Uninstaller -------------------------------

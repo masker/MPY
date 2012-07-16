@@ -461,6 +461,9 @@ class mpy2c( object ):
             #include "msp430g2231.h"
         '''
 
+
+        self.micro_name = re.sub( 'm430', 'msp430', self.micro_name.lower() )
+
         opn = []
         replace_state = None
         for t in self.op:
@@ -480,7 +483,7 @@ class mpy2c( object ):
 
 
                 self.add_element_opn( opn, t,  '\n#include <msp430.h>\n' ) 
-                self.add_element_opn( opn, t,  '#include "%s.h"\n' % micro_name )
+                self.add_element_opn( opn, t,  '#include "%s.h"\n' % self.micro_name )
                 
                 file = os.path.join( script_dir, 'mpy_functions.c' ) 
                 self.add_element_opn( opn, t,  '#include "%s"\n' % file ) 
@@ -489,7 +492,7 @@ class mpy2c( object ):
 
 
 
-                print '%s  %s' % ( '@@MMCU@@:', micro_name )
+                print '%s  %s' % ( '@@MMCU@@:', self.micro_name )
 
 
         if replace_state != 'done':
