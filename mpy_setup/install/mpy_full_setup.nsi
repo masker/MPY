@@ -24,6 +24,17 @@ SetCompressor lzma
 !include "MUI2.nsh"
 !include Sections.nsh
 
+!include StrRep.nsh
+!include ReplaceInFile.nsh
+
+
+!macro RepInFile SOURCE_FILE SEARCH_TEXT REPLACEMENT
+  ${If} "${SEARCH_TEXT}" != "${REPLACEMENT}"
+      !insertmacro _ReplaceInFile  "${SOURCE_FILE}" "${SEARCH_TEXT}\" "${REPLACEMENT}\"
+  ${EndIf}
+!macroend
+
+
 ; MUI Settings
 !define MUI_ABORTWARNING
 !define MUI_ICON     "pixmaps\mpy_logo.ico"
@@ -39,12 +50,6 @@ Var MpyDir
 
 
 
-#!macro ConfigureMpyDirPage type var
-#!define MUI_DIRECTORYPAGE_VARIABLE ${var}
-#!define MUI_PAGE_HEADER_SUBTEXT "Choose the folder in which to install $(^NameDA) ${type}"
-#!define MUI_DIRECTORYPAGE_TEXT_TOP "Setup will install $(^NameDA) ${type} in the following folder. To install in a different folder, click Browse and select another folder. $_CLICK"
-#!define MUI_DIRECTORYPAGE_TEXT_DESTINATION "${type} $(^DirSubText)"
-#!macroend
 
 
 
@@ -58,11 +63,12 @@ Var MpyDir
 ; License page (Read the Licence)
 !insertmacro MUI_PAGE_LICENSE "COPYING"
 
+; Directory page (Set Where to Install)
+!insertmacro MUI_PAGE_DIRECTORY
+
 ; Components Page (Select what parts to install)
 !insertmacro MUI_PAGE_COMPONENTS
 
-; Directory page (Set Where to Install)
-!insertmacro MUI_PAGE_DIRECTORY
 
 ; Instfiles page (Do the installation)
 !insertmacro MUI_PAGE_INSTFILES
@@ -193,17 +199,25 @@ Section /o "WXPython" WXPythonSection
   StrCpy $MpyDir $INSTDIR
 
 ;;;;; install pywin32
+#  SetOverwrite try
+#  SetOutPath "$TEMP"
+#  File  "C:\mpy_temp\pywin32-217.win32-py2.7.exe"
+##  nsExec::ExecToLog "$TEMP\pywin32-217.win32-py2.7.exe"
+##  ExecDos::exec /DETAILED "$TEMP\pywin32-217.win32-py2.7.exe"
+#  ExecWait '"$TEMP\pywin32-217.win32-py2.7.exe"  /SILENT' $0
+#  DetailPrint "pywin32 installer returned $0"
+
+;;;;; install pywin32   postinstall silent method
   SetOverwrite try
-  SetOutPath "$TEMP"
-  File  "C:\mpy_temp\pywin32-217.win32-py2.7.exe"
-#  nsExec::ExecToLog "$TEMP\pywin32-217.win32-py2.7.exe"
-#  ExecDos::exec /DETAILED "$TEMP\pywin32-217.win32-py2.7.exe"
-  ExecWait '"$TEMP\pywin32-217.win32-py2.7.exe"  /SILENT' $0
+  SetOutPath "$PythonDir\Lib\site-packages"
+  File /r "C:\mpy_temp\pywin32-217_postinstall\SCRIPTS\*"
+  File /r "C:\mpy_temp\pywin32-217_postinstall\PLATLIB\*"
+;  MessageBox MB_OK "pywin32 install start"
+  ExecWait '"$PythonDir\python.exe" pywin32_postinstall.py -install' $0
   DetailPrint "pywin32 installer returned $0"
-;  Delete "$TEMP\pywin32-217.win32-py2.7.exe"
-;  MessageBox MB_OK "pywin32 install done"
-
-
+;  MessageBox MB_OK "pywin32 install finished"
+  Delete "pywin32_postinstall.py"
+  
 
 ;;;; identify the wxpython installation exe
 ;  MessageBox MB_OK "WXpython install"
@@ -215,6 +229,7 @@ Section /o "WXPython" WXPythonSection
   ExecWait '"$TEMP\wxPython2.8-win32-unicode-2.8.12.1-py27.exe"  /SILENT' $0
   DetailPrint "WXpython installer returned $0"
 ;  Delete "$TEMP\wxPython2.8-win32-unicode-2.8.12.1-py27.exe"
+;  MessageBox MB_OK "WXpython install"
 
 ;;;; install pyserial
 ;  MessageBox MB_OK "Pyserial install"
@@ -224,6 +239,7 @@ Section /o "WXPython" WXPythonSection
   SetOutPath "$TEMP\pyserial-2.5\pyserial-2.5"
   ExecWait '"$PythonDir\python.exe" setup.py install' $0
   DetailPrint "Pyserial installer returned $0"
+;  MessageBox MB_OK "pyserial install"
 
 
 
@@ -252,6 +268,7 @@ Section /o "Editra" EditraSection
   ExecWait '"$PythonDir\python.exe" setup.py install' $0
   DetailPrint "Editra installer returned $0"
 ;  Delete "$TEMP\wxPython2.8-win32-unicode-2.8.12.1-py27.exe"
+;  MessageBox MB_OK "editra install"
 
 SectionEnd
 
@@ -296,13 +313,17 @@ Section "MPY Editor" MpyEditorSection
   SetOutPath "$PythonDir\Lib\site-packages\Editra\plugins" 
   File       "C:\Python27\Lib\site-packages\Editra\plugins\*.*"
 
+  # re define the link to point to the actual MPY instalation directory
+  !insertmacro RepInFile  "$PythonDir\Lib\site-packages\Editra\plugins\mpy.egg-link" "C:\MPY" "$INSTDIR"
+  !insertmacro RepInFile  "$PythonDir\Lib\site-packages\Editra\plugins\mpyuart.egg-link" "C:\MPY" "$INSTDIR"
+  
+
 
   ; Copy the spash screen image from the mpy install directory into Editra's src dir. 
   ; the splash screen image is generated from the image .png into a python file using png2py wx utility
   SetOverwrite try  
   SetOutPath "$PythonDir\Lib\site-packages\Editra\src" 
   File       "C:\MPY\mpy_setup\install\edimage.py"
-
 
 
   ; Add the shortcuts to the start menu and desktop
@@ -352,6 +373,13 @@ Section "MPY User Settings" MpyEditorSettingsSection
   SetOutPath "$LOCALAPPDATA\Editra\"
   File /r "C:\Documents and Settings\mike asker\Application Data\Editra\*.*"
 
+#  # re define the link to point to the actual MPY instalation directory
+#  !insertmacro RepInFile       "$APPDATA\Editra\sessions\default.session"   "C:\MPY" "$INSTDIR"
+#  !insertmacro RepInFile  "$LOCALAPPDATA\Editra\sessions\default.session"   "C:\MPY" "$INSTDIR"
+#  !insertmacro RepInFile       "$APPDATA\Editra\sessions\__default.session" "C:\MPY" "$INSTDIR"
+#  !insertmacro RepInFile  "$LOCALAPPDATA\Editra\sessions\__default.session" "C:\MPY" "$INSTDIR"
+
+
 SectionEnd
 
 
@@ -364,9 +392,10 @@ Section -AdditionalIcons
   SetOutPath  "$MpyDir"
   WriteIniStr "$MpyDir\${PRODUCT_NAME}.url" "InternetShortcut" "URL" "${PRODUCT_WEB_SITE}"
   SetShellVarContext all
-  CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\Website.lnk"            "$MpyDir\${PRODUCT_NAME}.url"             "" "$MpyDir\mpy_setup\install\${MUI_UNICON}"
-  CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\MpyDriverInstaller.lnk" "$MpyDir\mpy_driver_installer.0.1.a1.exe" "" "$MpyDir\mpy_setup\install\${MUI_UNICON}"
-  CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\Uninstall.lnk"          "$MpyDir\uninst.exe"                      "" "$MpyDir\mpy_setup\install\${MUI_UNICON}"
+  CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME}.lnk"    "$PythonDir\Scripts\editra.bat"           "" "$MpyDir\mpy_setup\install\${MUI_ICON}"
+  CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\Website.lnk"            "$MpyDir\${PRODUCT_NAME}.url"             "" "$MpyDir\mpy_setup\install\${MUI_ICON}"
+  CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\MpyDriverInstaller.lnk" "$MpyDir\mpy_driver_installer.0.1.a1.exe" "" "$MpyDir\mpy_setup\install\${MUI_ICON}"
+  CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\Uninstall.lnk"          "$MpyDir\uninst.exe"                      "" "$MpyDir\mpy_setup\install\${MUI_ICON}"
 SectionEnd
 
 
@@ -519,7 +548,7 @@ FunctionEnd
   !insertmacro MUI_DESCRIPTION_TEXT ${MpyEditorSettingsSection} "Mpy Load Default User Settings"
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
-ComponentText "Python will be installed in directory $PythonDir$\nMpy components will be installed in directory C:\MPY" 
+ComponentText "Python will be installed in directory $PythonDir$\nMpy components will be installed in directory $INSTDIR" 
 
 
 ;------------------------------- End Installer --------------------------------

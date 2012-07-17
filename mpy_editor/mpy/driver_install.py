@@ -76,7 +76,7 @@ def run_mpy_driver_installer():
     '''runs the NSIS driver installer script'''
     
     # run the devcon command
-    cmd      = r'%s\mpy_driver_installer.0.1.a1.exe' % mpy_dir
+    cmd      = r'%s\mpy_driver_installer.0.1.a2.exe' % mpy_dir
     cmd_opts = r''
     command_line = '"%s" %s' % (cmd,cmd_opts)
     op = runcmd( command_line , log=False )

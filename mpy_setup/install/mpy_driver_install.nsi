@@ -106,7 +106,7 @@ ReserveFile '${NSISDIR}\Plugins\InstallOptions.dll'
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
 OutFile "C:\MPY\mpy_driver_installer.${PRODUCT_VERSION}.exe"
 ;InstallDir "$PROGRAMFILES\${PRODUCT_NAME}"
-InstallDir "C:\MPY"
+InstallDir "$EXEDIR"
 InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show
 ShowUnInstDetails show
@@ -136,9 +136,12 @@ RequestExecutionLevel admin
 
 Section "Plug-in Launchpad" PlugInSection
 
+#  System::Call "kernel32::GetCurrentDirectory(i ${NSIS_MAX_STRLEN}, t .r0)"
+#  StrCpy "$0" $INSTDIR
+#  StrCpy $EXEDIR $INSTDIR
 
   MessageBox MB_OKCANCEL|MB_ICONINFORMATION  \
-  "Plug in the Launchpad board now. then press OK,$\nor press Cancel to skip the Driver Installation$\n$\n(Note you should Cancel the Windows Install New Driver Wizard if it pops up, the Mpy Driver Installer is going to do the installation instead)" \
+  "Installation Directory: $INSTDIR $OUTDIR $EXEDIR$\n$\nPlug in the Launchpad board now. then press OK,$\nor press Cancel to skip the Driver Installation$\n$\n(Note you should Cancel the Windows Install New Driver Wizard if it pops up, the Mpy Driver Installer is going to do the installation instead)" \
   IDOK done
   Abort
   
@@ -171,7 +174,7 @@ Section "LibUsb MspDebug" LibUsbSection
   ${Else}
      SetOutPath "$INSTDIR\mpy_setup\drivers\libusb-win32-bin-1.2.5.0\bin\x86"
   ${EndIf}
-  ExecWait 'install-filter.exe install --inf="C:\MPY\mpy_setup\drivers\libusb-win32-bin-1.2.5.0\USB_Human_Interface_Device_(Interface_1).inf"' $0
+  ExecWait 'install-filter.exe install --inf="$INSTDIR\mpy_setup\drivers\libusb-win32-bin-1.2.5.0\USB_Human_Interface_Device_(Interface_1).inf"' $0
   DetailPrint "LibUsb install-filter.exe returned $0"
 
   StrCmp $0 0 continueInstall
