@@ -64,6 +64,8 @@ Var MpyDir
 !insertmacro MUI_PAGE_LICENSE "COPYING"
 
 ; Directory page (Set Where to Install)
+
+DirText "Setup will now install the MpyEditor into the directory shown below.$\n$\nNote: This directory must not contain spaces$\n$\nClick Next to Continue"
 !insertmacro MUI_PAGE_DIRECTORY
 
 ; Components Page (Select what parts to install)
@@ -260,11 +262,11 @@ Section /o "Editra" EditraSection
 ;  MessageBox MB_OK "Editra install"
   SetOverwrite try
   SetOutPath "$TEMP\Editra"
-  File  /r "C:\mpy_temp\Editra-0.7.01.tar\dist\Editra-0.7.01\Editra-0.7.01"
+  File  /r "C:\mpy_temp\Editra-0.7.08.tar\dist\Editra-0.7.08\Editra-0.7.08"
 
 
   ; install wxpython
-  SetOutPath "$TEMP\Editra\Editra-0.7.01"
+  SetOutPath "$TEMP\Editra\Editra-0.7.08"
   ExecWait '"$PythonDir\python.exe" setup.py install' $0
   DetailPrint "Editra installer returned $0"
 ;  Delete "$TEMP\wxPython2.8-win32-unicode-2.8.12.1-py27.exe"

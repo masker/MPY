@@ -532,12 +532,15 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
             self._buffer.Clear()
 
         
-        cmd = r'%s -u %s\mpy_editor\mpy\driver_install.py'  % (self.python_exe, self.mpy_dir)           
+        cmd = r'%s -u %s\mpy_editor\mpy\driver_install.py'  % (self.python_exe, self.mpy_dir)       
+        cmd = r'%s\mpy_driver_installer.0.1.a2.exe'  % (self.mpy_dir)       
+            
         util.Log("[mpy][RunDrvInstScript] Starting Script %s" % cmd)
         self.State['lcmd'] = cmd
         args = ''
         self.State['largs'] = args
-        self._buffer.AppendUpdate( '[mpy] dir=%s cmd=%s\n' % (os.getcwd(), cmd) )
+#        self._buffer.AppendUpdate( '[mpy] dir=%s cmd=%s\n' % (os.getcwd(), cmd) )
+        self._buffer.AppendUpdate( "[mpy] Check for 'User Account Control' in background window\n[mpy] Click Yes to allow mpy_driver_installer.exe to make changes to this computer\n" )
         # Must give it a python type file for some reason!
         self.Run(self.State['file'], cmd, args, 32161)   
 
