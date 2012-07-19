@@ -95,7 +95,7 @@ class MpyUartWindow(ed_basewin.EdBaseCtrlBox):
 #         self.python_exe  = r'C:\Python27\python.exe'
 #         self.mpy_dir     = r'C:\MPY'
 
-        self.python_exe   = r'C:\Python%s%s\python.exe' % ( sys.version_info.major, sys.version_info.minor )
+        self.python_exe   = r'C:\Python%s%s\python.exe' % ( sys.version.split('.')[0], sys.version.split('.')[1] )
         tstr = sys.modules[__name__].__file__
         idx = tstr.index(  r'\mpy_uart\mpyuart' )
         self.mpy_dir = tstr[:idx]

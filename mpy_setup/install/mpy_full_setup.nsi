@@ -47,6 +47,7 @@ SetCompressor lzma
 
 Var PythonDir
 Var MpyDir
+Var MpyUserSettings
 
 
 
@@ -69,6 +70,7 @@ DirText "Setup will now install the MpyEditor into the directory shown below.$\n
 !insertmacro MUI_PAGE_DIRECTORY
 
 ; Components Page (Select what parts to install)
+!define MUI_PAGE_CUSTOMFUNCTION_PRE detect_components_already_installed
 !insertmacro MUI_PAGE_COMPONENTS
 
 
@@ -164,7 +166,7 @@ RequestExecutionLevel admin
 ;------------------------------------------
 Section /o "Python 2.7" PythonSection
 
-    StrCpy $MpyDir $INSTDIR
+    StrCpy "$MpyDir" "$INSTDIR"
 
 #    DetailPrint "Instdir is : $INSTDIR ,    and MpyDir is :  $MpyDir , and PythonDir is : $PythonDir"
 #    MessageBox MB_OK "PYTHONSECTION  START"  
@@ -198,7 +200,7 @@ Section /o "WXPython" WXPythonSection
 
 
 
-  StrCpy $MpyDir $INSTDIR
+  StrCpy "$MpyDir" "$INSTDIR"
 
 ;;;;; install pywin32
 #  SetOverwrite try
@@ -256,7 +258,7 @@ SectionEnd
 ;------------------------------------------
 Section /o "Editra" EditraSection
 
-  StrCpy $MpyDir $INSTDIR
+  StrCpy "$MpyDir" "$INSTDIR"
  
   ; identify the Editra instalation script
 ;  MessageBox MB_OK "Editra install"
@@ -280,18 +282,17 @@ SectionEnd
 ; SECTION 4
 ; Install MPY tools
 ;------------------------------------------
-Section "MPY Tools" MpyToolsSection
+Section /o "MPY Tools" MpyToolsSection
   SectionIn 1 2
   ; Extract the files and make shortcuts
 
-  StrCpy $MpyDir $INSTDIR
+  StrCpy "$MpyDir" "$INSTDIR"
 
   SetOverwrite try
   SetOutPath "$MpyDir"
   File /r "C:\MPY\devcon"
   File /r "C:\MPY\mspgcc-20120406"
   File /r "C:\MPY\mspdebug_v019"
-  File    "C:\MPY\mpy_driver_installer.0.1.a2.exe"
 SectionEnd
 
 
@@ -299,7 +300,7 @@ SectionEnd
 ; SECTION 4
 ; Install MPY editor
 ;------------------------------------------
-Section "MPY Editor" MpyEditorSection
+Section /o "MPY Editor" MpyEditorSection
   SectionIn 1 2
   ; Extract the files and make shortcuts
 
@@ -309,6 +310,7 @@ Section "MPY Editor" MpyEditorSection
   File /r "C:\MPY\mpy_uart"
   File /r "C:\MPY\mpy_setup"
   File /r "C:\MPY\mpy_examples"
+  File    "C:\MPY\mpy_driver_installer.0.1.a2.exe"
 
 
   SetOverwrite try  
@@ -363,7 +365,7 @@ SectionEnd
 ; SECTION 4
 ; Install MPY Default User Settings
 ;------------------------------------------
-Section "MPY User Settings" MpyEditorSettingsSection
+Section /o "MPY User Settings" MpyEditorSettingsSection
   SectionIn 1
   SetOverwrite try
   
@@ -466,7 +468,11 @@ Function .onInit
 
   done:
   
+FunctionEnd
 
+; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  
+Function detect_components_already_installed
 
   
   ; Check which components are already present
@@ -482,6 +488,8 @@ Function .onInit
       StrCpy $PythonDir "C:\Python27"
   ${ElseIf} ${FileExists} "C:\Python26\python.exe"
       StrCpy $PythonDir "C:\Python26"
+  ${ElseIf} ${FileExists} "C:\Python25\python.exe"
+      StrCpy $PythonDir "C:\Python25"
   ${EndIf}
   
   ${If} $PythonDir == "?"
@@ -504,6 +512,8 @@ Function .onInit
   !insertmacro SelectSection ${EditraSection}
   DoneEditraCheck:
   
+  StrCpy "$MpyDir" "$INSTDIR"
+  
   ; MPYTOOLS
   IfFileExists "$MpyDir\devcon" DoneMpyToolsCheck MpyToolsDoesNotExist
   MpyToolsDoesNotExist:
@@ -516,7 +526,23 @@ Function .onInit
   MpyEditorDoesNotExist:
   !insertmacro SelectSection ${MpyEditorSection}
   DoneMpyEditorCheck:
-  
+
+
+  ; MPY_USER_SETTINGS
+#  StrCpy $MpyUserSettings "not_present"
+#  ${If} ${FileExists}     "$APPDATA\Editra"
+#      StrCpy $MpyUserSettings "present"
+#  ${ElseIf} ${FileExists} "$LOCALAPPDATA\Editra"
+#      StrCpy $MpyUserSettings "present"
+#  ${EndIf}
+#  
+#  ${If} $MpyUserSettings == "not_present"
+#      !insertmacro SelectSection ${MpyEditorSettingsSection}
+#  ${EndIf}
+
+  # always update the user settings so that novice users always get a reset and clean startup directory in editra 
+  !insertmacro SelectSection ${MpyEditorSettingsSection}
+
 FunctionEnd
 
 

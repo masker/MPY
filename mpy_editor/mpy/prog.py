@@ -21,8 +21,7 @@ def runcmd( command_line, log=False ):
 
 
         
-        
-python_exe   = r'C:\Python%s%s\python.exe' % ( sys.version_info.major, sys.version_info.minor )
+python_exe   = r'C:\Python%s%s\python.exe' % ( sys.version.split('.')[0], sys.version.split('.')[1] )
 idx = sys.argv[0].index(  r'\mpy_editor\mpy\prog.py' )
 mpy_dir = sys.argv[0][:idx]
 

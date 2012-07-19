@@ -22,7 +22,7 @@ import re
 # python_exe   = r'C:\Python27\python.exe'
 # mpy_dir      = r'C:\MPY'
 
-python_exe   = r'C:\Python%s%s\python.exe' % ( sys.version_info.major, sys.version_info.minor )
+python_exe   = r'C:\Python%s%s\python.exe' % ( sys.version.split('.')[0], sys.version.split('.')[1] )
 idx = sys.argv[0].index(  r'\mpy_editor\mpy' )
 mpy_dir = sys.argv[0][:idx]
 

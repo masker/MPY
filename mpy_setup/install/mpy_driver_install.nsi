@@ -141,7 +141,7 @@ Section "Plug-in Launchpad" PlugInSection
 #  StrCpy $EXEDIR $INSTDIR
 
   MessageBox MB_OKCANCEL|MB_ICONINFORMATION  \
-  "Installation Directory: $INSTDIR $OUTDIR $EXEDIR$\n$\nPlug in the Launchpad board now. then press OK,$\nor press Cancel to skip the Driver Installation$\n$\n(Note you should Cancel the Windows Install New Driver Wizard if it pops up, the Mpy Driver Installer is going to do the installation instead)" \
+  "Plug in the Launchpad board now. then press OK,$\nor press Cancel to skip the Driver Installation$\n$\n(Note you should Cancel the Windows Install New Driver Wizard if it pops up, the Mpy Driver Installer is going to do the installation instead)" \
   IDOK done
   Abort
   
