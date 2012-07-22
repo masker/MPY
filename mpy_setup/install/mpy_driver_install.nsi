@@ -141,7 +141,7 @@ Section "Plug-in Launchpad" PlugInSection
 #  StrCpy $EXEDIR $INSTDIR
 
   MessageBox MB_OKCANCEL|MB_ICONINFORMATION  \
-  "Plug in the Launchpad board now. then press OK,$\nor press Cancel to skip the Driver Installation$\n$\n(Note you should Cancel the Windows Install New Driver Wizard if it pops up, the Mpy Driver Installer is going to do the installation instead)" \
+  "Plug in the Launchpad board now. then press OK,$\nor press Cancel to skip the Driver Installation$\n$\n(Note you should Cancel the Windows 'Found New Driver' Wizard if it pops up, the Mpy Driver Installer is going to do the installation instead)" \
   IDOK done
   Abort
   
@@ -177,9 +177,11 @@ Section "LibUsb MspDebug" LibUsbSection
   ExecWait 'install-filter.exe install --inf="$INSTDIR\mpy_setup\drivers\libusb-win32-bin-1.2.5.0\USB_Human_Interface_Device_(Interface_1).inf"' $0
   DetailPrint "LibUsb install-filter.exe returned $0"
 
-  StrCmp $0 0 continueInstall
-    MessageBox MB_ICONSTOP|MB_OK "${PRODUCT_NAME} install-filter.exe install of LibUsb for MspDebug FAILED"
-  continueInstall:
+  ${If} $0 != 0
+      MessageBox MB_OK|MB_ICONEXCLAMATION "Error ($0) while installing LibUsb MspDebug Driver. Try re-installing, or use inf-wizard.exe"
+  ${EndIf}
+
+
 
 
 SectionEnd
@@ -209,6 +211,9 @@ Section "MSP430 Uart" CDC430Section
       ExecWait '"$INSTDIR\mpy_setup\drivers\eZ430-UART\dpinst.exe" /c /q /sa /sw ' $0
   ${EndIf}
   DetailPrint "MSP430 Uart dpinst.exe returned $0"
+  ${If} $0 != 0
+      MessageBox MB_OK|MB_ICONEXCLAMATION "Error ($0) while installing eZ430-UART Driver. Try re-installing, or use Device Manager to install"
+  ${EndIf}
 
  
 SectionEnd
@@ -221,6 +226,18 @@ SectionEnd
 ; Prepare for installation
 
 Function .onInit
+
+
+  # Check to see if user is running with Admin previleges,
+  # Admin is required for the install
+  # call userInfo plugin to get user info.  The plugin puts the result in the stack
+  userInfo::getAccountType
+  pop $0
+  ${If} $0 != "Admin"
+      MessageBox MB_OK|MB_ICONEXCLAMATION "You must 'Run as Administrator' (Account type = $0). Instllation Cancelled"
+      Abort
+  ${EndIf}
+
 
   ; Prevent running multiple instances of the installer
   System::Call 'kernel32::CreateMutexA(i 0, i 0, t "launchpad_driver_installer") i .r1 ?e'

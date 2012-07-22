@@ -166,18 +166,11 @@ RequestExecutionLevel admin
 ;------------------------------------------
 Section /o "Python 2.7" PythonSection
 
-    StrCpy "$MpyDir" "$INSTDIR"
-
-#    DetailPrint "Instdir is : $INSTDIR ,    and MpyDir is :  $MpyDir , and PythonDir is : $PythonDir"
-#    MessageBox MB_OK "PYTHONSECTION  START"  
-
-
-  ; identify the python instalation file
-;  MessageBox MB_OK "pyhon27 install"  
+  StrCpy "$MpyDir" "$INSTDIR"
+  StrCpy $PythonDir "C:\Python27"
 
   ; Remove any vestiges of python27
-  RmDir /r "$PythonDir"
-  
+  RmDir /r "$PythonDir"  
   
   SetOverwrite try
   SetOutPath "$TEMP"
@@ -186,6 +179,11 @@ Section /o "Python 2.7" PythonSection
   ; run the python installation msi
   ExecWait '"msiexec.exe" /package "$TEMP\python-2.7.3.msi" /passive' $0
   DetailPrint "Python installer returned $0"
+  ${If} $0 != 0
+      MessageBox MB_OK|MB_ICONEXCLAMATION "Error ($0) while installing Python 2.7. Installation Failed"
+      Abort
+  ${EndIf}
+
 ;  Delete "$TEMP\python-2.7.3.msi"
 
 SectionEnd
@@ -219,6 +217,11 @@ Section /o "WXPython" WXPythonSection
 ;  MessageBox MB_OK "pywin32 install start"
   ExecWait '"$PythonDir\python.exe" pywin32_postinstall.py -install' $0
   DetailPrint "pywin32 installer returned $0"
+  ${If} $0 != 0
+      MessageBox MB_OK|MB_ICONEXCLAMATION "Error ($0) while installing pywin32. Installation Failed"
+      Abort
+  ${EndIf}
+
 ;  MessageBox MB_OK "pywin32 install finished"
   Delete "pywin32_postinstall.py"
   
@@ -232,6 +235,11 @@ Section /o "WXPython" WXPythonSection
   ; install wxpython
   ExecWait '"$TEMP\wxPython2.8-win32-unicode-2.8.12.1-py27.exe"  /SILENT' $0
   DetailPrint "WXpython installer returned $0"
+  ${If} $0 != 0
+      MessageBox MB_OK|MB_ICONEXCLAMATION "Error ($0) while installing wxPython. Installation Failed"
+      Abort
+  ${EndIf}
+
 ;  Delete "$TEMP\wxPython2.8-win32-unicode-2.8.12.1-py27.exe"
 ;  MessageBox MB_OK "WXpython install"
 
@@ -243,6 +251,11 @@ Section /o "WXPython" WXPythonSection
   SetOutPath "$TEMP\pyserial-2.5\pyserial-2.5"
   ExecWait '"$PythonDir\python.exe" setup.py install' $0
   DetailPrint "Pyserial installer returned $0"
+  ${If} $0 != 0
+      MessageBox MB_OK|MB_ICONEXCLAMATION "Error ($0) while installing pyserial. Installation Failed"
+      Abort
+  ${EndIf}
+
 ;  MessageBox MB_OK "pyserial install"
 
 
@@ -271,6 +284,11 @@ Section /o "Editra" EditraSection
   SetOutPath "$TEMP\Editra\Editra-0.7.08"
   ExecWait '"$PythonDir\python.exe" setup.py install' $0
   DetailPrint "Editra installer returned $0"
+  ${If} $0 != 0
+      MessageBox MB_OK|MB_ICONEXCLAMATION "Error ($0) while installing Editra. Installation Failed"
+      Abort
+  ${EndIf}
+
 ;  Delete "$TEMP\wxPython2.8-win32-unicode-2.8.12.1-py27.exe"
 ;  MessageBox MB_OK "editra install"
 
@@ -318,7 +336,7 @@ Section /o "MPY Editor" MpyEditorSection
   File       "C:\Python27\Lib\site-packages\Editra\plugins\*.*"
 
   # re define the link to point to the actual MPY instalation directory
-  !insertmacro RepInFile  "$PythonDir\Lib\site-packages\Editra\plugins\mpy.egg-link" "C:\MPY" "$INSTDIR"
+  !insertmacro RepInFile  "$PythonDir\Lib\site-packages\Editra\plugins\mpy.egg-link"     "C:\MPY" "$INSTDIR"
   !insertmacro RepInFile  "$PythonDir\Lib\site-packages\Editra\plugins\mpyuart.egg-link" "C:\MPY" "$INSTDIR"
   
 
@@ -446,6 +464,18 @@ SectionEnd
 
 Function .onInit
 
+
+  # Check to see if user is running with Admin previleges,
+  # Admin is required for the install
+  # call userInfo plugin to get user info.  The plugin puts the result in the stack
+  userInfo::getAccountType
+  pop $0
+  ${If} $0 != "Admin"
+      MessageBox MB_OK|MB_ICONEXCLAMATION "You must 'Run as Administrator' (Account type = $0). Instllation Cancelled"
+      Abort
+  ${EndIf}
+ 
+
   ; Prevent running multiple instances of the installer
   System::Call 'kernel32::CreateMutexA(i 0, i 0, t "mpy_installer") i .r1 ?e'
   Pop $R0
@@ -488,8 +518,8 @@ Function detect_components_already_installed
       StrCpy $PythonDir "C:\Python27"
   ${ElseIf} ${FileExists} "C:\Python26\python.exe"
       StrCpy $PythonDir "C:\Python26"
-  ${ElseIf} ${FileExists} "C:\Python25\python.exe"
-      StrCpy $PythonDir "C:\Python25"
+#  ${ElseIf} ${FileExists} "C:\Python25\python.exe"
+#      StrCpy $PythonDir "C:\Python25"
   ${EndIf}
   
   ${If} $PythonDir == "?"
@@ -594,8 +624,19 @@ ComponentText "Python will be installed in directory $PythonDir$\nMpy components
 ;##############################################################################
 ;----------------------------- Start Uninstaller ------------------------------
 
-;Function un.onInit
-;FunctionEnd
+Function un.onInit
+
+  # Check to see if user is running with Admin previleges,
+  # Admin is required for the install
+  # call userInfo plugin to get user info.  The plugin puts the result in the stack
+  userInfo::getAccountType
+  pop $0
+  ${If} $0 != "Admin"
+      MessageBox MB_OK|MB_ICONEXCLAMATION "You must 'Run as Administrator' (Account type = $0). Un-installer Cancelled"
+      Abort
+  ${EndIf}
+ 
+FunctionEnd
 
 
 # Only remove python27 stuff, this is the only version of python that this instalation installed
