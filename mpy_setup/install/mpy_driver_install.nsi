@@ -177,9 +177,9 @@ Section "LibUsb MspDebug" LibUsbSection
   ExecWait 'install-filter.exe install --inf="$INSTDIR\mpy_setup\drivers\libusb-win32-bin-1.2.5.0\USB_Human_Interface_Device_(Interface_1).inf"' $0
   DetailPrint "LibUsb install-filter.exe returned $0"
 
-  ${If} $0 != 0
-      MessageBox MB_OK|MB_ICONEXCLAMATION "Error ($0) while installing LibUsb MspDebug Driver. Try re-installing, or use inf-wizard.exe"
-  ${EndIf}
+#  ${If} $0 != 0
+#      MessageBox MB_OK|MB_ICONEXCLAMATION "Error ($0) while installing LibUsb MspDebug Driver. Try re-installing, or use inf-wizard.exe"
+#  ${EndIf}
 
 
 
@@ -211,9 +211,9 @@ Section "MSP430 Uart" CDC430Section
       ExecWait '"$INSTDIR\mpy_setup\drivers\eZ430-UART\dpinst.exe" /c /q /sa /sw ' $0
   ${EndIf}
   DetailPrint "MSP430 Uart dpinst.exe returned $0"
-  ${If} $0 != 0
-      MessageBox MB_OK|MB_ICONEXCLAMATION "Error ($0) while installing eZ430-UART Driver. Try re-installing, or use Device Manager to install"
-  ${EndIf}
+#  ${If} $0 != 0
+#      MessageBox MB_OK|MB_ICONEXCLAMATION "Error ($0) while installing eZ430-UART Driver. Try re-installing, or use Device Manager to install"
+#  ${EndIf}
 
  
 SectionEnd
