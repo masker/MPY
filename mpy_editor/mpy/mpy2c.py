@@ -296,7 +296,8 @@ class mpy2c( object ):
             if in_funct_def and t[1]:
                 scope = t[2]
                 v = t[0]
-                if self.var_d[scope][v][1] == None:
+                # check the token v is not a function definition name and check that it has not been done already
+                if v not in self.var_d and self.var_d[scope][v][1] == None:
                     typ = self.var_d[scope][v][0]
                     tv = t[:]
                     tv[0] = '%s ' % typ
@@ -333,7 +334,8 @@ class mpy2c( object ):
                             continue
                     
                         typ = self.var_d[scope][v][0]
-                        if self.var_d[scope][v][1] == None:
+                        # check the token v is not a function definition name and check that it has not been done already
+                        if v not in self.var_d and self.var_d[scope][v][1] == None:
                             if debug:
                                   print '  adding var definition for ', v 
                             tv = t[:]
@@ -864,7 +866,8 @@ void main (void) {
         end_i = 0
         end_of_call_idx = 0
         params_in_code = None
-        for i in range(len(self.op)):
+        i = 0
+        while i <  len(self.op):
 
             # Disables the output of the source op until we get to the 
             # end_i, used to prevent writing out of the original un-repleaced Call statement
@@ -889,7 +892,6 @@ void main (void) {
             # stored in the self.macros list
             if elem in self.macros_dict:
                 idx = self.macros_dict[ elem ]
-                
             
             # If we have parameters then look again in the macro_dict_full to see if the function and the
             # parameters match in name, if so then we will use this macro instead of the generic
@@ -956,12 +958,16 @@ void main (void) {
                     opn.append(tr)
                       
                 params_in_code = None
+                
                  
                 if params_in_prototype != None:
-                    end_i = end_of_call_idx          
+                    end_i = end_of_call_idx 
+                    i = end_of_call_idx-1
             else:
               if i >= end_i:  
                 opn.append(t)
+                
+            i += 1
                 
         self.op = opn
         
