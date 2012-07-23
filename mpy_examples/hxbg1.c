@@ -2,9 +2,11 @@
       
 #include <msp430.h>
 #include "msp430g2553.h"
-#include "C:\Python27\MPY\mpy\mpy\mpy_functions.c"
+#include "c:\mpy\mpy_editor\mpy\mpy_functions.c"
 
-      ConfigureUserGPIO ( ) { int P2SEL2 ; int P1SEL2 ; int CACTL1 ; int CACTL2 ; 
+int S ; int dist ; 
+
+      ConfigureUserGPIO ( ) { 
           "setup the ios" ; 
           P2SEL = 0 ; 
           P2SEL2 = 0 ; 
@@ -19,7 +21,7 @@
           P1OUT = 0 ; 
           P2DIR |= BIT2 ; 
           P2OUT = 0 ; 
-          P1DIR |= BIT5 ; P1SEL &= ~ BIT5 ; P1REN &= ~ BIT5 ; } 
+          if ( 21 < 32 ) { P1DIR |= ( 1 << ( 21 & 15 ) ) ; P1SEL &= ~ ( 1 << ( 21 & 15 ) ) ; P1REN &= ~ ( 1 << ( 21 & 15 ) ) ; } else { P2DIR |= ( 1 << ( 21 & 15 ) ) ; P2SEL &= ~ ( 1 << ( 21 & 15 ) ) ; P2REN &= ~ ( 1 << ( 21 & 15 ) ) ; } ; } 
       ConfigureADC10 ( int  user_pin ) { 
           ADC10CTL0 &= ~ ENC ; 
           ADC10CTL0 = ( ADC10SHT_2 + ADC10ON ) ; 
@@ -36,28 +38,28 @@
                           ADC10CTL1 = INCH_7 ; 
                           ADC10AE0 |= 128 ; } } 
       stop ( ) { 
-          P1OUT &= ~ BIT3 ; 
-          P1OUT &= ~ BIT4 ; 
-          P1OUT &= ~ BIT2 ; 
-          P2OUT &= ~ BIT2 ; } 
+          if ( 19 < 32 ) { P1OUT &= ~ ( 1 << ( 19 & 15 ) ) ; } else { P2OUT &= ~ ( 1 << ( 19 & 15 ) ) ; } ; 
+          if ( 20 < 32 ) { P1OUT &= ~ ( 1 << ( 20 & 15 ) ) ; } else { P2OUT &= ~ ( 1 << ( 20 & 15 ) ) ; } ; 
+          if ( 18 < 32 ) { P1OUT &= ~ ( 1 << ( 18 & 15 ) ) ; } else { P2OUT &= ~ ( 1 << ( 18 & 15 ) ) ; } ; 
+          if ( 34 < 32 ) { P1OUT &= ~ ( 1 << ( 34 & 15 ) ) ; } else { P2OUT &= ~ ( 1 << ( 34 & 15 ) ) ; } ; } 
       forward ( ) { 
           print ( "  forward\n" ) ; 
           stop ( ) ; 
-          P1OUT |= BIT3 ; 
-          P1OUT |= BIT4 ; } 
+          if ( 19 < 32 ) { P1OUT |= ( 1 << ( 19 & 15 ) ) ; } else { P2OUT |= ( 1 << ( 19 & 15 ) ) ; } ; 
+          if ( 20 < 32 ) { P1OUT |= ( 1 << ( 20 & 15 ) ) ; } else { P2OUT |= ( 1 << ( 20 & 15 ) ) ; } ; } 
       backward ( ) { 
           print ( "  backward\n" ) ; 
           stop ( ) ; 
-          P1OUT |= BIT3 ; } 
+          if ( 19 < 32 ) { P1OUT |= ( 1 << ( 19 & 15 ) ) ; } else { P2OUT |= ( 1 << ( 19 & 15 ) ) ; } ; } 
       turn_right ( ) { 
           print ( "  turn_right\n" ) ; 
           stop ( ) ; 
-          P1OUT |= BIT2 ; 
-          P2OUT |= BIT2 ; } 
+          if ( 18 < 32 ) { P1OUT |= ( 1 << ( 18 & 15 ) ) ; } else { P2OUT |= ( 1 << ( 18 & 15 ) ) ; } ; 
+          if ( 34 < 32 ) { P1OUT |= ( 1 << ( 34 & 15 ) ) ; } else { P2OUT |= ( 1 << ( 34 & 15 ) ) ; } ; } 
       turn_left ( ) { 
           print ( "  turn_left\n" ) ; 
           stop ( ) ; 
-          P1OUT |= BIT2 ; } 
+          if ( 18 < 32 ) { P1OUT |= ( 1 << ( 18 & 15 ) ) ; } else { P2OUT |= ( 1 << ( 18 & 15 ) ) ; } ; } 
       ir_led_on ( int  user_pin ) { 
           if ( user_pin == 4 ) { 
               P2OUT |= BIT3 ; } else 
@@ -76,24 +78,24 @@
                       P2OUT &= ~ BIT6 ; } else 
                       if ( user_pin == 7 ) { 
                           P2OUT &= ~ BIT7 ; } } 
-      Read_IR ( int  analog_pin , int  led_pin ) { int dist ; int min ; int max ; int diff ; 
+      Read_IR ( int  analog_pin , int  led_pin ) { int min ; int max ; int diff ; 
           ConfigureADC10 ( analog_pin ) ; 
           ir_led_on ( led_pin ) ; 
           wait ( 2 ) ; 
-          P2OUT |= BIT4 ; 
+          if ( 36 < 32 ) { P1OUT |= ( 1 << ( 36 & 15 ) ) ; } else { P2OUT |= ( 1 << ( 36 & 15 ) ) ; } ; 
           ADC10CTL0 |= ( ENC + ADC10SC ) ; 
           while ( ( ADC10CTL1 & BUSY ) ) { 
           } 
           min = ADC10MEM ; 
-          P2OUT &= ~ BIT4 ; 
+          if ( 36 < 32 ) { P1OUT &= ~ ( 1 << ( 36 & 15 ) ) ; } else { P2OUT &= ~ ( 1 << ( 36 & 15 ) ) ; } ; 
           ir_led_off ( led_pin ) ; 
           wait ( 2 ) ; 
-          P2OUT |= BIT4 ; 
+          if ( 36 < 32 ) { P1OUT |= ( 1 << ( 36 & 15 ) ) ; } else { P2OUT |= ( 1 << ( 36 & 15 ) ) ; } ; 
           ADC10CTL0 |= ( ENC + ADC10SC ) ; 
           while ( ( ADC10CTL1 & BUSY ) ) { 
           } 
           max = ADC10MEM ; 
-          P2OUT &= ~ BIT4 ; 
+          if ( 36 < 32 ) { P1OUT &= ~ ( 1 << ( 36 & 15 ) ) ; } else { P2OUT &= ~ ( 1 << ( 36 & 15 ) ) ; } ; 
           diff = ( ( ( max - min ) * 3 ) / 2 ) ; 
           if ( max > min ) { 
               dist = ( ( max * 30 ) / diff ) ; 
@@ -105,12 +107,12 @@
           print_num ( max ) ; 
           print ( "\n" ) ; 
           if ( dist > 900 ) { 
-              P1OUT |= BIT5 ; } else 
+              if ( 21 < 32 ) { P1OUT |= ( 1 << ( 21 & 15 ) ) ; } else { P2OUT |= ( 1 << ( 21 & 15 ) ) ; } ; } else 
               if ( dist > 400 ) { 
-                  P1OUT &= ~ BIT5 ; } else { 
-                  P1OUT |= BIT5 ; } 
+                  if ( 21 < 32 ) { P1OUT &= ~ ( 1 << ( 21 & 15 ) ) ; } else { P2OUT &= ~ ( 1 << ( 21 & 15 ) ) ; } ; } else { 
+                  if ( 21 < 32 ) { P1OUT |= ( 1 << ( 21 & 15 ) ) ; } else { P2OUT |= ( 1 << ( 21 & 15 ) ) ; } ; } 
           return dist ; } 
-      turn_towards_object ( ) { int dist ; int obj_distance ; int angle ; int obj_angle ; 
+      turn_towards_object ( ) { int obj_distance ; int angle ; int obj_angle ; 
           "Turn round 360deg in 30deg steps and look for the direction which has the\n    has the least distance" ; 
           obj_distance = 30000 ; 
           obj_angle = 0 ; 
@@ -139,8 +141,16 @@ void main (void) {
     WDTCTL = WDTPW + WDTHOLD; // Stop WDT
     BCSCTL1 = CALBC1_1MHZ;    // Set range
     DCOCTL  = CALDCO_1MHZ;    // SMCLK = DCO = 1MHz
+
+    // set all pins to pulldown inputs
+    P1DIR = 0;
+    P1REN = 0xFF;
+    P1OUT = 0;
+    P2DIR = 0;
+    P2REN = 0xFF;
+    P2OUT = 0;
    
-int S ; int dist ; 
+
 
 
       print ( "hexbug1 has started\n" ) ; 

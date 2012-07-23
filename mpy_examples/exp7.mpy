@@ -1,5 +1,5 @@
 
-define_micro('msp430g2553')
+define_micro('msp430g2231')
 
 
 
@@ -14,7 +14,7 @@ out1(REDLED)
 wait(1000)
 out0(REDLED)
 
-print_string( 'LP started, green led flash\n' )
+print( 'LP started, green led flash\n' )
 
 
 

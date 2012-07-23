@@ -2,7 +2,9 @@
       
 #include <msp430.h>
 #include "msp430g2231.h"
-#include "C:\MPY\mpy_editor\mpy\mpy_functions.c"
+#include "c:\mpy\mpy_editor\mpy\mpy_functions.c"
+
+
 
                         
 void main (void) { 

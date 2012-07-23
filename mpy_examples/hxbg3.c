@@ -2,7 +2,9 @@
       
 #include <msp430.h>
 #include "msp430g2553.h"
-#include "C:\MPY\mpy_editor\mpy\mpy_functions.c"
+#include "c:\mpy\mpy_editor\mpy\mpy_functions.c"
+
+int dist ; 
 
       ConfigureUserGPIO ( ) { 
           "setup the ios" ; 
@@ -19,10 +21,10 @@
           P1OUT = 0 ; 
           P2DIR |= BIT2 ; 
           P2OUT = 0 ; 
-          P1DIR |= BIT5 ; P1SEL &= ~ BIT5 ; P1REN &= ~ BIT5 ; } 
+          if ( 21 < 32 ) { P1DIR |= ( 1 << ( 21 & 15 ) ) ; P1SEL &= ~ ( 1 << ( 21 & 15 ) ) ; P1REN &= ~ ( 1 << ( 21 & 15 ) ) ; } else { P2DIR |= ( 1 << ( 21 & 15 ) ) ; P2SEL &= ~ ( 1 << ( 21 & 15 ) ) ; P2REN &= ~ ( 1 << ( 21 & 15 ) ) ; } ; } 
       ConfigurePWM ( ) { 
           "Setup the Timer TA1 to control a servo. The PWM period is 20ms and\n    the pulse varies between 700us to 2200us to give a 180 deg rotation of the servo" ; 
-          P2DIR &= ~ BIT4 ; P2SEL &= ~ BIT4 ; P2REN &= ~ BIT4 ; 
+          if ( 36 < 32 ) { P1DIR &= ~ ( 1 << ( 36 & 15 ) ) ; P1SEL &= ~ ( 1 << ( 36 & 15 ) ) ; P1REN &= ~ ( 1 << ( 36 & 15 ) ) ; } else { P2DIR &= ~ ( 1 << ( 36 & 15 ) ) ; P2SEL &= ~ ( 1 << ( 36 & 15 ) ) ; P2REN &= ~ ( 1 << ( 36 & 15 ) ) ; } ; 
           TA1CCR0 = 20000 ; 
           TA1CCTL2 = OUTMOD_7 ; 
           TA1CCR2 = 1300 ; 
@@ -31,10 +33,10 @@
           TA1CCR2 = pulse_duration ; } 
       arm_onoff ( int  onoff ) { 
           if ( onoff == 1 ) { 
-              P2DIR |= BIT4 ; P2SEL &= ~ BIT4 ; P2REN &= ~ BIT4 ; 
-              P2SEL |= BIT4 ; 
+              if ( 36 < 32 ) { P1DIR |= ( 1 << ( 36 & 15 ) ) ; P1SEL &= ~ ( 1 << ( 36 & 15 ) ) ; P1REN &= ~ ( 1 << ( 36 & 15 ) ) ; } else { P2DIR |= ( 1 << ( 36 & 15 ) ) ; P2SEL &= ~ ( 1 << ( 36 & 15 ) ) ; P2REN &= ~ ( 1 << ( 36 & 15 ) ) ; } ; 
+              if ( 36 < 32 ) { P1SEL |= ( 1 << ( 36 & 15 ) ) ; } else { P2SEL |= ( 1 << ( 36 & 15 ) ) ; } ; 
               print ( "      ARM 1\n" ) ; } else { 
-              P2DIR &= ~ BIT4 ; P2SEL &= ~ BIT4 ; P2REN &= ~ BIT4 ; 
+              if ( 36 < 32 ) { P1DIR &= ~ ( 1 << ( 36 & 15 ) ) ; P1SEL &= ~ ( 1 << ( 36 & 15 ) ) ; P1REN &= ~ ( 1 << ( 36 & 15 ) ) ; } else { P2DIR &= ~ ( 1 << ( 36 & 15 ) ) ; P2SEL &= ~ ( 1 << ( 36 & 15 ) ) ; P2REN &= ~ ( 1 << ( 36 & 15 ) ) ; } ; 
               print ( "      ARM 0\n" ) ; } } 
       arm_flip ( ) { 
           arm_move ( 1300 ) ; 
@@ -46,28 +48,28 @@
           wait ( 1000 ) ; 
           arm_onoff ( 0 ) ; } 
       stop ( ) { 
-          P1OUT &= ~ BIT3 ; 
-          P1OUT &= ~ BIT4 ; 
-          P1OUT &= ~ BIT2 ; 
-          P2OUT &= ~ BIT2 ; } 
+          if ( 19 < 32 ) { P1OUT &= ~ ( 1 << ( 19 & 15 ) ) ; } else { P2OUT &= ~ ( 1 << ( 19 & 15 ) ) ; } ; 
+          if ( 20 < 32 ) { P1OUT &= ~ ( 1 << ( 20 & 15 ) ) ; } else { P2OUT &= ~ ( 1 << ( 20 & 15 ) ) ; } ; 
+          if ( 18 < 32 ) { P1OUT &= ~ ( 1 << ( 18 & 15 ) ) ; } else { P2OUT &= ~ ( 1 << ( 18 & 15 ) ) ; } ; 
+          if ( 34 < 32 ) { P1OUT &= ~ ( 1 << ( 34 & 15 ) ) ; } else { P2OUT &= ~ ( 1 << ( 34 & 15 ) ) ; } ; } 
       forward ( ) { 
           print ( "  forward\n" ) ; 
           stop ( ) ; 
-          P1OUT |= BIT3 ; 
-          P1OUT |= BIT4 ; } 
+          if ( 19 < 32 ) { P1OUT |= ( 1 << ( 19 & 15 ) ) ; } else { P2OUT |= ( 1 << ( 19 & 15 ) ) ; } ; 
+          if ( 20 < 32 ) { P1OUT |= ( 1 << ( 20 & 15 ) ) ; } else { P2OUT |= ( 1 << ( 20 & 15 ) ) ; } ; } 
       backward ( ) { 
           print ( "  backward\n" ) ; 
           stop ( ) ; 
-          P1OUT |= BIT3 ; } 
+          if ( 19 < 32 ) { P1OUT |= ( 1 << ( 19 & 15 ) ) ; } else { P2OUT |= ( 1 << ( 19 & 15 ) ) ; } ; } 
       turn_right ( ) { 
           print ( "  turn_right\n" ) ; 
           stop ( ) ; 
-          P1OUT |= BIT2 ; 
-          P2OUT |= BIT2 ; } 
+          if ( 18 < 32 ) { P1OUT |= ( 1 << ( 18 & 15 ) ) ; } else { P2OUT |= ( 1 << ( 18 & 15 ) ) ; } ; 
+          if ( 34 < 32 ) { P1OUT |= ( 1 << ( 34 & 15 ) ) ; } else { P2OUT |= ( 1 << ( 34 & 15 ) ) ; } ; } 
       turn_left ( ) { 
           print ( "  turn_left\n" ) ; 
           stop ( ) ; 
-          P1OUT |= BIT2 ; } 
+          if ( 18 < 32 ) { P1OUT |= ( 1 << ( 18 & 15 ) ) ; } else { P2OUT |= ( 1 << ( 18 & 15 ) ) ; } ; } 
       ir_led_on ( int  user_pin ) { 
           if ( user_pin == 4 ) { 
               P2OUT |= BIT3 ; } else 
@@ -86,17 +88,17 @@
                       P2OUT &= ~ BIT6 ; } else 
                       if ( user_pin == 7 ) { 
                           P2OUT &= ~ BIT7 ; } } 
-      Read_IR ( int  analog_pin , int  led_pin ) { int dist ; int P1_7 ; int max ; int min ; int diff ; 
-          P2OUT |= BIT6 ; 
+      Read_IR ( int  analog_pin , int  led_pin ) { int min ; int max ; int diff ; 
+          if ( 38 < 32 ) { P1OUT |= ( 1 << ( 38 & 15 ) ) ; } else { P2OUT |= ( 1 << ( 38 & 15 ) ) ; } ; 
           wait ( 2 ) ; 
-          P2OUT |= BIT4 ; 
-          min = adc ( P1_7 ) ; 
-          P2OUT &= ~ BIT4 ; 
-          P2OUT &= ~ BIT6 ; 
+          if ( 36 < 32 ) { P1OUT |= ( 1 << ( 36 & 15 ) ) ; } else { P2OUT |= ( 1 << ( 36 & 15 ) ) ; } ; 
+          min = adc ( 23 ) ; 
+          if ( 36 < 32 ) { P1OUT &= ~ ( 1 << ( 36 & 15 ) ) ; } else { P2OUT &= ~ ( 1 << ( 36 & 15 ) ) ; } ; 
+          if ( 38 < 32 ) { P1OUT &= ~ ( 1 << ( 38 & 15 ) ) ; } else { P2OUT &= ~ ( 1 << ( 38 & 15 ) ) ; } ; 
           wait ( 2 ) ; 
-          P2OUT |= BIT4 ; 
-          max = adc ( P1_7 ) ; 
-          P2OUT &= ~ BIT4 ; 
+          if ( 36 < 32 ) { P1OUT |= ( 1 << ( 36 & 15 ) ) ; } else { P2OUT |= ( 1 << ( 36 & 15 ) ) ; } ; 
+          max = adc ( 23 ) ; 
+          if ( 36 < 32 ) { P1OUT &= ~ ( 1 << ( 36 & 15 ) ) ; } else { P2OUT &= ~ ( 1 << ( 36 & 15 ) ) ; } ; 
           diff = ( ( ( max - min ) * 3 ) / 2 ) ; 
           if ( max > min ) { 
               dist = ( ( max * 30 ) / diff ) ; 
@@ -108,17 +110,17 @@
           print_num ( max ) ; 
           print ( "\n" ) ; 
           if ( dist > 900 ) { 
-              P1OUT |= BIT5 ; } else 
+              if ( 21 < 32 ) { P1OUT |= ( 1 << ( 21 & 15 ) ) ; } else { P2OUT |= ( 1 << ( 21 & 15 ) ) ; } ; } else 
               if ( dist > 400 ) { 
-                  P1OUT &= ~ BIT5 ; } else { 
-                  P1OUT |= BIT5 ; } 
+                  if ( 21 < 32 ) { P1OUT &= ~ ( 1 << ( 21 & 15 ) ) ; } else { P2OUT &= ~ ( 1 << ( 21 & 15 ) ) ; } ; } else { 
+                  if ( 21 < 32 ) { P1OUT |= ( 1 << ( 21 & 15 ) ) ; } else { P2OUT |= ( 1 << ( 21 & 15 ) ) ; } ; } 
           return dist ; } 
-      turn_towards_object ( ) { int dist ; int P1_7 ; int obj_angle ; int P2_6 ; int angle ; int obj_distance ; 
+      turn_towards_object ( ) { int obj_distance ; int angle ; int obj_angle ; 
           "Turn round 360deg in 30deg steps and look for the direction which has the\n    has the least distance" ; 
           obj_distance = 30000 ; 
           obj_angle = 0 ; 
           for ( angle = 0 ; angle < 12 ; angle = angle + 1 ) { 
-              dist = Read_IR ( P1_7 , P2_6 ) ; 
+              dist = Read_IR ( 23 , 38 ) ; 
               if ( dist < obj_distance ) { 
                   obj_distance = dist ; 
                   obj_angle = angle ; } 
@@ -129,7 +131,7 @@
           print_value ( "direction =" , obj_angle ) ; 
           wait ( 1000 ) ; 
           for ( angle = 0 ; angle < obj_angle ; angle = angle + 1 ) { 
-              dist = Read_IR ( P1_7 , P2_6 ) ; 
+              dist = Read_IR ( 23 , 38 ) ; 
               if ( dist < obj_distance ) { 
                   obj_distance = dist ; 
                   obj_angle = angle ; } 
@@ -151,7 +153,7 @@ void main (void) {
     P2REN = 0xFF;
     P2OUT = 0;
    
-int P2_6 ; int dist ; int P1_7 ; 
+
 
 
       print ( "hexbug1 has started\n" ) ; 
@@ -176,7 +178,7 @@ int P2_6 ; int dist ; int P1_7 ;
           stop ( ) ; } 
       while ( 1 ) { 
           print ( "hexbug1 while 1\n" ) ; 
-          dist = Read_IR ( P1_7 , P2_6 ) ; 
+          dist = Read_IR ( 23 , 38 ) ; 
           print ( "hexbug1 while 2\n" ) ; 
           if ( dist < 300 ) { 
               arm_flip ( ) ; 

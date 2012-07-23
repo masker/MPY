@@ -17,6 +17,7 @@ while 1:           # Do the following lines forever and ever
    
    dly_big = random( dly_big )
    dly = dly_big/30
+   print_value( "dly_big=", dly_big )
    
    if dly > 0:
        out1(GREENLED)  # turn the green led on
