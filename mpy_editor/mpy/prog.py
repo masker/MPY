@@ -43,6 +43,41 @@ cpu = 'msp430g2553'
 status = 'good'
 
 
+
+#######################################################################
+#  mspdebug rf2500 exit  - run mspdebug initially to see which cpu is connected
+#######################################################################
+if 1:
+        chip_id_dict = { '0xf201': 'msp430g2231', 
+                         '0x2553': 'msp430g2553',
+                         '0x2452': 'msp430g2452',
+                       }
+        chip_id = 'Un-recognized'
+        print '(mspdebug started)...',
+        install_dir = r'%s\%s' % (mpy_dir, mspdebug_ver)
+        cmd = r'%s\mspdebug.exe' % install_dir
+        cmd_opts = r'rf2500 "exit"' 
+        command_line = '"%s" %s' % (cmd,cmd_opts)
+        op = runcmd( command_line )
+        if re.search('usbutil: unable to find a device matching 0451:f432',op):
+            print '*** ERROR *** Launchpad not connected, or driver not installed (click Install or run mpy_driver_install.exe)'
+        elif re.search('Device ID: (\S+)',op):
+            print '(mspdebug passed)   ' , 
+            wds =  re.findall('Device ID: (\S+)', op)
+            device_id = wds[-1]
+            if device_id in chip_id_dict:  
+                chip_id = chip_id_dict[ device_id ]
+                print  ' found chip ', chip_id 
+            else:
+                print  ' Device ID:', device_id, chip_id 
+        elif re.search('Could not find device'):
+            print '*** ERROR *** MSP430 chip could not be found, make sure msp430 is plugged into socket and that it is the correct way round\n' 
+        else:
+            print 'error !!\n'
+            print op
+
+        cpu = chip_id
+        
 #######################################################################
 #  mpy2c
 #######################################################################
@@ -56,7 +91,7 @@ if file != None:
         else:
            debug_str = ''
            
-        cmd_opts = '"%s\mpy_editor\mpy\mpy2c.py" "%s" %s' % ( mpy_dir, file, debug_str )
+        cmd_opts = '"%s\mpy_editor\mpy\mpy2c.py" "%s" %s %s' % ( mpy_dir, file, chip_id, debug_str )
         command_line = '"%s" %s' % (cmd,cmd_opts)
         op = runcmd( command_line )    
         if re.search('Traceback \(most recent call last\):',op):

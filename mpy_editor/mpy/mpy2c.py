@@ -11,7 +11,7 @@ class mpy2c( object ):
     into a .c file suitable for compiling onto a microcontroller''' 
  
     #######################################################################
-    def __init__(self, code, full_conversion=True, filename=None ):
+    def __init__(self, code, full_conversion=True, filename=None, chip_id=None ):
         '''Creates the mpy2c object. It does the following:
             1) Reads the code and parses it using the 'ast' library module
             2) Then walks the ast tree for the code and translates each element into an equivelant c syntax (nearly)
@@ -29,7 +29,7 @@ class mpy2c( object ):
                                '==', '!=',    '<',  '<=',  '>',  '>=',  'Is', 'IsNot', 'In', 'NotIn', '&&',  '||', '~']  
 
         if full_conversion:
-            self.micro_name = None        
+            self.micro_name = chip_id    
 
 
         # if the code is surrounded by quotes then remove them if there is a '=' char
@@ -463,8 +463,8 @@ class mpy2c( object ):
             #include "msp430g2231.h"
         '''
 
-
-        self.micro_name = re.sub( 'm430', 'msp430', self.micro_name.lower() )
+        if self.micro_name != None:
+            self.micro_name = re.sub( 'm430', 'msp430', self.micro_name.lower() )
 
         opn = []
         replace_state = None
@@ -490,18 +490,36 @@ class mpy2c( object ):
                 file = os.path.join( script_dir, 'mpy_functions.c' ) 
                 self.add_element_opn( opn, t,  '#include "%s"\n' % file ) 
 
-
-
-
-
                 print '%s  %s' % ( '@@MMCU@@:', self.micro_name )
 
 
-        if replace_state != 'done':
-            print "*** ERROR *** (mpy2c failed) define_micro line missing. eg. define_micro('msp430g2553')"
+        if replace_state == 'done':
+           self.op = opn    
 
- 
-        self.op = opn    
+        # if no define_micro was found, insert the micro includes at the very beginning of the output
+        elif self.micro_name != None:
+
+            opt = self.op[:]            
+            self.op = []
+            
+            self.add_element(  '\n#include <msp430.h>\n' ) 
+            self.add_element( '#include "%s.h"\n' % self.micro_name )
+            file = os.path.join( script_dir, 'mpy_functions.c' ) 
+            self.add_element('#include "%s"\n' % file ) 
+            self.add_marker('define_micro_end')
+            self.add_mpy_include( '%s\mpy_macros_common.mpy' % script_dir )
+            self.add_mpy_include( '%s\mpy_macros_%s.mpy' % (script_dir, self.micro_name) )
+
+            for t in opt:
+               self.op.append( t )
+            replace_state = 'done'
+        
+        
+
+        if replace_state != 'done':
+            print '*** ERROR *** (mpy2c failed) Cannot identify MSP430 chip'
+
+        print '%s  %s' % ( '@@MMCU@@:', self.micro_name )
 
 
     ########################################################################    
@@ -1351,7 +1369,8 @@ void main (void) {
         if parent_node_name == 'Str' and self.include_flag == True:
             self.include_name = node
 
-        # when we encounter the define_micro command then we will be adding the main() function
+        # when we encounter the define_micro command then we will define the micro name if it not already done
+#        if self.define_micro_flag == True and node_name == 'str' and self.scope == '__top_level__' and self.micro_name == None:
         if self.define_micro_flag == True and node_name == 'str' and self.scope == '__top_level__':
             self.micro_name = node.lower()
 
@@ -1367,9 +1386,15 @@ void main (void) {
 
      
 
-debug = False
+chip_id = None
 if len(sys.argv) > 2:
-    debug = sys.argv[2]
+    chip_id = sys.argv[2]
+if chip_id in [ '', 'Un-recognized']:
+    chip_id = None
+    
+debug = False
+if len(sys.argv) > 3:
+    debug = sys.argv[3]
     if debug != None:
         debug = True
 
@@ -1389,7 +1414,7 @@ jlines = ''.join(lines)
 jlines = re.sub(r'\r','',jlines)
 
 
-uc = mpy2c( jlines, filename=file )
+uc = mpy2c( jlines, filename=file, chip_id=chip_id )
 
 
 #uc.write_toks()

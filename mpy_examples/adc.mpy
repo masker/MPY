@@ -9,7 +9,7 @@
 # 
 ######################################################################
 
-define_micro('msp430g2231')   # Tell the compiler which msp430 microcontroller to program
+#define_micro('msp430g2231')   # Tell the compiler which msp430 microcontroller to program
 
 adc_enable()       # Setup the ADC block
 

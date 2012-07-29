@@ -1,7 +1,7 @@
 
-      
+
 #include <msp430.h>
-#include "msp430g2231.h"
+#include "msp430g2553.h"
 #include "c:\mpy\mpy_editor\mpy\mpy_functions.c"
 
 int v7 ; 
@@ -24,8 +24,7 @@ void main (void) {
 
 
 
-      
-      ADC10CTL0 &= ~ ENC ; ADC10CTL0 = ( ( ( ( ADC10SHT_2 | ADC10ON ) | REFON ) | REF2_5V ) | SREF_1 ) ; 
+ADC10CTL0 &= ~ ENC ; ADC10CTL0 = ( ( ( ( ADC10SHT_2 | ADC10ON ) | REFON ) | REF2_5V ) | SREF_1 ) ; 
       while ( 1 ) { 
           v7 = adc ( 23 ) ; 
           print_value ( "ADC value on p1_7" , v7 ) ; 
