@@ -200,14 +200,6 @@ Section /o "WXPython" WXPythonSection
 
   StrCpy "$MpyDir" "$INSTDIR"
 
-;;;;; install pywin32
-#  SetOverwrite try
-#  SetOutPath "$TEMP"
-#  File  "C:\mpy_temp\pywin32-217.win32-py2.7.exe"
-##  nsExec::ExecToLog "$TEMP\pywin32-217.win32-py2.7.exe"
-##  ExecDos::exec /DETAILED "$TEMP\pywin32-217.win32-py2.7.exe"
-#  ExecWait '"$TEMP\pywin32-217.win32-py2.7.exe"  /SILENT' $0
-#  DetailPrint "pywin32 installer returned $0"
 
 ;;;;; install pywin32   postinstall silent method
   SetOverwrite try
@@ -288,6 +280,11 @@ Section /o "Editra" EditraSection
       MessageBox MB_OK|MB_ICONEXCLAMATION "Error ($0) while installing Editra. Installation Failed"
       Abort
   ${EndIf}
+
+  !insertmacro RepInFile  "$PythonDir\Lib\site-packages\Editra\src\ed_main.py" \
+            "        if _PGET('LAST_SESSION') == mgr.DefaultSession:" \
+            "        if 1 or _PGET('LAST_SESSION') == mgr.DefaultSession:"
+
 
 ;  Delete "$TEMP\wxPython2.8-win32-unicode-2.8.12.1-py27.exe"
 ;  MessageBox MB_OK "editra install"
@@ -525,6 +522,7 @@ Function detect_components_already_installed
   ${If} $PythonDir == "?"
       StrCpy $PythonDir "C:\Python27"
       !insertmacro SelectSection ${PythonSection}
+      Goto WXPython29DoesNotExist
   ${EndIf}
   
 
@@ -534,6 +532,7 @@ Function detect_components_already_installed
   IfFileExists "$PythonDir\Lib\site-packages\wx-2.9-msw-unicode" DoneWXPythonCheck WXPython29DoesNotExist
   WXPython29DoesNotExist:
   !insertmacro SelectSection ${WXPythonSection}
+  Goto EditraDoesNotExist
   DoneWXPythonCheck:
 
   ; EDITRA

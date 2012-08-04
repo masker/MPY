@@ -54,6 +54,13 @@ SetCompressor lzma
 ;#####  PAGES       ####################################################################
 ;#######################################################################################
 ; Welcome page
+
+!define MUI_WELCOMEPAGE_TITLE_3LINES "True"
+!define MUI_TEXT_WELCOME_INFO_TITLE 'MPY DRIVER INSTALLER$\n\
+Plug in your Launchpad board now.$\n\
+Then Click the Install Button'
+
+
 !insertmacro MUI_PAGE_WELCOME
 
 
@@ -140,10 +147,10 @@ Section "Plug-in Launchpad" PlugInSection
 #  StrCpy "$0" $INSTDIR
 #  StrCpy $EXEDIR $INSTDIR
 
-  MessageBox MB_OKCANCEL|MB_ICONINFORMATION  \
-  "Plug in the Launchpad board now. then press OK,$\nor press Cancel to skip the Driver Installation$\n$\n(Note you should Cancel the Windows 'Found New Driver' Wizard if it pops up, the Mpy Driver Installer is going to do the installation instead)" \
-  IDOK done
-  Abort
+#  MessageBox MB_OKCANCEL|MB_ICONINFORMATION  \
+#  "Plug in the Launchpad board now. then press OK,$\nor press Cancel to skip the Driver Installation$\n$\n(Note you should Cancel the Windows 'Found New Driver' Wizard if it pops up, the Mpy Driver Installer is going to do the installation instead)" \
+#  IDOK done
+#  Abort
   
   done:
 
