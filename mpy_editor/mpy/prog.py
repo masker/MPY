@@ -36,9 +36,9 @@ debug = False
 file = sys.argv[1]
 file = os.path.abspath(file)
 (fileroot, fileext) = os.path.splitext(file)
-# print '[prog] argv = ', sys.argv
+#print '[prog] argv = ', sys.argv
 
-cpu = 'msp430g2553'
+chip_id = sys.argv[2]
 
 status = 'good'
 
@@ -47,7 +47,7 @@ status = 'good'
 #######################################################################
 #  mspdebug rf2500 exit  - run mspdebug initially to see which cpu is connected
 #######################################################################
-if 1:
+if 0:
         chip_id_dict = { '0xf201': 'msp430g2231', 
                          '0x2553': 'msp430g2553',
                          '0x2452': 'msp430g2452',
@@ -70,7 +70,7 @@ if 1:
                 print  ' found chip ', chip_id 
             else:
                 print  ' Device ID:', device_id, chip_id 
-        elif re.search('Could not find device'):
+        elif re.search('Could not find device',op):
             print '*** ERROR *** MSP430 chip could not be found, make sure msp430 is plugged into socket and that it is the correct way round\n' 
         else:
             print 'error !!\n'
@@ -108,8 +108,8 @@ if file != None:
             for line in oplines:
                 wds = line.split()
                 if len(wds) == 2 and wds[0].strip() == '@@MMCU@@:':
-                    cpu = wds[1].strip()      
-            print '(mpy2c passed)  wrote: %s.c   using CPU: %s' % (fileroot, cpu)
+                    chip_id = wds[1].strip()      
+            print '(mpy2c passed)  wrote: %s.c   using CPU: %s' % (fileroot, chip_id)
 
             if debug:
                 print op
@@ -123,7 +123,7 @@ if file != None:
         print '(mspgcc started)  ...', 
         install_dir = r'%s\%s' % (mpy_dir, mspgcc_ver)
         cmd      = r'%s\bin\msp430-gcc.exe' % install_dir
-        cmd_opts = r'-L"%s\msp430\lib\ldscripts\%s"   -mmcu=%s -Os -o "%s.elf" "%s.c"' % ( install_dir, cpu, cpu, fileroot, fileroot )
+        cmd_opts = r'-L"%s\msp430\lib\ldscripts\%s"   -mmcu=%s -Os -o "%s.elf" "%s.c"' % ( install_dir, chip_id, chip_id, fileroot, fileroot )
         command_line = '"%s" %s' % (cmd,cmd_opts)
         op = runcmd( command_line )
         if re.search(': error:',op)              or \
@@ -156,7 +156,7 @@ if file != None:
         else:
             print '(mspdebug passed)   ', 
             num_bytes = re.findall('(\d+ bytes written)', op)
-            print num_bytes[0], 'to ', cpu
+            print num_bytes[0], 'to ', chip_id
 
 else:    
     print '*** ERROR *** open and select the .mpy file to be programmed'

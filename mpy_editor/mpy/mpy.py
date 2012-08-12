@@ -34,6 +34,13 @@ import ebmlib
 import eclib
 import ed_basewin
 
+import subprocess
+import shlex
+import time
+import re
+import threading
+
+
 #import run_uart_comport
 
 #-----------------------------------------------------------------------------#
@@ -77,6 +84,9 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
     def __init__(self, parent):
         super(MpyWindow, self).__init__(parent)
 
+
+        
+
         # Attributes
         self._log = wx.GetApp().GetLog()
         self._mw = ed_basewin.FindMainWindow(self)
@@ -87,6 +97,7 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         self._clear = None      # Created in __DoLayout
         self._lockFile = None   # Created in __DoLayout
         self._chFiles = None    # Created in __DoLayout
+        self._chDevices = None
         self._worker = None
         self._busy = False
         self._isready = False
@@ -96,11 +107,24 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
 #         self.python_exe  = r'C:\Python27\python.exe'
 #         self.mpy_dir     = r'C:\MPY'
 
-        self.python_exe   = r'C:\Python%s%s\python.exe' % ( sys.version.split('.')[0], sys.version.split('.')[1] )
+#        self.python_exe   = r'C:\Python%s%s\python.exe' % ( sys.version.split('.')[0], sys.version.split('.')[1] )
+
+        # MPY setup
+        self.python_exe   = r'%s\python.exe' % ( sys.exec_prefix )
         tstr = sys.modules[__name__].__file__
         idx = tstr.index(  r'\mpy_editor\mpy' )
         self.mpy_dir = tstr[:idx]
 
+        self.mspDebugLock = threading.Lock()
+        self.mspDeviceSelected = 'Auto'
+        self.mspDeviceDetected = 'Unknown'
+        self.mspDevices = ['Auto', 'msp430g2211','msp430g2231','msp430g2452','msp430g2553' ]
+        self.mspDevice = 'Unknown'
+        self.mspLaunchpadStatus_previous = 'Not_Connected'
+        
+        self.colors = { 'yellow' : wx.Colour(255, 210,  95), 
+                        'green'  : wx.Colour(174, 255, 111), 
+                        'red'    : wx.Colour(255, 133, 106), }
 
         # Setup
         self.__DoLayout()
@@ -157,7 +181,11 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
 #        self.StartStopProg(run_during_startup=True)
 
 
-
+        # MPY timer setup for checking the connection status
+        
+        self.timer_con_status = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self.OnTimerCheckConnection, self.timer_con_status )
+        self.timer_con_status.Start(3000, oneShot=True)
 
     #---- Properties ----#
     Locked = property(lambda self: self._lockFile.IsChecked())
@@ -202,18 +230,48 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         ctrlbar.AddControl(self._chFiles, wx.ALIGN_LEFT)
 
 
+#         # Button
+#         self._prog = self.AddPlateButton(_("   Prog    "), ID_PROG,   wx.ALIGN_LEFT)
+#         self._prog.SetToolTipString(_("Compiles the file (mpy2c, mspgcc)\nDownloads the program to the Launchpad\nPrograms the Microcontroller\nthen it will Run (mspdebug)"))
+
+
+        self._conStatusTxt = wx.StaticText(ctrlbar, wx.ID_ANY, 'Launchpad: ')
+        self._conStatusTxt.SetForegroundColour(wx.Colour(0, 0, 0))
+        ctrlbar.AddControl(self._conStatusTxt, wx.ALIGN_LEFT)
+
+        # Connection Status of Launchpad  
+
+        self._conStatus = wx.StaticText(ctrlbar, wx.ID_ANY, '.             unknown               .')
+        self._conStatus.SetForegroundColour(wx.Colour(0, 0, 0))
+        self._conStatus.SetBackgroundColour(wx.Colour(255, 210, 95))
+#        self._conStatus.SetLabel(_(".             unknown               ."))
+        ctrlbar.AddControl(self._conStatus, wx.ALIGN_LEFT)
+        self._conStatus.SetToolTipString(_("Connection Status"))
+
+
+        # List of Devices to choose from  
+        self._chDevices = wx.Choice(ctrlbar, wx.ID_ANY, choices=self.mspDevices)
+        self._chDevices.SetSelection( 0 )
+        ctrlbar.AddControl(self._chDevices, wx.ALIGN_LEFT)
+        self._chDevices.SetToolTipString(_("Select the Microcontroller chip used in the Launchpad,\nor select 'Auto' to automatically detect the chip (recommended)"))
+ 
+
+
         # Button
-        self._prog = self.AddPlateButton(_("   Prog    "), ID_PROG,   wx.ALIGN_LEFT)
-        self._prog.SetToolTipString(_("Compiles the file (mpy2c, mspgcc)\nDownloads the program to the Launchpad\nPrograms the Microcontroller\nthen it will Run (mspdebug)"))
-        # Button
-        self._run   = self.AddPlateButton(_("  Run/Stop  "),   ed_glob.ID_BIN_FILE, wx.ALIGN_LEFT)
-        self._run.SetToolTipString(_("Run or Stop the Microcontroller"))
-        # Button
-        self._drvinst = self.AddPlateButton(_("  Install  "), ID_DRVINST,   wx.ALIGN_LEFT)
-        self._drvinst.SetToolTipString(_("Install Launchpad Drivers"))
-        
+#        self._run   = self.AddPlateButton(_("  PROG  "),   ed_glob.ID_BIN_FILE, wx.ALIGN_LEFT)
+        self._run   = self.AddPlateButton(_("  PROG  "),   ID_PROG, wx.ALIGN_LEFT)
+#        self._run.SetToolTipString(_("Run or Stop the Microcontroller"))
+        self._run.SetToolTipString(_("Compiles the file (mpy2c, mspgcc)\nDownloads the program to the Launchpad\nPrograms the Microcontroller\nthen it will Run (mspdebug)"))
+
+
         # Spacer
         ctrlbar.AddStretchSpacer()
+
+ 
+        # Button
+        self._drvinst = self.AddPlateButton(_("  Install Launchpad Driver  "), ID_DRVINST,   wx.ALIGN_RIGHT)
+        self._drvinst.SetToolTipString(_("Install Launchpad Drivers"))
+        
         
         # Button
         self._clear = self.AddPlateButton(_("Clear"), ed_glob.ID_DELETE,   wx.ALIGN_RIGHT)
@@ -271,10 +329,11 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
                 win.Raise()
         elif e_obj is self._run:
             # May be run or abort depending on current state
-            self.StartStopProcess()
-        elif e_obj is self._prog:
-            # May be run or abort depending on current state
             self.StartStopProg()
+#            self.StartStopProcess()
+#         elif e_obj is self._prog:
+#             # May be run or abort depending on current state
+#             self.StartStopProg()
         elif e_obj is self._drvinst:
             # May be run or abort depending on current state
             self.RunDrvInstScript()
@@ -282,6 +341,40 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
             self._buffer.Clear()
         else:
             evt.Skip()
+
+    def OnTimerCheckConnection(self, evt):
+        """Handle the Timer event for checking the connection status
+        @param evt: wx.CommandEvent
+        
+        """
+ 
+        # Check to see if the launchpad board is connected or not
+        self.mspLaunchpadDetected, self.mspLaunchpadStatus, self.mspLaunchpadStatusColor = run_mspdebug(self)
+
+        # If the connection status changed from not connected to connected,
+        # then do a full check to find out which microcontroller is on the board.
+        # Be aware that this will reset the microcontroller, so we only do a 
+        # full check when the launchpad connection status changes
+
+        if self.mspLaunchpadStatus == 'Connected' and self.mspLaunchpadStatus_previous != 'Connected':
+            self.mspDeviceDetected, self.mspDeviceStatus, self.mspDeviceStatusColor = run_mspdebug_full(self)
+            tstr = re.sub( '_', ' ', self.mspDeviceDetected.upper() )
+            self._conStatus.SetLabel( 'Connected: %s' % tstr )
+            self._conStatus.SetBackgroundColour(self.colors[self.mspDeviceStatusColor])        
+        elif self.mspLaunchpadStatus == 'Not_Connected':   # not connected
+            tstr = re.sub( '_', ' ', self.mspLaunchpadStatus )
+            self._conStatus.SetLabel( tstr )
+            self._conStatus.SetBackgroundColour(self.colors[self.mspLaunchpadStatusColor])        
+        
+        else:  # still connected, don't update the connection status
+            pass
+            
+
+        self.mspLaunchpadStatus_previous = self.mspLaunchpadStatus
+
+        self.timer_con_status.Start(2000, oneShot=True)
+
+
 
     def OnChoice(self, evt):
         """Handle events from the Choice controls
@@ -294,6 +387,13 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
             fname = self._fnames[e_sel]
             self.SetFile(fname)
             self._chFiles.SetToolTipString(fname)
+        elif e_id == self._chDevices.GetId():
+            self.mspDeviceSelected = self._chDevices.GetStringSelection()
+
+#             # write out the device we will use
+#             self._buffer.AppendUpdate( 'DEVICE = %s\n' % self.mspDevice )
+#             self._buffer.FlushBuffer()
+            
         elif e_id == ID_EXECUTABLE:
             e_obj = evt.GetEventObject()
             handler = handlers.GetHandlerById(self.State['lang'])
@@ -594,9 +694,16 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         if self._busy:
             util.Log("[mpy][info] Starting process")
             handler = handlers.GetHandlerById(self.State['lang'])
+
+
+            if  self.mspDeviceSelected == 'Auto':
+                 self.mspDevice = self.mspDeviceDetected
+            else:
+                 self.mspDevice = self.mspDeviceSelected
+
             
             mpy_dir = r'C:\MPY'
-            cmd = r'%s -u "%s\mpy_editor\mpy\prog.py"' % ( self.python_exe, self.mpy_dir)
+            cmd = r'%s -u "%s\mpy_editor\mpy\prog.py "' % ( self.python_exe, self.mpy_dir,)
 
 
  
@@ -605,7 +712,7 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
 #            cmd = handler.GetCommand(cmd)
 
 #            args = self.FindWindowById(ID_ARGS).GetValue().split()
-            args = ''
+            args = self.mspDevice
             self.State['largs'] = args
 #            self.Run(self.State['file'], cmd, args, self.State['lang'])
 
@@ -613,15 +720,26 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
 #            self.Run(self.State['file'], cmd, args, self.State['lang'])
             
            
-            self._buffer.AppendUpdate( '[mpy] dir=%s cmd=%s\n' % (os.getcwd(), cmd) )
+#            self._buffer.AppendUpdate( '[mpy] dir=%s cmd=%s\n' % (os.getcwd(), cmd) )
             # Must give it a python type file for some reason!
+            
+#            self._buffer.AppendUpdate( 'prog started' )
+#            self._buffer.FlushBuffer()
+
+#            self.mspDebugLock.acquire()
+
             self.Run(self.State['file'], cmd, args, 32161)   
+
+
+#            self._buffer.AppendUpdate( 'prog finished' )
+#            self._buffer.FlushBuffer()
 
 
         elif self._worker:
             util.Log("[mpy][info] Aborting process")
             self._worker.Abort()
             self._worker = None
+#            self.mspDebugLock.release()
 
     def SetFile(self, fname):
         """Set the script file that will be run
@@ -657,14 +775,14 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
             if abort.IsNull() or not abort.IsOk():
                 abort = wx.ArtProvider.GetBitmap(wx.ART_ERROR,
                                                  wx.ART_MENU, (16, 16))
-            self._run.SetBitmap(abort)
-            self._run.SetLabel(_("  Run/Stop  "))
+#            self._run.SetBitmap(abort)
+            self._run.SetLabel(_("  PROG  "))
         else:
             rbmp = wx.ArtProvider.GetBitmap(str(ed_glob.ID_BIN_FILE), wx.ART_MENU)
             if rbmp.IsNull() or not rbmp.IsOk():
                 rbmp = None
-            self._run.SetBitmap(rbmp)
-            self._run.SetLabel(_("  Run/Stop  "))
+#            self._run.SetBitmap(rbmp)
+            self._run.SetLabel(_("  PROG  "))
             # If the buffer was changed while this was running we should
             # update to the new buffer now that it has stopped.
             self.SetFile(self.State['cfile'])
@@ -747,6 +865,8 @@ class OutputDisplay(eclib.OutputBuffer, eclib.ProcessBufferMixin):
         # Attributes
         self._mw = parent.MainWindow
         self._cfile = ''
+        
+        self.parent_obj = parent
 
         # Setup
         font = Profile_Get('FONT1', 'font', wx.Font(11, wx.FONTFAMILY_MODERN,
@@ -815,6 +935,14 @@ class OutputDisplay(eclib.OutputBuffer, eclib.ProcessBufferMixin):
 
     def DoProcessExit(self, code=0):
         """Do all that is needed to be done after a process has exited"""
+        
+#        self.parent_obj.mspDebugLock.release()
+                
+#        self.AppendUpdate("DoProcessExit\n")
+#        self.FlushBuffer()
+
+
+        
         # Peek in the queue to see the last line before the exit line
         queue = self.GetUpdateQueue()
         prepend_nl = True
@@ -854,6 +982,114 @@ class OutputDisplay(eclib.OutputBuffer, eclib.ProcessBufferMixin):
             mode = wx.stc.STC_WRAP_WORD
         self.SetWrapMode(mode)
 
+
+#--------------------------------------------------------
+def runcmd( command_line, log=False ):
+        args = shlex.split(command_line)
+        if log:   print 'command_line=', args
+        p = subprocess.Popen( args , stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+        output = p.communicate()[0] 
+        # remove any double linefeeds
+        output = re.sub('\r', '', output)
+        if log:   print 'x=', output
+        return output
+
+#------------------------------------------------------------------------
+def run_mspdebug(parent):
+        '''This function runs mspdebug to determine whether the Launchpad is connected
+        It does not cause the launchpad microcontroller chip to reset'''
+
+#        parent.mspDebugLock.acquire()
+
+        chip_id_dict = { '0xf201': 'msp430g2231', 
+                         '0x2553': 'msp430g2553',
+                         '0x2452': 'msp430g2452',
+                       }
+        chip_id = 'Unknown'
+        mspdebug_ver = r'mspdebug_v019'
+        print '(mspdebug started)...',
+        install_dir = r'%s\%s' % (parent.mpy_dir, mspdebug_ver)
+        cmd = r'%s\mspdebug.exe' % install_dir
+        cmd_opts = r'rf2500 "--usb-list"' 
+        command_line = '"%s" %s' % (cmd,cmd_opts)
+        op = runcmd( command_line )
+        
+        if re.search('0451:f432 eZ430-RF2500',op):
+            connection_status = 'Connected'  # green
+            color = 'yellow'
+        else: 
+            connection_status = 'Not_Connected'  # red
+            color = 'red'
+        
+        
+        if connection_status[0] == '_':
+            chip_id = connection_status 
+
+
+#        parent.mspDebugLock.release()
+        
+        return 'unknown', connection_status, color
+        
+        
+#------------------------------------------------------------------------
+def run_mspdebug_full(parent):
+        '''This function will run mspdebug and find the chip number of the launchpad.
+        Running this function will cause the microcontroller to reset.'''
+
+#        parent.mspDebugLock.acquire()
+
+        chip_id_dict = { '0xf201': 'msp430g2231', 
+                         '0x2553': 'msp430g2553',
+                         '0x2452': 'msp430g2452',
+                       }
+        chip_id = 'Un-recognized'
+        mspdebug_ver = r'mspdebug_v019'
+        print '(mspdebug started)...',
+        install_dir = r'%s\%s' % (parent.mpy_dir, mspdebug_ver)
+        cmd = r'%s\mspdebug.exe' % install_dir
+        cmd_opts = r'rf2500 "exit"' 
+        command_line = '"%s" %s' % (cmd,cmd_opts)
+        op = runcmd( command_line )
+        if re.search('usbutil: unable to find a device matching 0451:f432',op):
+            print '*** ERROR *** Launchpad not connected, or driver not installed (click Install or run mpy_driver_install.exe)'
+            connection_status = '_Launchpad_Not_Found'  # red
+            color = 'red'
+        elif re.search('Device ID: (\S+)',op):
+            print '(mspdebug passed)   ' , 
+            wds =  re.findall('Device ID: (\S+)', op)
+            device_id = wds[-1]
+            if device_id in chip_id_dict:  
+                chip_id = chip_id_dict[ device_id ]
+                print  ' found chip ', chip_id 
+                connection_status = 'Chip_Recognized'  # green
+                color = 'green'
+            else:
+                print  ' Device ID:', device_id, chip_id 
+                connection_status = '_Chip_Not_Recognized'  # yellow
+                color = 'yellow'
+        elif re.search('Could not find device',op):
+            print '*** ERROR *** MSP430 chip could not be found, make sure msp430 is plugged into socket and that it is the correct way round\n' 
+            connection_status = '_Launchpad_Chip_Not_Found'   # yellow
+            color = 'yellow'
+        elif re.search("can't claim interface: The requested resource is in use", op):
+            print '*** ERROR *** mspdebug is already running, close the other program\n' 
+            connection_status = '_mspdebug_in_use'   # yellow
+            color = 'red'
+        else:
+            print 'error !!\n'
+            print op
+            connection_status = '_Unknown_Error'  # red
+            color = 'red'
+        
+        
+        if connection_status[0] == '_':
+            chip_id = connection_status 
+
+
+#        parent.mspDebugLock.release()
+        
+        return chip_id, connection_status, color
+    
 
 #-----------------------------------------------------------------------------#
 def GetLangIdFromMW(mainw):
