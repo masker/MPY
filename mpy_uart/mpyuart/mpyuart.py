@@ -92,10 +92,13 @@ class MpyUartWindow(ed_basewin.EdBaseCtrlBox):
         self._state = dict(file='', lang=0, cfile='', clang=0, last='', 
                            lastlang=0, prelang=0, largs='', lcmd='')
 
-#         self.python_exe  = r'C:\Python27\python.exe'
-#         self.mpy_dir     = r'C:\MPY'
 
-        self.python_exe   = r'C:\Python%s%s\python.exe' % ( sys.version.split('.')[0], sys.version.split('.')[1] )
+        self.colors = { 'yellow' : wx.Colour(255, 210,  95), 
+                        'green'  : wx.Colour(174, 255, 111), 
+                        'red'    : wx.Colour(255, 133, 106), }
+ 
+
+        self.python_exe   = r'%s\python.exe' % ( sys.exec_prefix )
         tstr = sys.modules[__name__].__file__
         idx = tstr.index(  r'\mpy_uart\mpyuart' )
         self.mpy_dir = tstr[:idx]
@@ -186,12 +189,18 @@ class MpyUartWindow(ed_basewin.EdBaseCtrlBox):
     def __DoLayout(self):
         """Layout the window"""
         ctrlbar = self.CreateControlBar(wx.TOP)
-        ctrlbar.SetBackgroundColour(wx.Colour(204, 50, 50))
-#        ctrlbar.SetForegroundColour(wx.Colour(204, 50, 50))
+         
+        ctrlbar.SetBackgroundColour(wx.Colour(112,157,186))
+        
+        ctrlbar._color  = wx.Colour(33,  128, 188)
+        ctrlbar._color2 = wx.Colour(162, 177, 186)
+        ctrlbar.SetMargins( 7, 7 )
+        
+        
         
         # Preferences
-        self._pbtn = self.AddPlateButton(u"", ed_glob.ID_PREF)
-        self._pbtn.SetToolTipString(_("Settings"))
+#        self._pbtn = self.AddPlateButton(u"", ed_glob.ID_PREF)
+#        self._pbtn.SetToolTipString(_("Settings"))
 
         # Exe
 #         ctrlbar.AddControl(wx.StaticText(ctrlbar, label=_("exec") + ":"),
@@ -217,10 +226,10 @@ class MpyUartWindow(ed_basewin.EdBaseCtrlBox):
 #         ctrlbar.AddControl(args, wx.ALIGN_LEFT, 1)
 
         # Buttons
-        self._run = self.AddPlateButton(_("Start/Stop"), ed_glob.ID_BIN_FILE, 
-                                        wx.ALIGN_LEFT)
+        self._run = self.AddPlateButton(_("Start/Stop"), ID_PROG,  wx.ALIGN_LEFT)
         self._run.SetToolTipString(_("Start or Stop serial communication with the Launchpad"))
-        
+        self._run.SetPressColor( self.colors['green'] )
+
         # Spacer
         ctrlbar.AddStretchSpacer()
         
@@ -229,8 +238,9 @@ class MpyUartWindow(ed_basewin.EdBaseCtrlBox):
 #                                         wx.ALIGN_LEFT)
 
 
-        self._clear = self.AddPlateButton(_("Clear"), ed_glob.ID_DELETE,
-                                          wx.ALIGN_RIGHT)
+        self._clear = self.AddPlateButton(_("Clear"), ed_glob.ID_DELETE, wx.ALIGN_RIGHT)
+        self._clear.SetPressColor( self.colors['green'] )
+
         self.SetWindow(self._buffer)
         
         

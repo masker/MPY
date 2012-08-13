@@ -125,6 +125,8 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         self.colors = { 'yellow' : wx.Colour(255, 210,  95), 
                         'green'  : wx.Colour(174, 255, 111), 
                         'red'    : wx.Colour(255, 133, 106), }
+                        
+        self.Locked = False
 
         # Setup
         self.__DoLayout()
@@ -188,7 +190,7 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         self.timer_con_status.Start(3000, oneShot=True)
 
     #---- Properties ----#
-    Locked = property(lambda self: self._lockFile.IsChecked())
+#    Locked = property(lambda self: self._lockFile.IsChecked())
     MainWindow = property(lambda self: self._mw)
     Preferences = property(lambda self: Profile_Get(handlers.CONFIG_KEY, default=None),
                            lambda self, prefs: Profile_Set(handlers.CONFIG_KEY, prefs))
@@ -213,27 +215,42 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
     def __DoLayout(self):
         """Layout the window"""
         ctrlbar = self.CreateControlBar(wx.TOP)
-#        ctrlbar.SetBackgroundColour(wx.Colour(204, 50, 50))
-#        ctrlbar.SetForegroundColour(wx.Colour(204, 50, 50))
+        ctrlbar.SetBackgroundColour(wx.Colour(112,157,186))
+        
+        ctrlbar._color  = wx.Colour(33,  128, 188)
+        ctrlbar._color2 = wx.Colour(162, 177, 186)
+        ctrlbar.SetMargins( 3, 3 )
+        
+        
         
         # Preferences
-        self._pbtn = self.AddPlateButton(u"", ed_glob.ID_PREF)
-        self._pbtn.SetToolTipString(_("Settings"))
+#        self._pbtn = self.AddPlateButton(u"", ed_glob.ID_PREF)
+#        self._pbtn.SetToolTipString(_("Settings"))
 
 
         # Script Label
-        ctrlbar.AddControl((5, 5), wx.ALIGN_LEFT)
-        self._lockFile = wx.CheckBox(ctrlbar, wx.ID_ANY)
-        self._lockFile.SetToolTipString(_("Lock File"))
-        ctrlbar.AddControl(self._lockFile, wx.ALIGN_LEFT)
-        self._chFiles = wx.Choice(ctrlbar, wx.ID_ANY)#, choices=[''])
-        ctrlbar.AddControl(self._chFiles, wx.ALIGN_LEFT)
+#        self._lockFile = wx.CheckBox(ctrlbar, wx.ID_ANY)
+#        self._lockFile.SetToolTipString(_("Lock File"))       
+#        ctrlbar.AddControl(self._lockFile, wx.ALIGN_LEFT)
+
+
 
 
 #         # Button
 #         self._prog = self.AddPlateButton(_("   Prog    "), ID_PROG,   wx.ALIGN_LEFT)
 #         self._prog.SetToolTipString(_("Compiles the file (mpy2c, mspgcc)\nDownloads the program to the Launchpad\nPrograms the Microcontroller\nthen it will Run (mspdebug)"))
 
+        # add the mpy image
+        ctrlbar.AddControl((5, 5), wx.ALIGN_LEFT)
+#        bitmap = wx.Bitmap(r"C:\projects\msp_editra\images\mpy_logo_46x50.bmp", wx.BITMAP_TYPE_ANY)
+        bitmap = wx.Bitmap(r"%s\mpy_setup\install\pixmaps\mpy_logo_controlbar.png" % self.mpy_dir, wx.BITMAP_TYPE_ANY)
+        image = wx.ImageFromBitmap(bitmap)
+        image = image.Scale(30, 30, wx.IMAGE_QUALITY_HIGH)
+        bitmap = wx.BitmapFromImage(image)
+        self.mpy_bitmap = wx.StaticBitmap(self, -1, bitmap )
+        ctrlbar.AddControl( self.mpy_bitmap, wx.ALIGN_LEFT)
+
+        ctrlbar.AddControl((5, 5), wx.ALIGN_LEFT)
 
         self._conStatusTxt = wx.StaticText(ctrlbar, wx.ID_ANY, 'Launchpad: ')
         self._conStatusTxt.SetForegroundColour(wx.Colour(0, 0, 0))
@@ -250,18 +267,25 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
 
 
         # List of Devices to choose from  
-        self._chDevices = wx.Choice(ctrlbar, wx.ID_ANY, choices=self.mspDevices)
-        self._chDevices.SetSelection( 0 )
-        ctrlbar.AddControl(self._chDevices, wx.ALIGN_LEFT)
-        self._chDevices.SetToolTipString(_("Select the Microcontroller chip used in the Launchpad,\nor select 'Auto' to automatically detect the chip (recommended)"))
+#         self._chDevices = wx.Choice(ctrlbar, wx.ID_ANY, choices=self.mspDevices)
+#         self._chDevices.SetSelection( 0 )
+#         ctrlbar.AddControl(self._chDevices, wx.ALIGN_LEFT)
+#         self._chDevices.SetToolTipString(_("Select the Microcontroller chip used in the Launchpad,\nor select 'Auto' to automatically detect the chip (recommended)"))
  
 
+        self._chFiles = wx.Choice(ctrlbar, wx.ID_ANY)#, choices=[''])
+        ctrlbar.AddControl(self._chFiles, wx.ALIGN_LEFT)
 
         # Button
 #        self._run   = self.AddPlateButton(_("  PROG  "),   ed_glob.ID_BIN_FILE, wx.ALIGN_LEFT)
         self._run   = self.AddPlateButton(_("  PROG  "),   ID_PROG, wx.ALIGN_LEFT)
+#        self._run.SetPressColor( wx.Colour( 76, 239, 92 ))
+        self._run.SetPressColor( self.colors['green'] )
+        
+        self._run.SetBackgroundColour(wx.Colour( 44, 139, 54 ))
+        
 #        self._run.SetToolTipString(_("Run or Stop the Microcontroller"))
-        self._run.SetToolTipString(_("Compiles the file (mpy2c, mspgcc)\nDownloads the program to the Launchpad\nPrograms the Microcontroller\nthen it will Run (mspdebug)"))
+        self._run.SetToolTipString(_("PROGRAM the Launchpad\n - Compiles the file (mpy2c, mspgcc)\n - Downloads the program to the Launchpad\n - Programs the Microcontroller\n - Then it will run (mspdebug)"))
 
 
         # Spacer
@@ -271,10 +295,11 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         # Button
         self._drvinst = self.AddPlateButton(_("  Install Launchpad Driver  "), ID_DRVINST,   wx.ALIGN_RIGHT)
         self._drvinst.SetToolTipString(_("Install Launchpad Drivers"))
-        
+        self._drvinst.SetPressColor( self.colors['green'] )
         
         # Button
         self._clear = self.AddPlateButton(_("Clear"), ed_glob.ID_DELETE,   wx.ALIGN_RIGHT)
+        self._clear.SetPressColor( self.colors['green'] )
         self.SetWindow(self._buffer)
         
 
@@ -318,16 +343,16 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
     def OnButton(self, evt):
         """Handle events from the buttons on the control bar"""
         e_obj = evt.GetEventObject()
-        if e_obj == self._pbtn:
-            app = wx.GetApp()
-            win = app.GetWindowInstance(cfgdlg.ConfigDialog)
-            if win is None:
-                config = cfgdlg.ConfigDialog(self.MainWindow)
-                config.CentreOnParent()
-                config.Show()
-            else:
-                win.Raise()
-        elif e_obj is self._run:
+#         if e_obj == self._pbtn:
+#             app = wx.GetApp()
+#             win = app.GetWindowInstance(cfgdlg.ConfigDialog)
+#             if win is None:
+#                 config = cfgdlg.ConfigDialog(self.MainWindow)
+#                 config.CentreOnParent()
+#                 config.Show()
+#             else:
+#                 win.Raise()
+        if e_obj is self._run:
             # May be run or abort depending on current state
             self.StartStopProg()
 #            self.StartStopProcess()
@@ -405,7 +430,7 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
     def OnCheck(self, evt):
         """CheckBox for Lock File was clicked"""
         e_obj = evt.GetEventObject()
-        if e_obj is self._lockFile:
+        if 0 and e_obj is self._lockFile:
             if self.Locked:
                 self._chFiles.Disable()
             else:
@@ -568,7 +593,8 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
 #           ncmds > 0 and len(self.GetFile()):
 #            for ctrl in (exe_ch, args_txt, self._run,
             for ctrl in (self._run,
-                         self._chFiles, self._lockFile):
+                         self._chFiles):
+#                         self._chFiles, self._lockFile):
                 ctrl.Enable()
 
             self._isready = True
@@ -587,7 +613,8 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
             self._isready = False
 #            for ctrl in (exe_ch, args_txt, self._run,
             for ctrl in (self._run,
-                         self._chFiles, self._lockFile):
+                         self._chFiles):
+#                         self._chFiles, self._lockFile):
                 ctrl.Disable()
 
     def Run(self, fname, cmd, args, ftype):
@@ -1007,7 +1034,7 @@ def run_mspdebug(parent):
                        }
         chip_id = 'Unknown'
         mspdebug_ver = r'mspdebug_v019'
-        print '(mspdebug started)...',
+#        print '(mspdebug started)...',
         install_dir = r'%s\%s' % (parent.mpy_dir, mspdebug_ver)
         cmd = r'%s\mspdebug.exe' % install_dir
         cmd_opts = r'rf2500 "--usb-list"' 
