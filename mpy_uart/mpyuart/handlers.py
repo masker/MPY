@@ -505,7 +505,7 @@ class CamlHandler(FileTypeHandler):
     class meta:
         typeid = synglob.ID_LANG_CAML
         commands = dict(ocaml='ocaml')
-        error = re.compile(r'File "(.+)", line (.+), characters .+:')
+        error   = re.compile(r'File "(.+)", line (.+), characters .+:')
         hotspot = re.compile(r'File "(.+)", line (.+), characters .+:')
 
 #-----------------------------------------------------------------------------#
@@ -702,10 +702,10 @@ class PythonHandler(FileTypeHandler):
     class meta:
         typeid = synglob.ID_LANG_PYTHON
         commands = dict(python='python -u', pylint='pylint',
-                             pylinterr='pylint -e',  upy='upy')
+                             pylinterr='pylint -e',  mpy='mpy')
         default = 'python'
-        error = re.compile('File "(.+)", line ([0-9]+)')
-        hotspot = re.compile('File "(.+)", line ([0-9]+)')
+        error   = re.compile('File "(.+)", line ([0-9]+)|^\S+:.* error:')
+        hotspot = re.compile('File "(.+)", line ([0-9]+)|^\S+:.* error:')
 
     def GetEnvironment(self):
         """Get the environment to run the python script in"""

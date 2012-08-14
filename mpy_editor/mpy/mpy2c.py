@@ -11,7 +11,7 @@ class mpy2c( object ):
     into a .c file suitable for compiling onto a microcontroller''' 
  
     #######################################################################
-    def __init__(self, code, full_conversion=True, filename=None, chip_id=None ):
+    def __init__(self, code, full_conversion=True, filename='<unknown>', chip_id=None ):
         '''Creates the mpy2c object. It does the following:
             1) Reads the code and parses it using the 'ast' library module
             2) Then walks the ast tree for the code and translates each element into an equivelant c syntax (nearly)
@@ -47,7 +47,7 @@ class mpy2c( object ):
         if code.find('\n') >= 0:
            code += '\n'
  
-        self.code_ast = ast.parse(code)
+        self.code_ast = ast.parse(code,filename=filename)
         self.code_lines = code.split('\n')
 
         
@@ -197,7 +197,7 @@ class mpy2c( object ):
             lastfile = t[8]
         
             if t[4] > lineno:
-                opstr += '\n'
+                opstr += '// &%s&%s\n' % (lastfile, lineno)
                 opstr += '  ' * t[6]
             lineno = t[4]
             
@@ -710,7 +710,7 @@ void main (void) {
                 mpy_value_sub = re.sub( 'else:', '\nelse:', mpy_value )
                 mpy_value_sub = re.sub( 'elif',  '\nelif', mpy_value_sub )
                 
-                duc = mpy2c( mpy_value_sub, full_conversion=False)
+                duc = mpy2c( mpy_value_sub, full_conversion=False, filename=self.filename)
                 duc.remove_trailing_semicolon()
                 c_value = duc.write_op(file=None).strip()
                 (name_parameters, parameter_list) = self.get_name_params_from_macro(name)
@@ -1140,7 +1140,8 @@ void main (void) {
 
 
         ##### mark the element as a variable ######
-        if node_name == 'str' and parent_arg_name in [None, 'target', 'value'] and arg_name == 'id':
+#        if node_name == 'str' and parent_arg_name in [None, 'target', 'value'] and arg_name == 'id':
+        if node_name == 'str' and parent_arg_name in [None, 'target'] and arg_name == 'id':
             vardef = True
         else:
             vardef = False
