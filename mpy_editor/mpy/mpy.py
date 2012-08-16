@@ -104,10 +104,6 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         self._state = dict(file='', lang=0, cfile='', clang=0, last='', 
                            lastlang=0, prelang=0, largs='', lcmd='')
 
-#         self.python_exe  = r'C:\Python27\python.exe'
-#         self.mpy_dir     = r'C:\MPY'
-
-#        self.python_exe   = r'C:\Python%s%s\python.exe' % ( sys.version.split('.')[0], sys.version.split('.')[1] )
 
         # MPY setup
         self.python_exe   = r'%s\python.exe' % ( sys.exec_prefix )
@@ -122,11 +118,16 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         self.mspDevice = 'Unknown'
         self.mspLaunchpadStatus_previous = 'Not_Connected'
         
-        self.colors = { 'yellow' : wx.Colour(255, 210,  95), 
-                        'green'  : wx.Colour(174, 255, 111), 
-                        'red'    : wx.Colour(255, 133, 106), }
+        self.colors = { 'yellow'      : wx.Colour(255, 210,  95), 
+                        'green'       : wx.Colour(174, 255, 111), 
+                        'light_green' : wx.Colour(76,  239,  92),
+                        'red'         : wx.Colour(255, 133, 106), 
+                        'grey'        : wx.Colour(128, 128, 128),  }
                         
         self.Locked = False
+        self.mspStatusStr  =  '.             unknown               .'
+        self.mspStatusColor   = wx.Colour(255, 210, 95)
+
 
         # Setup
         self.__DoLayout()
@@ -173,21 +174,10 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         ed_msg.RegisterCallback(self._CanLaunch, REQUEST_ACTIVE)
         ed_msg.RegisterCallback(self._CanReLaunch, REQUEST_RELAUNCH)
 
-        # Start the MPY uart serial COM-PORT interface
-        # but only start it if it is not already running 
-        
-#         self.run_uart_comport = run_uart_comport.run_uart_comport(self, \
-#             device_id=r'USB\VID_0451&PID_F432&MI_00',  
-#             run_in_separate_thread=True)
+        # Start the MPY uart serial COM-PORT interface        
+        self.con_check_thread = threading.Thread(target=self.CheckConnectionLoop, args=())
+        self.con_check_thread.start()
 
-#        self.StartStopProg(run_during_startup=True)
-
-
-        # MPY timer setup for checking the connection status
-        
-        self.timer_con_status = wx.Timer(self)
-        self.Bind(wx.EVT_TIMER, self.OnTimerCheckConnection, self.timer_con_status )
-        self.timer_con_status.Start(3000, oneShot=True)
 
     #---- Properties ----#
 #    Locked = property(lambda self: self._lockFile.IsChecked())
@@ -197,9 +187,9 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
     State = property(lambda self: self._state)
 
 
+    
 
-
-
+    #-------------------------------------------------------------------------------
     def OnDestroy(self, evt):
         if self:
             ed_msg.Unsubscribe(self.OnPageChanged)
@@ -257,13 +247,12 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         ctrlbar.AddControl(self._conStatusTxt, wx.ALIGN_LEFT)
 
         # Connection Status of Launchpad  
-
-        self._conStatus = wx.StaticText(ctrlbar, wx.ID_ANY, '.             unknown               .')
+        self._conStatus = wx.StaticText(ctrlbar, wx.ID_ANY, self.mspStatusStr)
         self._conStatus.SetForegroundColour(wx.Colour(0, 0, 0))
-        self._conStatus.SetBackgroundColour(wx.Colour(255, 210, 95))
+        self._conStatus.SetBackgroundColour(self.mspStatusColor)
 #        self._conStatus.SetLabel(_(".             unknown               ."))
         ctrlbar.AddControl(self._conStatus, wx.ALIGN_LEFT)
-        self._conStatus.SetToolTipString(_("Connection Status"))
+        self._conStatus.SetToolTipString(_("The Launchpad Chip Connection Status"))
 
 
         # List of Devices to choose from  
@@ -276,26 +265,29 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         self._chFiles = wx.Choice(ctrlbar, wx.ID_ANY)#, choices=[''])
         ctrlbar.AddControl(self._chFiles, wx.ALIGN_LEFT)
 
+        ctrlbar.AddControl((5, 5), wx.ALIGN_LEFT)
+        
         # Button
-#        self._run   = self.AddPlateButton(_("  PROG  "),   ed_glob.ID_BIN_FILE, wx.ALIGN_LEFT)
-        self._run   = self.AddPlateButton(_("  PROG  "),   ID_PROG, wx.ALIGN_LEFT)
-#        self._run.SetPressColor( wx.Colour( 76, 239, 92 ))
-        self._run.SetPressColor( self.colors['green'] )
-        
-        self._run.SetBackgroundColour(wx.Colour( 44, 139, 54 ))
-        
-#        self._run.SetToolTipString(_("Run or Stop the Microcontroller"))
+        self._run = wx.Button(ctrlbar, ID_PROG, "Program")
+        self._run.SetBackgroundColour(self.colors['green'])
         self._run.SetToolTipString(_("PROGRAM the Launchpad\n - Compiles the file (mpy2c, mspgcc)\n - Downloads the program to the Launchpad\n - Programs the Microcontroller\n - Then it will run (mspdebug)"))
-
+        ctrlbar.AddControl(self._run, wx.ALIGN_LEFT)
+#        self._run   = self.AddPlateButton(_("  PROG  "),   ed_glob.ID_BIN_FILE, wx.ALIGN_LEFT)
+#        self._run   = self.AddPlateButton(_("  PROG  "),   ID_PROG, wx.ALIGN_LEFT)
+#        self._run.SetPressColor( self.colors['green'] )        
 
         # Spacer
         ctrlbar.AddStretchSpacer()
 
  
         # Button
-        self._drvinst = self.AddPlateButton(_("  Install Launchpad Driver  "), ID_DRVINST,   wx.ALIGN_RIGHT)
-        self._drvinst.SetToolTipString(_("Install Launchpad Drivers"))
-        self._drvinst.SetPressColor( self.colors['green'] )
+        self._drvinst = wx.Button(ctrlbar, ID_DRVINST,_("  Install Launchpad Driver  "))
+        self._drvinst.SetToolTipString(_("Runs the Launchpad Driver Software Installation Program"))
+        self._drvinst.SetBackgroundColour(self.colors['green'])
+        ctrlbar.AddControl(self._drvinst, wx.ALIGN_LEFT)
+#        self._drvinst = self.AddPlateButton(_("  Install Launchpad Driver  "), ID_DRVINST,   wx.ALIGN_RIGHT)
+#        self._drvinst.SetPressColor( self.colors['green'] )
+        ctrlbar.AddControl((5, 5), wx.ALIGN_LEFT)
         
         # Button
         self._clear = self.AddPlateButton(_("Clear"), ed_glob.ID_DELETE,   wx.ALIGN_RIGHT)
@@ -367,7 +359,9 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         else:
             evt.Skip()
 
-    def OnTimerCheckConnection(self, evt):
+
+    #-------------------------------------------------------------------------------------
+    def OnTimerCheckConnection(self, evt=None):
         """Handle the Timer event for checking the connection status
         @param evt: wx.CommandEvent
         
@@ -384,23 +378,47 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         if self.mspLaunchpadStatus == 'Connected' and self.mspLaunchpadStatus_previous != 'Connected':
             self.mspDeviceDetected, self.mspDeviceStatus, self.mspDeviceStatusColor = run_mspdebug_full(self)
             tstr = re.sub( '_', ' ', self.mspDeviceDetected.upper() )
-            self._conStatus.SetLabel( 'Connected: %s' % tstr )
-            self._conStatus.SetBackgroundColour(self.colors[self.mspDeviceStatusColor])        
+            tstr = 'Connected: %s' % tstr
+            self.mspLaunchpadStatusStr = tstr
+            self.mspStatusColor = self.colors[self.mspDeviceStatusColor]
         elif self.mspLaunchpadStatus == 'Not_Connected':   # not connected
             tstr = re.sub( '_', ' ', self.mspLaunchpadStatus )
-            self._conStatus.SetLabel( tstr )
-            self._conStatus.SetBackgroundColour(self.colors[self.mspLaunchpadStatusColor])        
+            self.mspLaunchpadStatusStr = tstr
+            self.mspStatusColor = self.colors[self.mspLaunchpadStatusColor]
+#             self._conStatus.SetLabel( tstr )
+#             self._conStatus.SetBackgroundColour(color)        
         
         else:  # still connected, don't update the connection status
             pass
             
 
         self.mspLaunchpadStatus_previous = self.mspLaunchpadStatus
+        
+#        self.timer_con_status.Start(2000, oneShot=True)
+        return  (self.mspLaunchpadStatusStr, self.mspStatusColor )
 
-        self.timer_con_status.Start(2000, oneShot=True)
+    #--------------------------------------------------------------------------------
+    def CheckConnectionLoop( self ):
+        '''Continuously running loop is run in a separate thread and is responsible for
+        checcking the connection status to the Launchpad'''
+        
+        while 1:    
+            time.sleep(2)
+            (tstr, color) = self.OnTimerCheckConnection()
+            wx.CallAfter( self.UpdateConnectionStatus, (tstr,color) )
 
+    #--------------------------------------------------------------------------------
+    def UpdateConnectionStatus( self, status):
+        '''Updates the GUI connection status, from the wx.CallAfter call from the  
+        CheckConnectionLoop funcion which is running in a separate thread
+        '''
+        
+        (tstr, color) = status    
+        self._conStatus.SetLabel( tstr )
+        self._conStatus.SetBackgroundColour(color)        
 
-
+    
+    #--------------------------------------------------------------------------------
     def OnChoice(self, evt):
         """Handle events from the Choice controls
         @param evt: wx.CommandEvent
@@ -415,9 +433,6 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         elif e_id == self._chDevices.GetId():
             self.mspDeviceSelected = self._chDevices.GetStringSelection()
 
-#             # write out the device we will use
-#             self._buffer.AppendUpdate( 'DEVICE = %s\n' % self.mspDevice )
-#             self._buffer.FlushBuffer()
             
         elif e_id == ID_EXECUTABLE:
             e_obj = evt.GetEventObject()
@@ -668,6 +683,8 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         self.State['largs'] = args
 #        self._buffer.AppendUpdate( '[mpy] dir=%s cmd=%s\n' % (os.getcwd(), cmd) )
         self._buffer.AppendUpdate( "[mpy] Check for 'User Account Control' in background window\n[mpy] Click Yes to allow mpy_driver_installer.exe to make changes to this computer\n" )
+        self._drvinst.SetBackgroundColour(self.colors['grey'])
+
         # Must give it a python type file for some reason!
         self.Run(self.State['file'], cmd, args, 32161)   
 
@@ -754,6 +771,7 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
 #            self._buffer.FlushBuffer()
 
 #            self.mspDebugLock.acquire()
+            self._run.SetBackgroundColour(self.colors['grey'])
 
             self.Run(self.State['file'], cmd, args, 32161)   
 
@@ -964,7 +982,9 @@ class OutputDisplay(eclib.OutputBuffer, eclib.ProcessBufferMixin):
         """Do all that is needed to be done after a process has exited"""
         
 #        self.parent_obj.mspDebugLock.release()
-                
+        self.parent_obj._run.SetBackgroundColour(self.parent_obj.colors['green'])
+        self.parent_obj._drvinst.SetBackgroundColour(self.parent_obj.colors['green'])
+        
 #        self.AppendUpdate("DoProcessExit\n")
 #        self.FlushBuffer()
 
@@ -1014,7 +1034,13 @@ class OutputDisplay(eclib.OutputBuffer, eclib.ProcessBufferMixin):
 def runcmd( command_line, log=False ):
         args = shlex.split(command_line)
         if log:   print 'command_line=', args
-        p = subprocess.Popen( args , stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+        
+        # options to prevent console window from openning
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = subprocess.SW_HIDE
+
+        p = subprocess.Popen( args , stdout=subprocess.PIPE,stderr=subprocess.STDOUT, startupinfo=startupinfo)
         output = p.communicate()[0] 
         # remove any double linefeeds
         output = re.sub('\r', '', output)
