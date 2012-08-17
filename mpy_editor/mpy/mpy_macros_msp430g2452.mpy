@@ -34,7 +34,3 @@ macro( pulse_width(pulse,clocks),  'TA0CCR1 = clocks;' )
 
 macro( adc_enable(), 'ADC10CTL0 &= ~ENC; ADC10CTL0 = (ADC10SHT_2 | ADC10ON | REFON | REF2_5V | SREF_1);')
 
-
-
-
-

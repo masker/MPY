@@ -11,7 +11,7 @@ class mpy2c( object ):
     into a .c file suitable for compiling onto a microcontroller''' 
  
     #######################################################################
-    def __init__(self, code, full_conversion=True, filename='<unknown>', chip_id=None ):
+    def __init__(self, code, full_conversion=True, filename='<unknown>', chip_id=None, hfile=None ):
         '''Creates the mpy2c object. It does the following:
             1) Reads the code and parses it using the 'ast' library module
             2) Then walks the ast tree for the code and translates each element into an equivelant c syntax (nearly)
@@ -68,7 +68,8 @@ class mpy2c( object ):
                 
         
         if full_conversion:
-            self.setup_standard_variables_list()        
+#            self.setup_standard_variables_list()        
+            self.setup_hfile_variables_list(hfile)        
             
         self.convert_for_statements()
         self.remove_last_commas()
@@ -114,6 +115,44 @@ class mpy2c( object ):
              self.output_toks()
  
 
+    #########################################################################
+    def setup_hfile_variables_list(self, hfile):
+        '''Reads the hfile (the device specific .h file from the mspgcc installation)
+        and finds all the defines in the file, and creates a standard list of variables. 
+        This list will be used to prevent these variables from being redeclared in the 
+        mpy2c generated file
+        '''
+
+        self.standard_var_list = []
+        
+        fip = open( hfile, 'r')
+
+        if fip:
+            for line in fip:
+                line = line.strip()
+                # re to find r'#define CALBC1_1MHZ_          0x10FF    /* BCSCTL1 Calibration Data for 1MHz */'
+                #                      ^^^^^^^^^^^^
+                fnd = re.findall(r'\s*#define\s+(\S+)\s+', line )
+                if len(fnd) == 1 and len(fnd[0]) > 0:
+                    self.standard_var_list.append( fnd[0] )
+                   
+                # re to find = r'const_sfrb(CALBC1_1MHZ, CALBC1_1MHZ_);'
+                #                           ^^^^^^^^^^^    
+                fnd = re.findall(r'\s*\w*sfr[bw]\s*\(\s*(\w+)\s*,', line )
+                if len(fnd) == 1 and len(fnd[0]) > 0:
+                    self.standard_var_list.append( fnd[0] )
+
+            fip.close()
+        
+        else:
+        
+            print "*** error *** the .h file '%s' cannot be read, check that the mspgcc installation is correct" % (hfile)
+
+        # Add all the mpy functions that are defined as C functions
+        mpy_c_functions = ['wait', 'print', 'print_num', 'print_hex', 'print_value', 'adc', 'random' ] 
+        self.standard_var_list.extend( mpy_c_functions )
+
+    
 
     #########################################################################
     def setup_standard_variables_list(self):
@@ -210,6 +249,8 @@ class mpy2c( object ):
                 
             opstr += '%s%s' % (t[0], suffix)
 
+        opstr += '// &%s&%s\n' % (lastfile, lineno)
+        
         if file == 'screen':
             print opstr
             print '=============================================================='
@@ -1393,9 +1434,13 @@ if len(sys.argv) > 2:
 if chip_id in [ '', 'Un-recognized']:
     chip_id = None
     
-debug = False
+hfile = None
 if len(sys.argv) > 3:
-    debug = sys.argv[3]
+    hfile = sys.argv[3]
+
+debug = False
+if len(sys.argv) > 4:
+    debug = sys.argv[4]
     if debug != None:
         debug = True
 
@@ -1405,7 +1450,10 @@ file = sys.argv[1]
 file = os.path.abspath(file)
 (fileroot, fileext) = os.path.splitext(file)
 
+
 script_dir  = os.path.dirname( sys.argv[0] )
+
+
 
 
 fip = open( file, 'rb')
@@ -1415,7 +1463,7 @@ jlines = ''.join(lines)
 jlines = re.sub(r'\r','',jlines)
 
 
-uc = mpy2c( jlines, filename=file, chip_id=chip_id )
+uc = mpy2c( jlines, filename=file, chip_id=chip_id, hfile=hfile )
 
 
 #uc.write_toks()

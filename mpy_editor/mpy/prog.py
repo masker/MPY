@@ -107,15 +107,22 @@ def search_file_line( file, ref, comment_char ):
     return None,None   
 
 
+
+
+###########################################################
+## main prog starts here ##################################
+###########################################################
+
+
 python_exe   = r'%s\python.exe' % ( sys.exec_prefix )
 idx = sys.argv[0].index(  r'\mpy_editor\mpy\prog.py' )
 mpy_dir = sys.argv[0][:idx]
 
-file_contents = {}
 
 mspgcc_ver   = r'mspgcc-20120406'
 mspdebug_ver = r'mspdebug_v019'
 
+file_contents = {}
 debug = False
 
 # Main Program
@@ -128,6 +135,11 @@ file = os.path.abspath(file)
 chip_id = sys.argv[2]
 
 status = 'good'
+
+
+
+# Find the .h file for the chip_id device
+hfile = r'%s\%s\msp430\include\%s.h'  % (mpy_dir, mspgcc_ver, chip_id.lower())
 
 
 
@@ -178,14 +190,14 @@ if file != None:
         else:
            debug_str = ''
            
-        cmd_opts = '"%s\mpy_editor\mpy\mpy2c.py" "%s" %s %s' % ( mpy_dir, file, chip_id, debug_str )
+        cmd_opts = '"%s\mpy_editor\mpy\mpy2c.py" "%s" %s "%s" %s' % ( mpy_dir, file, chip_id, hfile, debug_str )
         command_line = '"%s" %s' % (cmd,cmd_opts)
         op = runcmd( command_line )    
         if re.search('Traceback \(most recent call last\):',op):
             print '\n\n  *** (mpy2c FAILED) ***\n'
             print op
             status = 'failed mpy2c'
-        elif re.search('mpy2c failed',op):
+        elif re.search('mpy2c failed|SyntaxError:',op):
             print '\n\n    *** (mpy2c FAILED) ***\n'
             print op
             status = 'failed mpy2c'
@@ -201,7 +213,7 @@ if file != None:
             if debug:
                 print op
 
-
+#        print op
     
 #######################################################################
 #  mspgcc
