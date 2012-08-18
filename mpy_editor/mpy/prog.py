@@ -55,7 +55,7 @@ def hotspotify_c_log( op_log, file ):
                 
             py_file, py_linenum = get_py_file_linenum( c_line, '//' )    
             if py_file:
-               pyer_line = ' File "%s", line %s\n (File "%s", line %s)\n    %s\n' % ( py_file, py_linenum, c_file, c_linenum, error_str)
+                pyer_line = '(File "%s", line %s)\n File "%s", line %s\n    %s\n' % (  c_file, c_linenum, py_file, py_linenum, error_str)
             else:
                 pyer_line = '                    (File "%s", line %s)\n    %s\n' % ( c_file, c_linenum, error_str)
             print pyer_line 

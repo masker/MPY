@@ -11,7 +11,7 @@ class mpy2c( object ):
     into a .c file suitable for compiling onto a microcontroller''' 
  
     #######################################################################
-    def __init__(self, code, full_conversion=True, filename='<unknown>', chip_id=None, hfile=None ):
+    def __init__(self, code, full_conversion=True, filename='<unknown>', chip_id=None, hfile=None, vlist=None ):
         '''Creates the mpy2c object. It does the following:
             1) Reads the code and parses it using the 'ast' library module
             2) Then walks the ast tree for the code and translates each element into an equivelant c syntax (nearly)
@@ -63,14 +63,16 @@ class mpy2c( object ):
         self.include_name = None
         self.last_body_end_idx = None
         
-
-        self.walk_node( None, self.code_ast, None, None, None, 'TOP', filename=filename)  
-                
-        
         if full_conversion:
 #            self.setup_standard_variables_list()        
-            self.setup_hfile_variables_list(hfile)        
-            
+            self.setup_hfile_variables_list(hfile)
+        else:
+            self.standard_var_list = vlist    
+ 
+        self.walk_node( None, self.code_ast, None, None, None, None, 'TOP', filename=filename)  
+                
+        
+           
         self.convert_for_statements()
         self.remove_last_commas()
         
@@ -238,6 +240,7 @@ class mpy2c( object ):
             if t[4] > lineno:
                 opstr += '// &%s&%s\n' % (lastfile, lineno)
                 opstr += '  ' * t[6]
+                
             lineno = t[4]
             
             
@@ -306,24 +309,48 @@ class mpy2c( object ):
         
         
         self.var_d = {}
+        in_args = False
         
         # Look for all elements where the vardef is True
         # and add the element text to the var_d dict
         for t in self.op:
+
+            scope = t[2]
+            if t[5] == 'func_args_start':
+                in_args = True
+            if t[5] == 'func_args_end':
+                in_args = False
+
             if t[1] == True:
-                scope = t[2]
                 if scope not in self.var_d:
                     self.var_d[scope] = {}
+                    
+                
+                # Add the variable to the var_d dict, but not if 
+                #   the variable is in the standard variable list, or
+                #   the vartable is an argument of a function
                 if t[0] not in self.standard_var_list:
                     # to start lets assume that 'all' variables are int's
                     # this will be upgraded later to add strings and lists (hopefully)
                     #                             typename  done_flag
                     if self.is_var_num_str( t[0] ) == 'variable':
                         self.var_d[scope][ t[0] ]  = [ 'int',    None ]
-#                    self.var_d[scope][ t[0] ]  = [ 'unsigned int',    None ]
+
+            # add the function arguments as variables to be declared
+            if in_args == True:
+                if scope not in self.var_d:
+                    self.var_d[scope] = {}
+                if t[0] not in self.standard_var_list:
+                    if self.is_var_num_str( t[0] ) == 'variable':
+                        self.var_d[scope][ t[0] ]  = [ 'int',    None ]
+                        t[1] = True
                 
         opn = []
         
+        
+        
+        if debug:
+            print 'var_d 1 =', self.var_d
                 
         # Then add the variable declaration to the body_start or to the function definition arguments
         in_funct_def = False
@@ -366,12 +393,12 @@ class mpy2c( object ):
                     opn.append(t_newline)
                     
                 if debug:
-                    print 'found body_start for ', scope
+                    print 'found body_start for ', scope, ' on line ', t[4]
                 if scope in self.var_d:
                     for v in self.var_d[scope]:
                     
                         # Skip this variable definition if a global ('main') variable of the same name has been defined 
-                        if scope != 'main' and v in  self.var_d['main']:
+                        if scope != 'main' and 'main' in self.var_d and v in  self.var_d['main']:
                             continue
                     
                         typ = self.var_d[scope][v][0]
@@ -586,7 +613,7 @@ class mpy2c( object ):
 #                 found = None
 
                 
-            if t[5] in ['body_end', 'define_micro_end'] and idx < len(self.op) - 3:
+            if t[5] in ['body_end', 'define_micro_end'] and idx < len(self.op) - 5:
                 main_insert_idx = idx
                 main_insert_tok = t[:]
                 found = idx
@@ -613,7 +640,7 @@ class mpy2c( object ):
                 t = main_insert_tok[:]
                 indent = t[6]
                 t[2] = 'main'
-                t[4] = main_insert_tok[4] - 1
+                t[4] = main_insert_tok[4] + 1
                 t[5] = ''
                 t[6] = indent
                 t[0] = '''
@@ -637,20 +664,20 @@ void main (void) {
                 
                 t = main_insert_tok[:]
                 t[2] = 'main'
-                t[4] = main_insert_tok[4] - 1
+                t[4] = main_insert_tok[4] + 1
                 t[6] = 0
                 t[0] = ''
                 t[5] = 'body_start'
                 opn.append(t)
                 t = main_insert_tok[:]
                 t[2] = 'main'
-                t[4] = main_insert_tok[4] - 1
+                t[4] = main_insert_tok[4] + 1
                 t[6] = indent                
                 t[0] = '\n'
                 t[5] = ''
                 opn.append(t)
                 t[2] = 'main'
-                t[4] = main_insert_tok[4] - 1
+                t[4] = main_insert_tok[4] + 1
                 t[6] = indent             
                 t[0] = '\n'
                 t[5] = ''
@@ -751,7 +778,7 @@ void main (void) {
                 mpy_value_sub = re.sub( 'else:', '\nelse:', mpy_value )
                 mpy_value_sub = re.sub( 'elif',  '\nelif', mpy_value_sub )
                 
-                duc = mpy2c( mpy_value_sub, full_conversion=False, filename=self.filename)
+                duc = mpy2c( mpy_value_sub, full_conversion=False, filename=self.filename, vlist=self.standard_var_list)
                 duc.remove_trailing_semicolon()
                 c_value = duc.write_op(file=None).strip()
                 (name_parameters, parameter_list) = self.get_name_params_from_macro(name)
@@ -983,6 +1010,7 @@ void main (void) {
                 linenum_start = t[4]
                 indent        = t[6]
                 line_offset = None
+                vardef        = t[1]
 
                 
                 if params_in_prototype and len(params_in_prototype) > 0 and 'portpin' in params_in_prototype:
@@ -991,6 +1019,7 @@ void main (void) {
                 for tro in duc.op:
                     tr = tro[:]
                     tr[0] = tro[0][:]
+                    
                     
                     # Check to see if each element is one of the parameters if it is then replace it with the
                     # parameter name used in the  
@@ -1003,16 +1032,25 @@ void main (void) {
                                 tr[0] = re.sub('xxx', port, tr[0])
                             if tr[0].find('yyy') >= 0:
                                 tr[0] = re.sub('yyy', bit, tr[0])
-                        
+                        # if parameters are used in the macro and the 
+                    else:
+                      tr[1] = vardef  
+
                     if not line_offset: 
                         line_offset = linenum_start
                     tr[4] =  linenum_start
                     tr[6] =  indent
                     tr[2] =  scope
                     
-                    vns =  self.is_var_num_str(tr[0], tr[7])
-                    if vns == 'variable':
-                        tr[1] = True
+                    if tr[0] in self.standard_var_list:
+                        tr[1] = False
+                        
+#                     vns =  self.is_var_num_str(tr[0], tr[7])
+#                     if vns == 'variable':
+#                         tr[1] = True
+ 
+ 
+                    
  
                     opn.append(tr)
                       
@@ -1092,7 +1130,7 @@ void main (void) {
         jlines = ''.join(lines)
         jlines = re.sub(r'\r','',jlines)
         
-        uc_inc = mpy2c( jlines, filename=fullfile , full_conversion=False)
+        uc_inc = mpy2c( jlines, filename=fullfile , full_conversion=False, vlist=self.standard_var_list)
         
         self.op.extend( uc_inc.op )
     
@@ -1100,7 +1138,7 @@ void main (void) {
 
         
     ########################################################################    
-    def walk_node( self, parent_node_name, node,  parent_arg_name, arg_name, first_node_name, node_or_field, filename=None):
+    def walk_node( self, parent_node_name, node,  parent_arg_name, arg_name, first_node_name, parent_first_node_name, node_or_field, filename=None):
         '''Traverses the node and adds the node details to self.op to form
         a C format string in self.op.  This is a recursive function.
         
@@ -1166,7 +1204,7 @@ void main (void) {
             lineno  = '?'  
 
 
-        if debug : print '(walk_node) ', pfx, node_or_field, parent_node_name, node_name, parent_arg_name, arg_name, node0_name, first_node_name, node, typ
+        if debug : print '(walk_node) ', pfx, node_or_field, parent_node_name, node_name, parent_arg_name, arg_name, node0_name, first_node_name, parent_first_node_name, node, typ
 
 
 
@@ -1182,7 +1220,7 @@ void main (void) {
 
         ##### mark the element as a variable ######
 #        if node_name == 'str' and parent_arg_name in [None, 'target', 'value'] and arg_name == 'id':
-        if node_name == 'str' and parent_arg_name in [None, 'target'] and arg_name == 'id':
+        if node_name == 'str' and parent_arg_name in [None, 'target'] and arg_name == 'id' and parent_first_node_name == 'Assign' and str(node) not in self.standard_var_list:
             vardef = True
         else:
             vardef = False
@@ -1303,7 +1341,7 @@ void main (void) {
             node_count = 1
             for nd in node:
  #                           parent_node_name, node,  parent_arg_name, arg_name, first_node_name, node_or_field):
-                self.walk_node(  node_name,     nd,      arg_name,       None,   parent_node_name, 'NOD', filename=filename )
+                self.walk_node(  node_name,     nd,      arg_name,       None,   parent_node_name, first_node_name, 'NOD', filename=filename )
 
                 # After processing each line frm the Modlule list of lines, we need it check to see
                 # if we need to do an inline include of a mpy file
@@ -1334,7 +1372,7 @@ void main (void) {
                         first_node_nm = field[1].__class__.__name__
                         done = True
    #                           parent_node_name,  node,  parent_arg_name, arg_name, first_node_name, node_or_field):
-                    self.walk_node(  node_name , field[1],  arg_name,     field[0], first_node_nm, 'FLD', filename=filename)
+                    self.walk_node(  node_name , field[1],  arg_name,     field[0], first_node_nm, first_node_name, 'FLD', filename=filename)
                      
         self.scope  = scope
         self.level  = level

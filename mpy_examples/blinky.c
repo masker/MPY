@@ -5,6 +5,7 @@
 #include "c:\mpy\mpy_editor\mpy\mpy_functions.c"
 
 
+// &C:\MPY\mpy_examples\blinky.mpy&15
 
                         
 void main (void) { 
@@ -23,11 +24,10 @@ void main (void) {
    
 
 
-// &C:\MPY\mpy_examples\blinky.mpy&17
-if ( 16 < 32 ) { P1DIR |= ( 1 << ( 16 & 15 ) ) ; P1SEL &= ~ ( 1 << ( 16 & 15 ) ) ; P1REN &= ~ ( 1 << ( 16 & 15 ) ) ; } else { P2DIR |= ( 1 << ( 16 & 15 ) ) ; P2SEL &= ~ ( 1 << ( 16 & 15 ) ) ; P2REN &= ~ ( 1 << ( 16 & 15 ) ) ; } ; // &C:\MPY\mpy_examples\blinky.mpy&11
-      while ( 1 ) { // &C:\MPY\mpy_examples\blinky.mpy&14
-          if ( 1 ) { if ( 16 < 32 ) { P1OUT |= ( 1 << ( 16 & 15 ) ) ; } else { P2OUT |= ( 1 << ( 16 & 15 ) ) ; } ; } else { if ( 16 < 32 ) { P1OUT &= ~ ( 1 << ( 16 & 15 ) ) ; } else { P2OUT &= ~ ( 1 << ( 16 & 15 ) ) ; } ; } ; // &C:\MPY\mpy_examples\blinky.mpy&15
-          wait ( 100 ) ; // &C:\MPY\mpy_examples\blinky.mpy&16
-          if ( 0 ) { if ( 16 < 32 ) { P1OUT |= ( 1 << ( 16 & 15 ) ) ; } else { P2OUT |= ( 1 << ( 16 & 15 ) ) ; } ; } else { if ( 16 < 32 ) { P1OUT &= ~ ( 1 << ( 16 & 15 ) ) ; } else { P2OUT &= ~ ( 1 << ( 16 & 15 ) ) ; } ; } ; // &C:\MPY\mpy_examples\blinky.mpy&17
-          wait ( 100 ) ; } } // &C:\MPY\mpy_examples\blinky.mpy&18
+if ( 16 < 32 ) { P1DIR |= ( 1 << ( 16 & 15 ) ) ; P1SEL &= ~ ( 1 << ( 16 & 15 ) ) ; P1REN &= ~ ( 1 << ( 16 & 15 ) ) ; } else { P2DIR |= ( 1 << ( 16 & 15 ) ) ; P2SEL &= ~ ( 1 << ( 16 & 15 ) ) ; P2REN &= ~ ( 1 << ( 16 & 15 ) ) ; } ; // &C:\MPY\mpy_examples\blinky.mpy&10
+      while ( 1 ) { // &C:\MPY\mpy_examples\blinky.mpy&11
+          if ( 1 ) { if ( 16 < 32 ) { P1OUT |= ( 1 << ( 16 & 15 ) ) ; } else { P2OUT |= ( 1 << ( 16 & 15 ) ) ; } ; } else { if ( 16 < 32 ) { P1OUT &= ~ ( 1 << ( 16 & 15 ) ) ; } else { P2OUT &= ~ ( 1 << ( 16 & 15 ) ) ; } ; } ; // &C:\MPY\mpy_examples\blinky.mpy&12
+          wait ( 100 ) ; // &C:\MPY\mpy_examples\blinky.mpy&13
+          if ( 0 ) { if ( 16 < 32 ) { P1OUT |= ( 1 << ( 16 & 15 ) ) ; } else { P2OUT |= ( 1 << ( 16 & 15 ) ) ; } ; } else { if ( 16 < 32 ) { P1OUT &= ~ ( 1 << ( 16 & 15 ) ) ; } else { P2OUT &= ~ ( 1 << ( 16 & 15 ) ) ; } ; } ; // &C:\MPY\mpy_examples\blinky.mpy&14
+          wait ( 100 ) ; } } // &C:\MPY\mpy_examples\blinky.mpy&15
 
