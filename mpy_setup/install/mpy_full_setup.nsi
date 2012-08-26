@@ -269,11 +269,11 @@ Section /o "Editra" EditraSection
 ;  MessageBox MB_OK "Editra install"
   SetOverwrite try
   SetOutPath "$TEMP\Editra"
-  File  /r "C:\mpy_temp\Editra-0.7.08.tar\dist\Editra-0.7.08\Editra-0.7.08"
+  File  /r "C:\mpy_temp\Editra-0.7.12.tar\dist\Editra-0.7.12\Editra-0.7.12"
 
 
   ; install wxpython
-  SetOutPath "$TEMP\Editra\Editra-0.7.08"
+  SetOutPath "$TEMP\Editra\Editra-0.7.12"
   ExecWait '"$PythonDir\python.exe" setup.py install' $0
   DetailPrint "Editra installer returned $0"
   ${If} $0 != 0
