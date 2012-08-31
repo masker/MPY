@@ -1059,7 +1059,7 @@ def run_mspdebug(parent):
                          '0x2452': 'msp430g2452',
                        }
         chip_id = 'Unknown'
-        mspdebug_ver = r'mspdebug_v019'
+        mspdebug_ver = r'mspdebug_v020'
 #        print '(mspdebug started)...',
         install_dir = r'%s\%s' % (parent.mpy_dir, mspdebug_ver)
         cmd = r'%s\mspdebug.exe' % install_dir
@@ -1096,7 +1096,7 @@ def run_mspdebug_full(parent):
                          '0x2452': 'msp430g2452',
                        }
         chip_id = 'Un-recognized'
-        mspdebug_ver = r'mspdebug_v019'
+        mspdebug_ver = r'mspdebug_v020'
         print '(mspdebug started)...',
         install_dir = r'%s\%s' % (parent.mpy_dir, mspdebug_ver)
         cmd = r'%s\mspdebug.exe' % install_dir

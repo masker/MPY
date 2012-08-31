@@ -25,7 +25,7 @@ int adc(int pin) {
     
 
 int   random( int  S ) { 
-          S = ( ( S * -18121 ) + 359 ) ; 
+          S = ( ( (S>>1) * (-18121) ) + 359 ) ; 
           return S ; } 
 
 

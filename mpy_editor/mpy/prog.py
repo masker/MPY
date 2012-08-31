@@ -120,7 +120,7 @@ mpy_dir = sys.argv[0][:idx]
 
 
 mspgcc_ver   = r'mspgcc-20120406'
-mspdebug_ver = r'mspdebug_v019'
+mspdebug_ver = r'mspdebug_v020'
 
 file_contents = {}
 debug = False
@@ -252,13 +252,14 @@ if file != None:
         cmd_opts = r'rf2500 "prog %s.elf"' % fileroot
         command_line = '"%s" %s' % (cmd,cmd_opts)
         op = runcmd( command_line )
-        if not re.search("Done, \d+ bytes written",op):
+#        if not re.search("Done, \d+ bytes written",op):  # v0.19
+        if not re.search("Done, \d+ bytes total",op):   # v0.20
             print '\n\n    *** (mspdebug FAILED) ***\n'
             print op
             status == 'failed mspdebug'
         else:
             print '(mspdebug passed)   ', 
-            num_bytes = re.findall('(\d+ bytes written)', op)
+            num_bytes = re.findall('(\d+ bytes total)', op)
             print num_bytes[0], 'to ', chip_id
 
 else:    

@@ -24,7 +24,7 @@ python_exe   = r'%s\python.exe' % ( sys.exec_prefix )
 idx = sys.argv[0].index(  r'\mpy_editor\mpy\find_device.py' )
 mpy_dir = sys.argv[0][:idx]
 
-mspdebug_ver = r'mspdebug_v019'
+mspdebug_ver = r'mspdebug_v020'
 
 debug = False
 

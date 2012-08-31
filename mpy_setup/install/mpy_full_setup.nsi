@@ -307,7 +307,7 @@ Section /o "MPY Tools" MpyToolsSection
   SetOutPath "$MpyDir"
   File /r "C:\MPY\devcon"
   File /r "C:\MPY\mspgcc-20120406"
-  File /r "C:\MPY\mspdebug_v019"
+  File /r "C:\MPY\mspdebug_v020"
 SectionEnd
 
 
@@ -656,7 +656,7 @@ SectionEnd
 Section /o "un.MPY Tools" UNMpyToolsSection
   SectionIn  1
   RmDir /r "$INSTDIR\devcon"
-  RmDir /r "$INSTDIR\mspdebug_v019"
+  RmDir /r "$INSTDIR\mspdebug_v020"
   RmDir /r "$INSTDIR\mspgcc-20120406"
 SectionEnd
 
