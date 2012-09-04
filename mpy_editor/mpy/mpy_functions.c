@@ -3,6 +3,7 @@
 // #include "msp430g2553.h"
 // #define TXD BIT1 // TXD on P1.1
  
+#include  <stdarg.h>
 
 // Function Definitions
 void Transmit(unsigned int);
@@ -41,6 +42,37 @@ void  halt(void) {
           for ( ; ;  ) { 
                   _NOP ( ) ; } }  
                 
+
+
+void print_mpy( const char *fmt, ... )
+{
+   va_list ap;
+   char *p, *sval;
+   int ival;
+   int x;
+   unsigned int TXByte;
+  
+//   print_num( ap ) ;
+   
+   va_start(ap, fmt);
+   for (p = fmt; *p; p++){
+       switch(*p) {
+          case 'd':
+              ival = va_arg(ap, int);
+              print_num( ival );
+              break;
+          case 'h':
+              ival = va_arg(ap, int);
+              print_hex( ival );
+              break;
+          case 's':
+              sval = va_arg(ap, char *);
+              print(sval);
+              break;
+       }
+   }
+   va_end(ap);
+}
 
 void print_value(char *string, int num)
 {

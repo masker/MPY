@@ -109,6 +109,10 @@ class mpy2c( object ):
                 print "  endless macro loop detected, last macro = '%s'" % (last_replace)
             
 
+
+            # Look for the print statements and convert them into the variable argument format that is
+            # compatible with C
+            self.convert_print_statements()
                 
             self.add_variable_definitions()
 
@@ -523,6 +527,96 @@ class mpy2c( object ):
                 state = None
               
         self.op = opn
+    ########################################################################    
+    def convert_print_statements(self):
+        '''The print_mpy statement has a variable argument list. We will replace 
+        modify the arguments so that the variable argument list can be compiled in C
+           print_mpy( 'X=', x, 'Y=', y )  -> print_mpy( "sdsd", "X=", x, "Y=", y )
+        This function inserts an extra format aguement at the beginning of the list.
+        The format arguement describes the type for each argument in the list.
+        (Note the print_mpy() function is actually the print() funtion in the user's
+        original input)
+        '''  
+        
+        opn = []
+        opn_pr = []
+        first_tok = None
+        state = None
+        tn = 0
+        print_level = 0
+        for t in self.op:
+            if not state and t[5] == 'Call' :
+                state = 'Call'
+                print_level = t[3]
+            if state == 'arg_end' and t[5] == 'Call_end' and t[3] == print_level:
+                state = None
+                first_tok[0] = '"%s"' % fmt
+                first_tok[1] = None
+                first_tok[5] = None
+                first_tok[7] = 'Str'
+#                 print "first_tok=" , first_tok
+#                 print "opn_pr=" , opn_pr
+                opn.append( first_tok )
+                second_tok = first_tok[:]
+                second_tok[0] = ','
+                opn.append( second_tok )
+                
+                opn.extend( opn_pr )
+                
+            if state == 'Call' and t[0] == 'print_mpy':
+                state = 'pr'
+            
+                
+                            
+            
+                
+            if state == 'pr' and t[5] == 'arg_start':
+                first_pram = tn 
+                # start a new list for the print parameters   
+                first_tok = t[:]
+                opn_pr = []
+                state = 'arg_start'
+                fmt = ''
+                
+            if state in ['arg_start', 'arg_done'] and t[5] == 'arg_end':
+                state = 'arg_end'
+            if state == 'arg_end'   and t[5] == 'arg_start':
+                state = 'arg_start'
+                
+            # when we and arg at the correct level we need to determine it's type
+            if state == 'arg_start' and t[0] != '' and t[3] == print_level+2:
+                state = 'arg_done'
+                if re.search(r'"', t[0]):
+                    fmt += 's'
+                elif  re.search(r'_hex$', t[0]):  # if the name ends in '_hex' then mark it to be printed as a hex number
+                    fmt += 'h' 
+                elif  re.search(r'_bin$', t[0]):
+                    fmt +='b' 
+                elif  re.search(r'_1000$', t[0]):
+                    fmt += 'm' 
+                elif  re.search(r'_100$', t[0]):
+                    fmt += 'c' 
+                elif  re.search(r'_10$', t[0]):
+                    fmt += 'x' 
+                else:
+                    fmt += 'd'                    # else print it as a decimal number.
+                
+                
+                
+                
+            if state not in ['arg_start', 'arg_end', 'arg_done']:
+                opn.append(t)
+            else:
+                opn_pr.append(t)
+                
+#            if state in ['pr', 'arg_start' , 'arg_done', 'arg_end' ]: print t
+                
+            tn += 1  
+        self.op = opn
+        
+        
+
+#        self.output_toks()       
 
     ########################################################################    
     def replace_define_micro(self):
@@ -1310,7 +1404,7 @@ void main (void) {
         if node_name in ['BinOp', 'arguments', 'BoolOp']:
             self.add_element( '(' )
 
-        if parent_node_name in ['Call', ] and node_name == 'Name':
+        if parent_node_name in ['Call',] and node_name == 'Name':
             self.add_marker('Call')
 
  
@@ -1406,6 +1500,8 @@ void main (void) {
                    self.add_element( ';' )
 
 
+        if arg_name == 'args' and parent_node_name in ['Call']:
+            self.add_marker( 'Call_end' )
 
         #####  )))))))   ###########
         if arg_name in ['test']:
