@@ -28,9 +28,15 @@ class mpy2c( object ):
         self.op_chars = ['+',   '-',   '+',  '-',  '*',   '/',  '%',  '**', '<<',    '>>',    '|',    '^',     '&',     '//',       \
                                '==', '!=',    '<',  '<=',  '>',  '>=',  'Is', 'IsNot', 'In', 'NotIn', '&&',  '||', '~']  
 
-        if full_conversion:
-            self.micro_name = chip_id    
+        # Change the print statements to a print_mpy function call
+        # this is most easily done before we pass the code to the ast parser
+        code = self.replace_print( code ) 
 
+        if full_conversion:
+            self.micro_name = chip_id   
+            
+
+        
 
         # if the code is surrounded by quotes then remove them if there is a '=' char
         # (when running get_macros() we need to process the macros without quotes,
@@ -74,6 +80,11 @@ class mpy2c( object ):
         
            
         self.convert_for_statements()
+        # Look for the print statements and convert them into the variable argument format that is
+        # compatible with C
+        if full_conversion:
+           self.convert_print_statements()
+
         self.remove_last_commas()
         
         # now process the macros (only do this once on the main code)
@@ -110,9 +121,6 @@ class mpy2c( object ):
             
 
 
-            # Look for the print statements and convert them into the variable argument format that is
-            # compatible with C
-            self.convert_print_statements()
                 
             self.add_variable_definitions()
 
@@ -120,6 +128,178 @@ class mpy2c( object ):
         if debug:
              self.output_toks()
  
+    #########################################################################
+    def blank_strings_and_comments(self, line):
+        '''This function goes through a line and replaces any quoted string with the string @@@\d@@@
+        which effectively blanks out the contents of any quoted string from being mistaken as code tokens.
+        Comments are stripped off completely (and not replaced). The original line is returned with the 
+        quoted strings replaced with the @@@\d@@@. The list of the orginal quoted strings 
+        is also returned in quote_strings.
+        ''' 
+        opline = ''
+        str_count = 0
+        in_str = False
+        in_comment = False
+        quoted_strings = []
+        ch_end = None
+        i = 0
+        for ch in line:
+        
+            # Start here! Look for an openning quote
+            if not in_comment and not in_str and ch in ["'", '"']:
+               ch_end = ch
+               in_str = True
+               current_quoted_string = ''
+               opline += '@@@%d@@@' % str_count   
+               str_count += 1
+#               print '(blank_strings_and_comments) start', i, ch, str_count, in_comment, in_str
+            else:
+                # End of string here! Look for a matching closing quote
+                if not in_comment and in_str and ch == ch_end:
+                   ch_end = ch
+                   in_str = False
+                   current_quoted_string += ch
+                   ch = ''   # Clear the ch (ch_end), we do not want it being added to the opline.
+                   quoted_strings.append(current_quoted_string)
+#                   print '(blank_strings_and_comments) end  ', i, ch, str_count, in_comment, in_str
+
+            # Look for trailing comment
+            if not in_comment and not in_str and ch == '#':
+               in_comment = True
+               current_quoted_string = ''
+#               opline += '@@@#@@@' 
+            
+            
+            # if the ch is a \ control character we need to double it up
+            if ch == '\\' :
+               ch = '\\\\'
+               
+            # We are in a quoted string therefore add the character to the current quoted string
+            # else add the character to output line
+            if in_str or in_comment:
+               current_quoted_string += ch
+            else:
+               opline += ch                 
+
+            i += 1
+
+#         if in_comment:
+#             quoted_strings.append(current_quoted_string)
+            
+        return (opline, quoted_strings)
+
+    #########################################################################
+    def reinsert_strings_and_comments(self, line, quoted_strings):
+        '''Replace all blanked out strings and comments back into the line.
+        This function is used on a line that has been previously processed
+        with blank_strings_and_comments() function. It replaces all blanked 
+        out strings and comments back into the original values.
+        All blanked out strings will match pattern @@@\d@@@ where the \d digit
+        is the match count. The parameter quoted_strings contains a list of all
+        the original strings
+        '''
+        i = 0
+        new_line = line
+        for repstr in quoted_strings:
+            new_line = re.sub(r'@@@%d@@@' % i, quoted_strings[i], new_line)
+            i += 1
+            
+        return new_line
+    
+
+                
+
+    #########################################################################
+    def replace_print(self, code):
+        '''Go through the input source file and replace the print function 
+        with a print__mpy__() function call. We do this to support variable
+        length argument list, and arguments with a trailing ',' to indicate
+        no newline.
+        
+        Assumptions:
+                1) The print command is on a single line
+                2) The print command is either a statement or a function
+                3) The print command may occur in a multi-command line separated with ; characters
+        '''
+        
+        lines = code.split('\n')
+        new_lines = []
+        for line in lines:
+            new_line = line
+            # Look for a possible print line
+            # this search may not definitively find a print command, as it is possible for 'print' to be contained
+            # inside a quoted string, in which case we should ignore it. 
+            if re.match(r'^\s*print[(|\s]', line):
+#                print '(replace_print) found print line = ', line
+                (blanked_line, quoted_strings) = self.blank_strings_and_comments(line)
+#                print '(replace_print) blanked_line = ', blanked_line, quoted_strings
+                cmds = blanked_line.split(';')
+                new_cmds = []
+                for cmd in cmds:
+                    new_cmd = cmd
+                    # Looking for " print(..." or " print X..."
+                    if re.match(r'^\s*print[(|\s]', cmd):
+#                        print '(replace_print) found print ', cmd
+
+                                                
+                        # Check to see if it is  function or a statement by looking for an openning bracket
+                        if re.match(r'^\s*print\s*\(', cmd):
+                            fnd_function = True
+                        else:
+                            fnd_function = False
+                        pars = cmd.split(',')
+#                        print '(replace_print) pars=', pars
+                        
+                        # Change the command from 'print' to 'print___mpy__' 
+                        if fnd_function:
+                            pars[0] = re.sub('print', 'print__mpy__', pars[0])
+                        else:
+                            pars[0] = re.sub('print', 'print__mpy__(', pars[0])
+ 
+                        #Look at the last pars value and determine if a newline is required or not
+                        #For a print function, if the last pars is a ')' then there is a trailing ',', therefore do not add newline
+                        if fnd_function:
+                            if  pars[-1].strip() == ')':
+                                do_nl = False
+                            else:
+                                do_nl = True
+                        #For a print statement, if the last pars is a ')' then there is a trailing ',', therefore do not add newline
+                        else:
+                            if pars[-1].strip() == '':
+                                do_nl = False
+                            else:
+                                do_nl = True
+                         
+#                        print '(replace_print) found print   fnd_function=', fnd_function, '  do_nl=', do_nl
+                        
+                        # Add newline if needed to last pars
+                        # but be careful if it is a function to add it before the last ')'
+                        if do_nl:
+                            if not fnd_function:
+                                pars[-1] += ' ,r"\\n"'
+                            else:
+                                pars[-1] = re.sub( r'\)\s*$', ' ,"\\\\n" )', pars[-1])
+                            
+                        # Add a trailing bracket if not a function
+                        if not fnd_function:
+                            pars[-1] += ' )'
+
+#                       print '(replace_print) new pars=', pars
+                        
+                           
+                        new_cmd = ','.join(pars)
+                        
+                    new_cmds.append(new_cmd)
+                
+                blanked_line = ';'.join(new_cmds)
+                new_line = self.reinsert_strings_and_comments(blanked_line, quoted_strings)
+#                print '(replace_print) reinserted line = ', new_line
+            new_lines.append(new_line)
+            
+
+        
+        return '\n'.join(new_lines)
+
 
     #########################################################################
     def setup_hfile_variables_list(self, hfile):
@@ -531,23 +711,29 @@ class mpy2c( object ):
     def convert_print_statements(self):
         '''The print_mpy statement has a variable argument list. We will replace 
         modify the arguments so that the variable argument list can be compiled in C
-           print_mpy( 'X=', x, 'Y=', y )  -> print_mpy( "sdsd", "X=", x, "Y=", y )
+           print( 'X=', x, 'Y=', y )  -> print__mpy__( "sdsd", "X=", x, "Y=", y )
         This function inserts an extra format aguement at the beginning of the list.
         The format arguement describes the type for each argument in the list.
         (Note the print_mpy() function is actually the print() funtion in the user's
         original input)
         '''  
         
+#         self.tok_num = 0
+#         self.output_toks()   
+                
         opn = []
         opn_pr = []
         first_tok = None
         state = None
         tn = 0
         print_level = 0
+        last_tok = ''
         for t in self.op:
             if not state and t[5] == 'Call' :
                 state = 'Call'
                 print_level = t[3]
+            if state == 'Call' and t[5] == 'Call_end' :    
+                state = None
             if state == 'arg_end' and t[5] == 'Call_end' and t[3] == print_level:
                 state = None
                 first_tok[0] = '"%s"' % fmt
@@ -563,7 +749,19 @@ class mpy2c( object ):
                 
                 opn.extend( opn_pr )
                 
-            if state == 'Call' and t[0] == 'print_mpy':
+#                 # If the last_tok was NOT a ',' character then add an extra newline parameter
+#                 # a trailing ',' will cause no newline
+#                 print 'last_tok=', last_tok
+#                 if last_tok[0] != ',':
+#                     tn = last_tok[:]
+#                     tn[0] = ','
+#                     opn.append( tn )
+#                     tn = last_tok[:]
+#                     tn[0] = '\n'
+#                     opn.append( tn )
+                    
+                
+            if state == 'Call' and t[0] == 'print__mpy__':
                 state = 'pr'
             
                 
@@ -601,7 +799,9 @@ class mpy2c( object ):
                 else:
                     fmt += 'd'                    # else print it as a decimal number.
                 
-                
+            
+            if t[0] != '':
+                last_tok = t[:]    
                 
                 
             if state not in ['arg_start', 'arg_end', 'arg_done']:
@@ -609,14 +809,14 @@ class mpy2c( object ):
             else:
                 opn_pr.append(t)
                 
-#            if state in ['pr', 'arg_start' , 'arg_done', 'arg_end' ]: print t
+#            if state: print print_level, state, t
                 
             tn += 1  
         self.op = opn
         
         
-
-#        self.output_toks()       
+#         self.tok_num = 0
+#         self.output_toks()       
 
     ########################################################################    
     def replace_define_micro(self):
@@ -795,6 +995,42 @@ void main (void) {
                 tt[0] = txt
                 tt[6] = 0
                 opn.append(tt) 
+
+
+
+#     ########################################################################    
+#     def add_print_newline(self):
+#         '''Go through the self.op looking for the print__mpy__ commands if there 
+#         is a trailing ',' then this indicates that no newline character is needed
+#         if the is no trailing ',' then a newline character is needed
+#         '''
+# 
+#         opn = []
+# 
+#         for i in range(len(self.op)):
+#                 t = self.op[i]
+#                 elem = t[0]
+#                 # look for a ','
+#                 if elem == ',':
+#                     fnd = False
+#                     # then look ahead at the next tokens
+#                     # when we find an empty
+#                     j = i
+#                     while not fnd:
+#                         j += 1
+#                         tn = self.op[j]
+#                         if tn[0] != '' or j >= len(self.op):
+#                             if tn[0] == ')':
+#                                t[0] = '' 
+#                             fnd = True
+#                          
+#                            
+#                 opn.append( t )
+#                 
+#         
+#         self.op = opn
+
+
         
     ########################################################################    
     def remove_last_commas(self):
