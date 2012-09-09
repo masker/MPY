@@ -44,7 +44,7 @@ void  halt(void) {
                 
 
 
-void print__mpy__( const char *fmt, ... )
+void print__mpy__( char *fmt, ... )
 {
    va_list ap;
    char *p, *sval;

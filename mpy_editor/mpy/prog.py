@@ -100,10 +100,11 @@ def search_file_line( file, ref, comment_char ):
     return the line, and the linenumber'''
     
     for i,ln in enumerate( file_contents[file] ):
-        ref_pos     = ln.find(ref)
-        comment_pos = ln.find(comment_char)
-        if ref_pos > 0 and (comment_pos < 0 or comment_pos > ref_pos):
-            return ln, i+1
+        if re.search( r'%s[\W$]' % ref, ln):
+            ref_pos     = ln.find(ref)
+            comment_pos = ln.find(comment_char)
+            if ref_pos > 0 and (comment_pos < 0 or comment_pos > ref_pos):
+                return ln, i+1
     return None,None   
 
 
@@ -136,6 +137,9 @@ chip_id = sys.argv[2]
 
 status = 'good'
 
+if chip_id == 'Unknown':
+    chip_id = 'msp430g2553'
+    print "\n*** warning *** The microcontroller chip is unknown, will use '%s'" % chip_id
 
 
 # Find the .h file for the chip_id device
@@ -175,6 +179,7 @@ if 0:
             print 'error !!\n'
             print op
 
+
         cpu = chip_id
         
 #######################################################################
@@ -190,6 +195,7 @@ if file != None:
         else:
            debug_str = ''
            
+            
         cmd_opts = '"%s\mpy_editor\mpy\mpy2c.py" "%s" %s "%s" %s' % ( mpy_dir, file, chip_id, hfile, debug_str )
         command_line = '"%s" %s' % (cmd,cmd_opts)
         op = runcmd( command_line )    
@@ -198,6 +204,10 @@ if file != None:
             print op
             status = 'failed mpy2c'
         elif re.search('mpy2c failed|SyntaxError:',op):
+            print '\n\n    *** (mpy2c FAILED) ***\n'
+            print op
+            status = 'failed mpy2c'
+        elif not re.search( 'mpy2c completed', op):
             print '\n\n    *** (mpy2c FAILED) ***\n'
             print op
             status = 'failed mpy2c'
@@ -255,8 +265,15 @@ if file != None:
 #        if not re.search("Done, \d+ bytes written",op):  # v0.19
         if not re.search("Done, \d+ bytes total",op):   # v0.20
             print '\n\n    *** (mspdebug FAILED) ***\n'
-            print op
+            
             status == 'failed mspdebug'
+            
+            if re.search("unable to find a device matching",op):
+                print '*** ERROR *** Launchpad not connected, or driver not installed (click Install Launchpad Driver, or run mpy_driver_install.exe)'
+            elif re.search('Could not find device',op):
+                print '*** ERROR *** MSP430 chip could not be found, make sure msp430 is plugged into socket and that it is the correct way round\n' 
+            else:
+                print op
         else:
             print '(mspdebug passed)   ', 
             num_bytes = re.findall('(\d+ bytes total)', op)

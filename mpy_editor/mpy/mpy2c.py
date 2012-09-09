@@ -1841,3 +1841,4 @@ uc = mpy2c( jlines, filename=file, chip_id=chip_id, hfile=hfile )
 fileop = '%s.c' % fileroot
 uc.write_op( file=fileop)
 
+print 'mpy2c completed'
