@@ -56,7 +56,7 @@ class mpy2c( object ):
         self.code_ast = ast.parse(code,filename=filename)
         self.code_lines = code.split('\n')
 
-        
+
         self.filename = filename
         self.tok_num = 0
         self.level  = 0
@@ -68,7 +68,8 @@ class mpy2c( object ):
         self.include_flag = None
         self.include_name = None
         self.last_body_end_idx = None
-        
+        self.global_vars = {}           # lists of global variables, a list for each scope        
+                
         if full_conversion:
 #            self.setup_standard_variables_list()        
             self.setup_hfile_variables_list(hfile)
@@ -514,11 +515,13 @@ class mpy2c( object ):
                 #   the variable is in the standard variable list, or
                 #   the vartable is an argument of a function
                 if t[0] not in self.standard_var_list:
-                    # to start lets assume that 'all' variables are int's
-                    # this will be upgraded later to add strings and lists (hopefully)
-                    #                             typename  done_flag
-                    if self.is_var_num_str( t[0] ) == 'variable':
-                        self.var_d[scope][ t[0] ]  = [ 'int',    None ]
+                    # Also test whether this vairiable is in the global_var list for this scop. If it is do not add it.
+                    if scope not in self.global_vars or t[0] not in self.global_vars[scope]:
+                        # to start lets assume that 'all' variables are int's
+                        # this will be upgraded later to add strings and lists (hopefully)
+                        #                             typename  done_flag
+                        if self.is_var_num_str( t[0] ) == 'variable':
+                            self.var_d[scope][ t[0] ]  = [ 'int',    None ]
 
             # add the function arguments as variables to be declared
             if in_args == True:
@@ -532,6 +535,17 @@ class mpy2c( object ):
         opn = []
         
         
+        # Add any global variable definition to the __top_level__ (if they are not already present)
+        print '(add_variable_definitions) global_vars=', self.global_vars
+        for k in self.global_vars:
+            gvl = self.global_vars[k]
+            if len(gvl) > 0:
+                for gv in gvl:
+                     scope = 'main'
+                     if scope not in self.var_d:
+                         self.var_d[scope] = {}
+                     if gv not in self.var_d[scope]:
+                         self.var_d[scope][ gv ]  = [ 'int',    None ]
         
         if debug:
             print 'var_d 1 =', self.var_d
@@ -581,9 +595,14 @@ class mpy2c( object ):
                 if scope in self.var_d:
                     for v in self.var_d[scope]:
                     
-                        # Skip this variable definition if a global ('main') variable of the same name has been defined 
-                        if scope != 'main' and 'main' in self.var_d and v in  self.var_d['main']:
-                            continue
+                        # Skip this variable definition if a global ('main') variable of 
+                        # the same name has been defined in this function scope
+                        if scope != 'main'           and \
+                           'main' in self.var_d      and \
+                           v in  self.var_d['main']  and \
+                          (scope in self.global_vars and v in self.global_vars[scope]):
+                            continue         
+                       
                     
                         typ = self.var_d[scope][v][0]
                         # check the token v is not a function definition name and check that it has not been done already
@@ -1533,7 +1552,7 @@ void main (void) {
         else:
             lineno  = '?'  
 
-
+        #                                 0        1                2              3             4            5          6             7                    8               9    10
         if debug : print '(walk_node) ', pfx, node_or_field, parent_node_name, node_name, parent_arg_name, arg_name, node0_name, first_node_name, parent_first_node_name, node, typ
 
 
@@ -1659,6 +1678,14 @@ void main (void) {
             if node_name == 'list':
                 self.add_marker('for_list')
             
+            
+        ###### Look for 'global' keyword definitions
+        
+        if first_node_name == 'Global' and node_name == 'str' and parent_arg_name == 'names':
+            global_var = node
+            if scope not in self.global_vars:
+                self.global_vars[scope] = []
+            self.global_vars[ scope ].append( global_var )
 
         
         ######  RECURSION  LOOPS  ##############################
@@ -1841,4 +1868,5 @@ uc = mpy2c( jlines, filename=file, chip_id=chip_id, hfile=hfile )
 fileop = '%s.c' % fileroot
 uc.write_op( file=fileop)
 
-print 'mpy2c completed'
+if not debug: 
+    print 'mpy2c completed'

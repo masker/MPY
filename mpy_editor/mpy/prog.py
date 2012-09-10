@@ -249,7 +249,7 @@ if file != None:
         if status == 'failed mspgcc':
             hotspotify_c_log( op, file)
     
-    
+#        print op
     
 #######################################################################
 #  mspdebug
