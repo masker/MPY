@@ -78,7 +78,9 @@ class mpy2c( object ):
  
         self.walk_node( None, self.code_ast, None, None, None, None, 'TOP', filename=filename)  
                 
-        
+
+        if full_conversion:         
+            self.reorder_functions()
            
         self.convert_for_statements()
         # Look for the print statements and convert them into the variable argument format that is
@@ -888,8 +890,15 @@ class mpy2c( object ):
             file = os.path.join( script_dir, 'mpy_functions.c' ) 
             self.add_element('#include "%s"\n' % file ) 
             self.add_marker('define_micro_end')
-            self.add_mpy_include( '%s\mpy_macros_common.mpy' % script_dir )
-            self.add_mpy_include( '%s\mpy_macros_%s.mpy' % (script_dir, self.micro_name) )
+            
+            if debug:
+                # Load a debug specific macro file which can include only the macros needed for the debug session
+                # this cuts down the volume of log output, making it easier to see what's going on
+                self.add_mpy_include( '%s\mpy_macros_common_debug.mpy' % script_dir )
+            else:
+                self.add_mpy_include( '%s\mpy_macros_common.mpy' % script_dir )
+                self.add_mpy_include( '%s\mpy_macros_%s.mpy' % (script_dir, self.micro_name) )
+
 
             for t in opt:
                self.op.append( t )
@@ -1195,6 +1204,9 @@ void main (void) {
             t = self.op[i]
             elem = t[0]
             mkr  = t[5]
+
+#            print '???          fnd elem <%s>' % t
+
             
             # get rid of the double quotes added as part of the earlier c conversion
             elem = re.sub( '^"|"$', '', elem)
@@ -1210,6 +1222,7 @@ void main (void) {
                 if mkr == 'arg_end':
                     state = 'args'
                     param_names.append( arg )
+#                    print '???          added param_names <%s>' % arg
 
             if state == 'args' and mkr == 'arg_start':
                 state = 'in_arg'
@@ -1321,6 +1334,8 @@ void main (void) {
             params_in_code = None
             if mkr == 'Call':
                 elem, params_in_code, end_of_call_idx = self.get_name_params_from_op(i)
+                
+#                print '??????', i, elem, params_in_code, end_of_call_idx
             
             idx = None
             # If the element (elem) is present in the self.macros_dict then we will replace it with the definition
@@ -1486,6 +1501,38 @@ void main (void) {
         self.add_marker( 'INCLUDE_%s  end' % file )
 
         
+    ########################################################################            
+    def reorder_functions( self ):
+        '''Go through all the code finding all function definitions.
+        Make sure everything that is not a function definition is placed
+        at the end. This will ensure that any 'bare' code will be included
+        main section'''    
+        
+        # all 
+        op_functs = []
+        
+        # toks that are at the __top_level__ will go into the op_main list
+        op_main   = []
+        # everything else is going into the op_functs list
+        op_functs = []
+        
+        i = 0
+        while i <  len(self.op):
+        
+           t = self.op[i]
+           
+           i += 1
+
+           if t[2] in ['__top_level__', 'main'] and t[5] != 'FunctionDef':
+              op_main.append(t)
+           else:
+              op_functs.append(t)
+              
+        # Replace the original self.op list with the op_functs list followed by the op_main list
+        self.op = op_functs
+        self.op.extend(op_main)
+
+        
     ########################################################################    
     def walk_node( self, parent_node_name, node,  parent_arg_name, arg_name, first_node_name, parent_first_node_name, node_or_field, filename=None):
         '''Traverses the node and adds the node details to self.op to form
@@ -1648,6 +1695,11 @@ void main (void) {
             self.add_element( '(' )
 #        if arg_name in ['body', 'orelse']:
 
+
+        if parent_node_name in ['list'] and parent_arg_name in [ 'args'] and first_node_name in ['Call']:
+            self.add_marker('arg_start')
+
+
         #####    (((((((    ######## 
         if arg_name == 'target' and parent_node_name == 'For' :
             self.add_element( '(' )
@@ -1666,8 +1718,6 @@ void main (void) {
         if parent_node_name in ['FunctionDef'] and node_name in [ 'arguments']:
             self.add_marker('func_args_start')
 
-        if parent_node_name in ['list'] and parent_arg_name in [ 'args'] and first_node_name in ['Call']:
-            self.add_marker('arg_start')
 
 
         if parent_node_name in ['For']:
@@ -1710,8 +1760,13 @@ void main (void) {
                 if parent_node_name == 'Module' and first_node_name == 'list' and self.define_micro_flag != None:
                     self.define_micro_flag = None
                     self.add_marker('define_micro_end')
-                    self.add_mpy_include( '%s\mpy_macros_common.mpy' % script_dir )
-                    self.add_mpy_include( '%s\mpy_macros_%s.mpy' % (script_dir, self.micro_name) )
+                    if debug:
+                        # Load a debug specific macro file which can include only the macros needed for the debug session
+                        # this cuts down the volume of log output, making it easier to see what's going on
+                        self.add_mpy_include( '%s\mpy_macros_common_debug.mpy' % script_dir )
+                    else:
+                        self.add_mpy_include( '%s\mpy_macros_common.mpy' % script_dir )
+                        self.add_mpy_include( '%s\mpy_macros_%s.mpy' % (script_dir, self.micro_name) )
 
                 
                 if node_count < node_len and parent_node_name == 'BoolOp' and node_name in ['list'] and parent_arg_name in ['test', None] and node0_name in ['Compare', 'Num']:
@@ -1840,6 +1895,7 @@ if len(sys.argv) > 4:
     debug = sys.argv[4]
     if debug != None:
         debug = True
+
 
 
 print '\n[mpy2c] argv=', sys.argv

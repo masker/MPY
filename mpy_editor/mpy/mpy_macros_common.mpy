@@ -40,7 +40,7 @@ macro( testbit(reg,bit),  '((reg & (1 << (bit & 15))) >> (bit & 15))'   )
 # OUTPUT COMMANDS
 
 
-macro( out(portpin,value), 'if(value): out1(portpin); else: out0(portpin);' )
+macro( out(portpin, value ) , 'if( value ): out1(portpin); else: out0(portpin);' )
 macro( out0(portpin),  'if(portpin<0x20): resetbit(P1OUT,portpin) else: resetbit(P2OUT,portpin)')
 macro( out1(portpin),  'if(portpin<0x20):   setbit(P1OUT,portpin) else:   setbit(P2OUT,portpin)')
 
