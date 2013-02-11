@@ -46,7 +46,7 @@ macro( out1(portpin),  'if(portpin<0x20):   setbit(P1OUT,portpin) else:   setbit
 
 # macro( dirout(portpin),  'if(portpin<0x20): _dirout1(portpin) else: _dirout2(portpin)' )
 # macro( _dirout1(portpin),  'setbit(P1DIR, portpin);   resetbit(P1SEL,portpin); resetbit(P1REN,portpin)' )
-# macro( _dirout2(portpin),  'setbit(P2DIR, portpin);   resetbit(P2SEL,portpin); resetbit(P2REN,portpin)' )
+# macro( _dirout2(portpin),   'setbit(P2DIR, portpin);   resetbit(P2SEL,portpin); resetbit(P2REN,portpin)' )
 
 
 # INPUT COMMANDS

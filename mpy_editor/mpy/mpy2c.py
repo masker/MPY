@@ -232,7 +232,9 @@ class mpy2c( object ):
             # Look for a possible print line
             # this search may not definitively find a print command, as it is possible for 'print' to be contained
             # inside a quoted string, in which case we should ignore it. 
-            if re.match(r'^\s*print[(|\s]', line):
+            
+            if re.findall(r'^\s*(\S*print)[\s|\(]',line):
+#            if re.match(r'^\s*print[(|\s]', line):
 #                print '(replace_print) found print line = ', line
                 (blanked_line, quoted_strings) = self.blank_strings_and_comments(line)
 #                print '(replace_print) blanked_line = ', blanked_line, quoted_strings
@@ -241,23 +243,44 @@ class mpy2c( object ):
                 for cmd in cmds:
                     new_cmd = cmd
                     # Looking for " print(..." or " print X..."
-                    if re.match(r'^\s*print[(|\s]', cmd):
-#                        print '(replace_print) found print ', cmd
-
-                                                
+                    flds = re.findall(r'^\s*(\S*print)[\s|\(]',cmd)
+                    if len(flds) == 1:
+                        
+                        # Find out which  print function is used and associated lowlevel character print function
+                        if flds[0] == 'print':
+                            tx_func = '__mpy_write_uart_TxByte'
+                        elif flds[0] == 'lcd_print':
+                            tx_func = '__mpy_write_lcd_TxByte'
+                        else:
+                            tx_func = '***ERROR PRINT NOT RECOGNIZED***'
+                         
+                                               
                         # Check to see if it is  function or a statement by looking for an openning bracket
-                        if re.match(r'^\s*print\s*\(', cmd):
+                        if re.match(r'^\s*\S*print\s*\(', cmd):
                             fnd_function = True
                         else:
                             fnd_function = False
+                            
+                            
                         pars = cmd.split(',')
 #                        print '(replace_print) pars=', pars
                         
                         # Change the command from 'print' to 'print___mpy__' 
                         if fnd_function:
-                            pars[0] = re.sub('print', 'print__mpy__', pars[0])
+                            pars[0] = re.sub('\S*print', 'print__mpy__', pars[0])
                         else:
-                            pars[0] = re.sub('print', 'print__mpy__(', pars[0])
+                            pars[0] = re.sub('\S*print', 'print__mpy__(', pars[0])
+                            
+                        # For consistency remove any spaces before the '('
+                        pars[0] = re.sub(r'print__mpy__\s+\(', 'print__mpy__(', pars[0])
+                            
+                        
+                        # Add the lowlevel character print function
+                        pars[0] = re.sub(r'print__mpy__\(',  'print__mpy__( %s, ' % tx_func, pars[0])
+                        
+                            
+                        #Insert a function pointer to the print function to be used. This is the function that will be used
+                        # to send out a character byte to the output device.
  
                         #Look at the last pars value and determine if a newline is required or not
                         #For a print function, if the last pars is a ')' then there is a trailing ',', therefore do not add newline
@@ -732,8 +755,8 @@ class mpy2c( object ):
     def convert_print_statements(self):
         '''The print_mpy statement has a variable argument list. We will replace 
         modify the arguments so that the variable argument list can be compiled in C
-           print( 'X=', x, 'Y=', y )  -> print__mpy__( "sdsd", "X=", x, "Y=", y )
-        This function inserts an extra format aguement at the beginning of the list.
+           print( 'X=', x, 'Y=', y )  -> print__mpy__( print_func, "sdsd", "X=", x, "Y=", y )
+        This function inserts an extra format aguement after the print_func argument in the list.
         The format arguement describes the type for each argument in the list.
         (Note the print_mpy() function is actually the print() funtion in the user's
         original input)
@@ -750,59 +773,60 @@ class mpy2c( object ):
         print_level = 0
         last_tok = ''
         for t in self.op:
+        
+            # Look for a function call, go to Call state
             if not state and t[5] == 'Call' :
                 state = 'Call'
                 print_level = t[3]
+                
+            # Look for the end of a function call, and go back to none state    
             if state == 'Call' and t[5] == 'Call_end' :    
                 state = None
+                
+            # Look for the end of an arg and an end to the function call, at the same level as the starting Call,
+            # go to None state, but add the fmt and opn_pr tokens to the opn buffer   
             if state == 'arg_end' and t[5] == 'Call_end' and t[3] == print_level:
+            
+            
                 state = None
                 first_tok[0] = '"%s"' % fmt
                 first_tok[1] = None
                 first_tok[5] = None
                 first_tok[7] = 'Str'
-#                 print "first_tok=" , first_tok
-#                 print "opn_pr=" , opn_pr
                 opn.append( first_tok )
                 second_tok = first_tok[:]
                 second_tok[0] = ','
                 opn.append( second_tok )
-                
                 opn.extend( opn_pr )
                 
-#                 # If the last_tok was NOT a ',' character then add an extra newline parameter
-#                 # a trailing ',' will cause no newline
-#                 print 'last_tok=', last_tok
-#                 if last_tok[0] != ',':
-#                     tn = last_tok[:]
-#                     tn[0] = ','
-#                     opn.append( tn )
-#                     tn = last_tok[:]
-#                     tn[0] = '\n'
-#                     opn.append( tn )
                     
-                
+            # Look for a call and a print___mpy__ function, go to 'pr' state
             if state == 'Call' and t[0] == 'print__mpy__':
                 state = 'pr'
+                             
             
                 
-                            
-            
+            # Look for arg_start or arg_done states and an arg_end marker, go to arg_end state    
+            if state in ['arg_start', 'arg_done'] and t[5] == 'arg_end':
+                state = 'arg_end'
                 
+            # Look for arg_end state and arg_start marker, go to arg_start state
+            if state in ['arg_end', 'arg_start1']   and t[5] == 'arg_start':
+                state = 'arg_start'
+
+            # Look for 'pr' state and arg_start, go to arg_start state
             if state == 'pr' and t[5] == 'arg_start':
-                first_pram = tn 
                 # start a new list for the print parameters   
                 first_tok = t[:]
                 opn_pr = []
-                state = 'arg_start'
+                state = 'arg_start1'
                 fmt = ''
-                
-            if state in ['arg_start', 'arg_done'] and t[5] == 'arg_end':
-                state = 'arg_end'
-            if state == 'arg_end'   and t[5] == 'arg_start':
-                state = 'arg_start'
-                
-            # when we and arg at the correct level we need to determine it's type
+
+            
+            # Look for arg_start state and non null token, and print_level +2 of the start print level
+            # this is an arg
+            # when we have a tok arg at the correct level we need to determine it's type
+            # and add it to the fmt format string
             if state == 'arg_start' and t[0] != '' and t[3] == print_level+2:
                 state = 'arg_done'
                 if re.search(r'"', t[0]):
@@ -824,18 +848,20 @@ class mpy2c( object ):
             if t[0] != '':
                 last_tok = t[:]    
                 
-                
+            # If the state is in an arg add it to the opn_pr list, else add it to the opn list
             if state not in ['arg_start', 'arg_end', 'arg_done']:
                 opn.append(t)
             else:
                 opn_pr.append(t)
                 
-#            if state: print print_level, state, t
                 
             tn += 1  
+            
+
         self.op = opn
         
-        
+     
+
 #         self.tok_num = 0
 #         self.output_toks()       
 
