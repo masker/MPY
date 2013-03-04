@@ -9,12 +9,21 @@
 # 
 ######################################################################
 
+def mik_func(x):
+    y = x*x
+    y = y*y
+    y = y*y
+    y = y*y
+    y = y*y
+    return y
+
+
 adc_enable()       # Setup the ADC block
 
 while 1:           # Do the following lines forever and ever
    
    v7 = adc(P1_7)  # Run ADC on pin P1_7
-   print( 'ADC value on pin p1_7', v7 )
+   print( 'ADC value on pin p1_7', v7, j )
    wait(500)       # Wait a 0.5 second
-
+   
 

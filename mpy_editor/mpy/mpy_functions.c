@@ -17,22 +17,28 @@ void print_hex(int (*func)(int), unsigned int num);
 void print_num(int (*func)(int), int num);
 void print_value(char *string, int num);
 void __setout(int portpin, int value);
+void _lcd2w_shift_1bit(int bit_value);
 
 
 //---------------------------------------------------------------------------------------
 // global varaibles used for the LCD interface
 
-int _lcd_DB7;
-int _lcd_DB6;
-int _lcd_DB5;
-int _lcd_DB4;
-int _lcd_EN;
-int _lcd_RS;
-int _lcd_char_count;
+int _lcd_DB7;     // used to hold the pin name assigned to control the LCD DB7 signal in 6 wire  mode
+int _lcd_DB6;     // ... DB6
+int _lcd_DB5;     // ... DB5
+int _lcd_DB4;     // ... DB4
+int _lcd_EN;      // ... EN
+int _lcd_RS;      // ... RS
+int _lcd_DATA;    // ... DB6 in 2 wire mode
+int _lcd_CLOCK;   // ... CLOCK
+int _lcd_char_count; // used to count the number of charaters sent to the lcd so that we know when to move to the next line
+int _lcd_mode;    // used to set whether we are in 6 wire mode or 2 wire mode (2=2wire mode, 6=6wire_mode)
+
 
 //---------------------------------------------------------------------------------------
 void __setout(int portpin, int value)
 // generic output command, does the same as the 'dirout' and 'out' macro combined
+// It is defined here as a function so that it can be called from a C function 
 {
   
   if (portpin < 0x20)
@@ -49,25 +55,56 @@ void __setout(int portpin, int value)
   }
 }
 
+
 //---------------------------------------------------------------------------------------
-void _lcd_4bit_write( int value )
-// Writes bits 7-4 to DB7-DB4, only bits 7-4 are used  all other bits are ignored'''
+void _lcd_4bit_write( int value, int rs_value )
+// Writes bits 7-4 to DB7-DB4, only bits 7-4 are used  all other bits are ignored
 {
-    __setout(_lcd_DB7, value & 0x80 );
-    __setout(_lcd_DB6, value & 0x40 );
-    __setout(_lcd_DB5, value & 0x20 );
-    __setout(_lcd_DB4, value & 0x10 );
-    
-    __setout(_lcd_EN, 1);
-    __setout(_lcd_EN, 0);
+    if (_lcd_mode == 6) {   // 6 wire mode
+      __setout(_lcd_DB7, value & 0x80 );
+      __setout(_lcd_DB6, value & 0x40 );
+      __setout(_lcd_DB5, value & 0x20 );
+      __setout(_lcd_DB4, value & 0x10 );
+      __setout(_lcd_RS,  rs_value & 0x01);
+      __setout(_lcd_EN, 1);
+      __setout(_lcd_EN, 0);
+    }
+ 
+    if (_lcd_mode == 2) {      // 2 wire mode
+      int i;
+      // flush the shift register with 8 bits of zero data, in preparation for a the data 
+      for (i=0; i<8; i++) {  
+         _lcd2w_shift_1bit(0);
+      }
+      
+      // send the first enable bit as the msb
+      _lcd2w_shift_1bit(1);
+      // then send the 4 bits msb first 
+      _lcd2w_shift_1bit(value & 0x80);    
+      _lcd2w_shift_1bit(value & 0x40);
+      _lcd2w_shift_1bit(value & 0x20);
+      _lcd2w_shift_1bit(value & 0x10);
+      // followed by the RS 
+      _lcd2w_shift_1bit(rs_value & 0x01);
+      // then the final 2 unused bits
+      _lcd2w_shift_1bit(0);
+      _lcd2w_shift_1bit(0);
+      // finally send a 1 to activate the enable signal
+      _lcd2w_shift_1bit(0);
+
+    }
 }
 
+void _lcd2w_shift_1bit(int bit_value)
+{
+    __setout(_lcd_DATA, bit_value );  __setout(_lcd_CLOCK, 1 ); __setout(_lcd_CLOCK, 0 );
+}
 
 void _lcd_control( int value, int dly )
 // Write a control instruction, only bits 7-4 are used
 {
-    __setout(_lcd_RS, 0);
-    _lcd_4bit_write( value );
+//    __setout(_lcd_RS, 0);
+    _lcd_4bit_write( value, 0 );
     wait( dly );
 }
 
@@ -80,9 +117,10 @@ void _lcd_clear()
 }    
 
 
-
+//-----------------------------------------------------------------------
+// Enable the LCD for direct wire control
+//-----------------------------------------------------------------------
 int lcd_enable( int DB7, int DB6, int DB5, int DB4, int EN, int RS)
-// function to enable the 6wire lcd interface
 {
 
   // first save the 6 lcd pins for use in this function and 
@@ -91,7 +129,34 @@ int lcd_enable( int DB7, int DB6, int DB5, int DB4, int EN, int RS)
   _lcd_DB5 = DB5;
   _lcd_DB4 = DB4;
   _lcd_EN  = EN;
+  _lcd_RS  = RS;
   
+  _lcd_mode = 6;
+  _lcd_enable();
+
+}
+
+//-----------------------------------------------------------------------
+// Enable the LCD for reduced 2 wire control
+// Using the 2-wire mode requires the user to connect to the LCD with a shift-register
+// and the MSP430 is connected to the shift-register using the Data and Clock signals
+//-----------------------------------------------------------------------
+int lcd2w_enable( int DATA, int CLOCK)
+{
+
+  // first save the 6 lcd pins for use in this function and 
+  _lcd_DATA = DATA;
+  _lcd_CLOCK = CLOCK;
+  
+  _lcd_mode = 2;
+  _lcd_enable();
+
+}
+
+
+int _lcd_enable()
+// function to enable the 6wire lcd interface
+{
 
 //  intialize with three 'Function Set' commands
     wait(100);
@@ -267,6 +332,7 @@ void __mpy_write_lcd_TxByte(unsigned int value)
 //also checks to see if the char is a LF or at the end of the first line
 {
 
+    // if char count is past the last character of the display the reset it 
     if (_lcd_char_count >= 80) { _lcd_char_count == 0; }
     
 
@@ -276,17 +342,17 @@ void __mpy_write_lcd_TxByte(unsigned int value)
     // Move the char position on to 40 if we are at the end of the first 16 char line
     if (_lcd_char_count >= 16 && _lcd_char_count < 64 ) { 
        _lcd_char_count = 64;
-       _lcd_control( 0xC0, 1 ); _lcd_control( 0x00, 1 );  
+       _lcd_control( 0xC0, 1 ); _lcd_control( 0x00, 1 );  // set GGRAM address to 64 which is the start of the 2nd line
     }
     
-    if (value == 10)  // end of line will reset the char count and clear the display the next print
+    if (value != 10)  // end of line will reset the char count and clear the display for the next print
     {
-        _lcd_char_count = 0;
-    } else {
-        __setout(_lcd_RS, 1);
-        _lcd_4bit_write( value );        // bits 7-4 are written as is
-        _lcd_4bit_write( value << 4 );   // bits 3-0 shifted into bit possitions 7-4, all other bits are ignored
+//        __setout(_lcd_RS, 1);
+        _lcd_4bit_write( value, 1 );        // bits 7-4 are written as is
+        _lcd_4bit_write( value << 4, 1 );   // bits 3-0 shifted into bit possitions 7-4, all other bits are ignored
         _lcd_char_count += 1;
+    } else {
+        _lcd_char_count = 0;    
     }
 }
 

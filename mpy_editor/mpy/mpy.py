@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 ###############################################################################
-# Name: launch.py                                                             #
-# Purpose: Launch Ui                                                          #
-# Author: Cody Precord <cprecord@editra.org>                                  #
+# Name: mpy.py                                                                #
+# Purpose:                                                                    #
+# Authors: 
+#         Cody Precord <cprecord@editra.org>                                  #
 # Copyright: (c) 2008 Cody Precord <staff@editra.org>                         #
 # License: wxWindows License                                                  #
 ###############################################################################
