@@ -88,7 +88,7 @@ void _lcd_4bit_write( int value, int rs_value )
       _lcd2w_shift_1bit(rs_value & 0x01);
       // then the final 2 unused bits
       _lcd2w_shift_1bit(0);
-      _lcd2w_shift_1bit(0);
+      _lcd2w_shift_1bit(1);
       // finally send a 1 to activate the enable signal
       _lcd2w_shift_1bit(0);
 
