@@ -28,6 +28,9 @@ class mpy2c( object ):
         self.op_chars = ['+',   '-',   '+',  '-',  '*',   '/',  '%',  '**', '<<',    '>>',    '|',    '^',     '&',     '//',       \
                                '==', '!=',    '<',  '<=',  '>',  '>=',  'Is', 'IsNot', 'In', 'NotIn', '&&',  '||', '~']  
 
+        # look for the presence  of __mpy_debug_on__
+        self.switch_debug_on(code)
+
         # Change the print statements to a print_mpy function call
         # this is most easily done before we pass the code to the ast parser
         code = self.replace_print( code ) 
@@ -209,8 +212,23 @@ class mpy2c( object ):
             
         return new_line
     
-
+    #########################################################################
+    def switch_debug_on(self, code):
+        '''If the code contains the debug on switch then switch debug on'''
+        
+        global debug, debug_reduced
+        
+        lines = code.split('\n')
+        for line in lines:
+ 
+            if re.findall('__mpy_verbose_debug_on__',line):
+                debug = True
+            if re.findall('__mpy_debug_on__',line):
+                debug_reduced = True
                 
+                
+                
+               
 
     #########################################################################
     def replace_print(self, code):
@@ -225,10 +243,14 @@ class mpy2c( object ):
                 3) The print command may occur in a multi-command line separated with ; characters
         '''
         
+        
         lines = code.split('\n')
         new_lines = []
         for line in lines:
             new_line = line
+            
+            
+                
             # Look for a possible print line
             # this search may not definitively find a print command, as it is possible for 'print' to be contained
             # inside a quoted string, in which case we should ignore it. 
@@ -572,8 +594,18 @@ class mpy2c( object ):
                      if gv not in self.var_d[scope]:
                          self.var_d[scope][ gv ]  = [ 'int',    None ]
         
+        
         if debug:
             print 'var_d 1 =', self.var_d
+            
+        
+        
+            
+            
+        # Go through the variables and change the types to be either 'int'  'char'  or 'int []'     
+        
+        self.change_variable_types()
+        
                 
         # Then add the variable declaration to the body_start or to the function definition arguments
         in_funct_def = False
@@ -656,6 +688,28 @@ class mpy2c( object ):
         
         if debug:
             print 'var_d=', self.var_d
+
+
+
+    ########################################################################    
+    def change_variable_types(self):
+        '''Go thru all the var_d lists and redefine the type depending on the 
+        tokens that follow.
+        If we see a " after the = , as in a = 'qwerty', then it is definitly a string type.
+        If we see a [ after the = , as in b = [ 1,2,3,4]' , then it is definitly a list of ints type.
+        Else we leave it as an int type (but may have to change as it might be a pointer to string or list.
+        
+        We then have to go through the remainder of the statement to find the size
+        of the string or list.
+        
+        After that we need to build a tree of variables whose types are
+        ''' 
+
+        
+        # Look for all elements where the vardef is True
+        # and add the element text to the var_d dict
+        for t in self.op:
+             pass
         
         
     ########################################################################    
@@ -1916,6 +1970,7 @@ hfile = None
 if len(sys.argv) > 3:
     hfile = sys.argv[3]
 
+debug_reduced = False
 debug = False
 if len(sys.argv) > 4:
     debug = sys.argv[4]
@@ -1950,5 +2005,7 @@ uc = mpy2c( jlines, filename=file, chip_id=chip_id, hfile=hfile )
 fileop = '%s.c' % fileroot
 uc.write_op( file=fileop)
 
-if not debug: 
-    print 'mpy2c completed'
+if debug or debug_reduced: 
+   print 'mpy2c completed debug'
+else:
+   print 'mpy2c completed'    # print this out so that the calling progrm knows we got to the end with normal completion

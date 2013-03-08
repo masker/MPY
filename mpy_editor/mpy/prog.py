@@ -207,11 +207,18 @@ if file != None:
             print '\n\n    *** (mpy2c FAILED) ***\n'
             print op
             status = 'failed mpy2c'
+        elif re.search( 'mpy2c completed debug', op):     
+            print '\n\n ############################ (mpy2c COMPLETED DEBUG BEGIN) ######################\n'
+            print op
+            print '\n\n ############################ (mpy2c COMPLETED DEBUG END) ########################\n'
+
+        # if it didn't get to the end print out any output that might be of use
         elif not re.search( 'mpy2c completed', op):
             print '\n\n    *** (mpy2c FAILED) ***\n'
             print op
             status = 'failed mpy2c'
-        elif status == 'good':
+
+        if status == 'good':
             # get the cpu name    
             oplines = op.split('\n')
             for line in oplines:
@@ -223,8 +230,7 @@ if file != None:
             if debug:
                 print op
 
-#        print op
-    
+
 #######################################################################
 #  mspgcc
 #######################################################################
