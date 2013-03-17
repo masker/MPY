@@ -358,6 +358,100 @@ void __mpy_write_lcd_TxByte(unsigned int value)
 
 
 
+//---------------------------------------------------------------------------
+void interrupt_setup( int portpin_intr, int param, int (*func)(int) )
+// Sets up an interrupt for either IO, USCI Aurt mode, Watchdog timer
+// The portpin paramter is used to define which of the interrupt are to be used.
+// If the portpin_intr matches a normal portpin value then an IO interrupt is setup
+// otherwise the interrupt is setup for one of the other peripheral types (watchdog_timer or uart)
+// The func argument is unused, but it is used by mpy2c to associate this 
+// interrupt with an ISR function.
+//
+// param specifies the type of interrupt, 
+// for IO interrrupt   param=Edge Select
+//          0= Rising Edge
+//          1= Falling Edge
+// for USCI Uart       param=Baudrate
+// for Watchdog timer  param=Timer interval
+{
+
+  // First setup the IO interrupts for port 1 and port 2
+  if (portpin_intr & 0x10)
+  {
+      P1IFG   &=  ~(1 << (portpin_intr & 15));    // Clear the interrupt flag for this bit 
+      if (param == 0)                             // Setup the edge select
+        P1IES &=  ~(1 << (portpin_intr & 15));    // Clear the bit for a Rising low-to-high transition
+      else 
+        P1IES |=   (1 << (portpin_intr & 15));    // Set the bit for a Falling high-to-low transition
+      P1IE    |=   (1 << (portpin_intr & 15));    // Finally set the enable bit
+  }
+  else if (portpin_intr & 0x20 )
+  {  
+      P2IFG   &=  ~(1 << (portpin_intr & 15));     // Clear the interrupt flag for this bit 
+      if (param == 0)                              // Setup the edge select
+        P2IES &=  ~(1 << (portpin_intr & 15));     // Clear the bit for a Rising low-to-high transition
+      else 
+        P2IES |=   (1 << (portpin_intr & 15));    // Set the bit for a Falling high-to-low transition
+      P2IE    |=   (1 << (portpin_intr & 15));    // Finally set the enable bit
+  }
+  else if (portpin_intr == 2) 
+  {   // initialize the USCI uart  (taken from TI examples) Requires USCI peripheral as in the msp430g2xx3 devices 
+#ifdef MPY_UART
+      P1SEL = BIT1 + BIT2 ;                     // P1.1 = RXD, P1.2=TXD
+      P1SEL2 = BIT1 + BIT2 ;                    // P1.1 = RXD, P1.2=TXD
+      UCA0CTL1 |= UCSSEL_2;                     // SMCLK
+      UCA0BR0 = 104;                            // 1MHz 9600
+      UCA0BR1 = 0;                              // 1MHz 9600
+      UCA0MCTL = UCBRS0;                        // Modulation UCBRSx = 1
+      UCA0CTL1 &= ~UCSWRST;                     // **Initialize USCI state machine**
+      IE2 |= UCA0RXIE;                          // Enable USCI_A0 RX interrupt
+#endif
+  }
+  else if (portpin_intr == 1) 
+  { 
+      __setout(0x16, 1);
+      BCSCTL3 = LFXT1S_2;
+      WDTCTL = WDT_MDLY_32;  //~30mS intervals
+      IE1 |= WDTIE;    //enable interrupt
+  }
+}
+
+
+//---------------------------------------------------------------------------
+int interrupt_reset( int portpin_intr)
+// resets the interrupt flag for thegiven extended portpin
+{
+  int flag;
+  // First setup the IO interrupts for port 1 and port 2
+  if (portpin_intr & 0x10)
+  {   
+      flag = ((P1IFG & (1 << (portpin_intr & 15))) >> (portpin_intr & 15));
+      P1IFG  &=   ~(1 << (portpin_intr & 15));     // Clear the interrupt flag for this bit 
+  }
+  else if (portpin_intr & 0x20 )
+  {
+      flag = ((P2IFG & (1 << (portpin_intr & 15))) >> (portpin_intr & 15));
+      P2IFG &=    ~(1 << (portpin_intr & 15));     // Clear the interrupt flag for this bit 
+  }
+
+  return( flag );
+}
 
 
 
+//---------------------------------------------------------------------------
+void interrupt_disable( int portpin_intr)
+// 
+
+{
+  // First setup the IO interrupts for port 1 and port 2
+  if (portpin_intr & 0x10)
+  {
+      P1IE   &=   ~(1 << (portpin_intr & 15));    // Clear the enable bit
+  }
+  else if (portpin_intr & 0x20 )
+  {
+      P2IE  &=    ~(1 << (portpin_intr & 15));    //  Clear the enable bit
+  }
+
+}

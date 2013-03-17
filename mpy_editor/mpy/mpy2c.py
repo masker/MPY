@@ -38,7 +38,11 @@ class mpy2c( object ):
         if full_conversion:
             self.micro_name = chip_id   
             
-
+            self.function_children   = {}
+            self.function_parents    = {}
+            self.function_parameters = {}
+            self.function_variables  = {}
+            self.function_current    = None
         
 
         # if the code is surrounded by quotes then remove them if there is a '=' char
@@ -131,9 +135,115 @@ class mpy2c( object ):
             self.add_variable_definitions()
 
             
+            self.process_interrupt_functions()
+            
         if debug:
              self.output_toks()
  
+ 
+    #########################################################################
+    def process_interrupt_functions(self):
+        '''Functions for interrupts need to be modified so that the interrupt keyword and interrupt
+        vector added as a prefix to the function 
+        
+        eg     interrupt(PORT1_VECTOR) flash_led ( ) 
+        '''
+ 
+        # find all the interrupt_setup commands
+        # and get their portpin_intr and interrupt function names       
+        self.interrupt_info = {}
+        state = None
+        marker = None
+        arg_count = 0
+        portpin = None
+        param = None
+        intr_function = None
+        
+        for t in self.op:
+            # look for calls for the interrupt_setup functions
+            if t[5] not in [None, '', '.']:
+                 marker = t[5]
+            
+            txt = t[0]
+
+            
+            if state == 'in_args' and marker == 'Call_end' :
+                state = None
+                arg_count = 0
+                self.interrupt_info[intr_function]  = { 'portpin': portpin }
+               
+            # we have a tok with a real value
+            
+            if marker == 'Call' and txt == 'interrupt_setup':
+                 state = 'intr_call_found'   
+                 
+            if txt in [None,'.','','(',')','{','}',',',';','[',']']:
+                continue
+
+            if state in ['intr_call_found', 'in_args'] and marker == 'arg_start' :
+                state = 'in_args'
+                arg_count += 1
+
+            if arg_count == 1:
+                portpin = txt
+            if arg_count == 2:
+                param = txt
+            if arg_count == 3:
+                intr_function = txt
+                
+
+            print  txt , arg_count, portpin, param, intr_function
+
+        # Go round again looking for all the function definitions
+        # when a function matches one of the interrupt function names
+        # add the interrupt(VECTOR) prefix                
+        op_new = []
+        state = None
+        marker = None
+        for t in self.op:
+            # look for calls for the interrupt_setup functions
+            if t[5] not in [None, '', '.']:
+                 marker = t[5]
+            
+            txt = t[0]
+            if marker == 'FunctionDef' and txt not in [None,'.','','(',')','{','}',',',';','[',']']:
+                if txt in self.interrupt_info:
+                    portpin = self.interrupt_info[txt]['portpin']
+                    intr_vector_str = self.get_interrupt_vector_str( portpin )
+                    tt = t[:]
+                    tt[0] = ' interrupt( %s ) ' % intr_vector_str
+                    op_new.append(tt)
+            
+            op_new.append( t )
+ 
+        self.op = op_new
+ 
+    #########################################################################
+    def get_interrupt_vector_str( self, portpin_str ):
+        '''Given an extended portpin name this function returns the name of the
+        corresponding interrupt vector as defined in the msp430xxxx.h files
+        An extended portpin defines regular IO pins plus other peripherals
+        such as the the Watchdog timer, and USCI Uart devices.'''
+        
+        try:
+            portpin = int(portpin_str)
+        except:
+            portpin = 0
+        
+        if ( 0x10 <= portpin < 0x20 ):  # P1.x  interrupts
+            return 'PORT1_VECTOR' 
+        if ( 0x20 <= portpin < 0x30 ):  # P2.x  interrupts
+            return 'PORT2_VECTOR' 
+        if (    portpin == 1 ):         #  INTERVAL_TIMER interrupt using the watchdog timer
+            return 'WDT_VECTOR' 
+        if (    portpin == 2 ):         #  UART_RX 
+            return 'USCIAB0RX_VECTOR' 
+        
+        print "*** error *** the portpin defined in interrupt_setup( %s ... ) command is not recognized" % portpin_str
+
+        
+        return 'ILLEGAL_VECTOR'
+    
     #########################################################################
     def blank_strings_and_comments(self, line):
         '''This function goes through a line and replaces any quoted string with the string @@@\d@@@
@@ -948,6 +1058,7 @@ class mpy2c( object ):
 
 
                 self.add_element_opn( opn, t,  '\n#include <msp430.h>\n' ) 
+                self.add_element_opn( opn, t,  '#include <signal.h>\n' ) 
                 self.add_element_opn( opn, t,  '#include "%s.h"\n' % self.micro_name )
                 
                 file = os.path.join( script_dir, 'mpy_functions.c' ) 
@@ -966,7 +1077,8 @@ class mpy2c( object ):
             self.op = []
             
             self.add_element(  '\n#include <msp430.h>\n' ) 
-            self.add_element( '#include "%s.h"\n' % self.micro_name )
+            self.add_element(  '#include <signal.h>\n' ) 
+            self.add_element(  '#include "%s.h"\n' % self.micro_name )
             file = os.path.join( script_dir, 'mpy_functions.c' ) 
             self.add_element('#include "%s"\n' % file ) 
             self.add_marker('define_micro_end')

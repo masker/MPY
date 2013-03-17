@@ -108,6 +108,29 @@ def search_file_line( file, ref, comment_char ):
     return None,None   
 
 
+#----------------------------------------------------------          
+def get_macro_def( chip_id ):
+    '''We need to have our own preprocessor macro definition which is dependant on the chip id.
+    This is needed as different devices have different peripherals and so some functions in the mpy_function.c
+    need to be modified based on the device. This function will provide a macro definition name
+    based on the device
+    '''
+    
+    macro_def = ' '
+    if chip_id[-1] in ['3'] :
+        macro_def +=  '-D MPY_USCI '
+        macro_def +=  '-D MPY_TIMER1 '
+
+    if chip_id[-1] in ['2'] :
+        macro_def +=  '-D MPY_USI '
+
+    if chip_id[-2] in ['3','5'] :
+        macro_def +=  '-D MPY_ADC '
+
+    if chip_id[-2:] in ['53','13', '52', '12', '11'] :
+        macro_def +=  '-D MPY_COMPA '
+    
+    return macro_def
 
 
 ###########################################################
@@ -237,10 +260,11 @@ if file != None:
     if status == 'good':    
         # Compile the C file using mspgcc
         print '(mspgcc started)  ...', 
+        macro_def = get_macro_def( chip_id )
         install_dir = r'%s\%s' % (mpy_dir, mspgcc_ver)
         cmd      = r'%s\bin\msp430-gcc.exe' % install_dir
 #        cmd_opts = r'-L"%s\msp430\lib\ldscripts\%s"   -mmcu=%s -Os -o "%s.elf" "%s.c"' % ( install_dir, chip_id, chip_id, fileroot, fileroot )
-        cmd_opts = r'-L"%s\msp430\lib\ldscripts\%s"   -mmcu=%s -Os -fdata-sections -ffunction-sections -o "%s.elf" "%s.c" -Wl,--gc-sections -Wl,--strip-all' % ( install_dir, chip_id, chip_id, fileroot, fileroot )
+        cmd_opts = r'%s -L"%s\msp430\lib\ldscripts\%s"   -mmcu=%s -Os -fdata-sections -ffunction-sections -o "%s.elf" "%s.c" -Wl,--gc-sections -Wl,--strip-all' % ( macro_def, install_dir, chip_id, chip_id, fileroot, fileroot )
         command_line = '"%s" %s' % (cmd,cmd_opts)
         op = runcmd( command_line )
         if re.search(': error:',op)              or \
