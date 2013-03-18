@@ -1205,8 +1205,8 @@ void main (void) {
         
         # Then finish the module with a closing bracket
         # close the 'main()' function we added
-        self.add_element( '}' )
-        self.add_marker(  'body_end' )
+        self.add_element( 'while(1);}' )     # Add the while statement so that we never run off the end of main
+        self.add_marker(  'body_end' )       # which I think causes interrupts not to work.
             
                 
     ########################################################################    

@@ -263,7 +263,6 @@ if file != None:
         macro_def = get_macro_def( chip_id )
         install_dir = r'%s\%s' % (mpy_dir, mspgcc_ver)
         cmd      = r'%s\bin\msp430-gcc.exe' % install_dir
-#        cmd_opts = r'-L"%s\msp430\lib\ldscripts\%s"   -mmcu=%s -Os -o "%s.elf" "%s.c"' % ( install_dir, chip_id, chip_id, fileroot, fileroot )
         cmd_opts = r'%s -L"%s\msp430\lib\ldscripts\%s"   -mmcu=%s -Os -fdata-sections -ffunction-sections -o "%s.elf" "%s.c" -Wl,--gc-sections -Wl,--strip-all' % ( macro_def, install_dir, chip_id, chip_id, fileroot, fileroot )
         command_line = '"%s" %s' % (cmd,cmd_opts)
         op = runcmd( command_line )

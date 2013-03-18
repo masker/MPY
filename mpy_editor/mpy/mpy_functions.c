@@ -16,6 +16,8 @@ void print_str(int (*func)(int), char *string);
 void print_hex(int (*func)(int), unsigned int num);
 void print_num(int (*func)(int), int num);
 void print_value(char *string, int num);
+void __out(int portpin, int value);
+void __dirout(int portpin);
 void __setout(int portpin, int value);
 void _lcd2w_shift_1bit(int bit_value);
 
@@ -36,7 +38,20 @@ int _lcd_mode;    // used to set whether we are in 6 wire mode or 2 wire mode (2
 
 
 //---------------------------------------------------------------------------------------
-void __setout(int portpin, int value)
+void __out(int portpin, int value)
+// generic output command, does the same as the 'dirout' and 'out' macro combined
+// It is defined here as a function so that it can be called from a C function 
+{
+  
+  if (portpin < 0x20)
+  {
+      if (value > 0) { P1OUT |=    1 << (portpin & 15); } else { P1OUT &=   ~ (1 << (portpin & 15)); }
+  } else {
+      if (value > 0) { P2OUT |=    1 << (portpin & 15); } else {  P2OUT &=   ~ (1 << (portpin & 15)); }
+  }
+}
+//---------------------------------------------------------------------------------------
+void __dirout(int portpin)
 // generic output command, does the same as the 'dirout' and 'out' macro combined
 // It is defined here as a function so that it can be called from a C function 
 {
@@ -46,12 +61,10 @@ void __setout(int portpin, int value)
       P1DIR |=    1 << (portpin & 15);
       P1SEL &=   ~ (1 << (portpin & 15));
       P1REN &=   ~ (1 << (portpin & 15));
-      if (value > 0) { P1OUT |=    1 << (portpin & 15); } else { P1OUT &=   ~ (1 << (portpin & 15)); }
   } else {
       P2DIR |=    1 << (portpin & 15);
       P2SEL &=   ~ (1 << (portpin & 15));
       P2REN &=   ~ (1 << (portpin & 15));
-      if (value > 0) { P2OUT |=    1 << (portpin & 15); } else {  P2OUT &=   ~ (1 << (portpin & 15)); }
   }
 }
 
@@ -61,13 +74,13 @@ void _lcd_4bit_write( int value, int rs_value )
 // Writes bits 7-4 to DB7-DB4, only bits 7-4 are used  all other bits are ignored
 {
     if (_lcd_mode == 6) {   // 6 wire mode
-      __setout(_lcd_DB7, value & 0x80 );
-      __setout(_lcd_DB6, value & 0x40 );
-      __setout(_lcd_DB5, value & 0x20 );
-      __setout(_lcd_DB4, value & 0x10 );
-      __setout(_lcd_RS,  rs_value & 0x01);
-      __setout(_lcd_EN, 1);
-      __setout(_lcd_EN, 0);
+      __out(_lcd_DB7, value & 0x80 );
+      __out(_lcd_DB6, value & 0x40 );
+      __out(_lcd_DB5, value & 0x20 );
+      __out(_lcd_DB4, value & 0x10 );
+      __out(_lcd_RS,  rs_value & 0x01);
+      __out(_lcd_EN, 1);
+      __out(_lcd_EN, 0);
     }
  
     if (_lcd_mode == 2) {      // 2 wire mode
@@ -97,7 +110,7 @@ void _lcd_4bit_write( int value, int rs_value )
 
 void _lcd2w_shift_1bit(int bit_value)
 {
-    __setout(_lcd_DATA, bit_value );  __setout(_lcd_CLOCK, 1 ); __setout(_lcd_CLOCK, 0 );
+    __out(_lcd_DATA, bit_value );  __out(_lcd_CLOCK, 1 ); __out(_lcd_CLOCK, 0 );
 }
 
 void _lcd_control( int value, int dly )
@@ -130,6 +143,13 @@ int lcd_enable( int DB7, int DB6, int DB5, int DB4, int EN, int RS)
   _lcd_DB4 = DB4;
   _lcd_EN  = EN;
   _lcd_RS  = RS;
+  __dirout(_lcd_DB7);
+  __dirout(_lcd_DB6);
+  __dirout(_lcd_DB5);
+  __dirout(_lcd_DB4);
+  __dirout(_lcd_EN);
+  __dirout(_lcd_RS);
+  
   
   _lcd_mode = 6;
   _lcd_enable();
@@ -147,6 +167,8 @@ int lcd2w_enable( int DATA, int CLOCK)
   // first save the 6 lcd pins for use in this function and 
   _lcd_DATA = DATA;
   _lcd_CLOCK = CLOCK;
+  __dirout(_lcd_DATA);
+  __dirout(_lcd_CLOCK);
   
   _lcd_mode = 2;
   _lcd_enable();
@@ -157,6 +179,8 @@ int lcd2w_enable( int DATA, int CLOCK)
 int _lcd_enable()
 // function to enable the 6wire lcd interface
 {
+
+
 
 //  intialize with three 'Function Set' commands
     wait(100);
@@ -347,7 +371,7 @@ void __mpy_write_lcd_TxByte(unsigned int value)
     
     if (value != 10)  // end of line will reset the char count and clear the display for the next print
     {
-//        __setout(_lcd_RS, 1);
+//        __out(_lcd_RS, 1);
         _lcd_4bit_write( value, 1 );        // bits 7-4 are written as is
         _lcd_4bit_write( value << 4, 1 );   // bits 3-0 shifted into bit possitions 7-4, all other bits are ignored
         _lcd_char_count += 1;
@@ -396,7 +420,7 @@ void interrupt_setup( int portpin_intr, int param, int (*func)(int) )
   }
   else if (portpin_intr == 2) 
   {   // initialize the USCI uart  (taken from TI examples) Requires USCI peripheral as in the msp430g2xx3 devices 
-#ifdef MPY_UART
+#ifdef MPY_USCI
       P1SEL = BIT1 + BIT2 ;                     // P1.1 = RXD, P1.2=TXD
       P1SEL2 = BIT1 + BIT2 ;                    // P1.1 = RXD, P1.2=TXD
       UCA0CTL1 |= UCSSEL_2;                     // SMCLK
@@ -407,12 +431,13 @@ void interrupt_setup( int portpin_intr, int param, int (*func)(int) )
       IE2 |= UCA0RXIE;                          // Enable USCI_A0 RX interrupt
 #endif
   }
+  // Setup the watchdog as an interval timer
   else if (portpin_intr == 1) 
   { 
-      __setout(0x16, 1);
       BCSCTL3 = LFXT1S_2;
-      WDTCTL = WDT_MDLY_32;  //~30mS intervals
+      WDTCTL = param;  //~30mS intervals
       IE1 |= WDTIE;    //enable interrupt
+//      _BIS_SR(LPM0_bits + GIE);
   }
 }
 
@@ -453,5 +478,12 @@ void interrupt_disable( int portpin_intr)
   {
       P2IE  &=    ~(1 << (portpin_intr & 15));    //  Clear the enable bit
   }
-
+  else if (portpin_intr == 2) 
+  {  
+      IE2 &= ~UCA0RXIE;                          // Disable USCI_A0 RX interrupt  }
+  }
+  else if (portpin_intr == 1)  
+  { 
+      IE1 &= ~WDTIE;                            // Disable Watchdog interrupt
+  }
 }
