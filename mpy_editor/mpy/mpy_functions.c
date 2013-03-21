@@ -1,3 +1,35 @@
+/*
+###########################################################################
+#  
+#     This file is part of mpyEditor.
+# 
+#     mpyEditor is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+# 
+#     mpyEditor is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+# 
+#     You should have received a copy of the GNU General Public License
+#     along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
+#
+#     (C) Copyright 2013 Mike Asker    mike.asker@gmail.com
+#
+###########################################################################
+#
+#   mpyfunctions.c
+#   
+#   This file is a collection of general purpose hardware functions for
+#   controlling MSP430 peripherals using the MPY Editor and MPY Language
+#
+############################################################################
+*/
+
+
+
 // #include <signal.h>
 // #include <msp430.h>
 // #include "msp430g2553.h"
@@ -223,6 +255,15 @@ void  wait( int  dly ) { int i ; int k ;
           for ( i = 0 ; i < dly ; i = i + 1 ) { 
               for ( k = 0 ; k < 280 ; k = k + 1 ) { 
                   _NOP ( ) ; } } } 
+
+static void __inline__ delay_cycles(register unsigned int n)
+{
+    __asm__ __volatile__ (
+		"1: \n"
+		" dec	%[n] \n"
+		" jne	1b \n"
+        : [n] "+r"(n));
+}
 
 // enter an infinite loop which 
 void  halt(void) { 

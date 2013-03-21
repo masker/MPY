@@ -1,3 +1,48 @@
+###########################################################################
+#  
+#     This file is part of mpyEditor.
+# 
+#     mpyEditor is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+# 
+#     mpyEditor is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+# 
+#     You should have received a copy of the GNU General Public License
+#     along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
+#
+#     (C) Copyright 2013 Mike Asker    mike.asker@gmail.com
+#
+###########################################################################
+#
+#   prog.py  
+#   
+#   This python script is used to run the mpy toolchain. 
+#   It is intended to be launched within the Editra tool using plugin file 'mpy.py'
+#   in a similar way to the Editra 'Launch' plugin.
+#   This file is run when the user presses the 'Prog' button on the Editra MPY shelf window.
+#   The Editra filename tab which has focus is passed into this file with sys.arg, 
+#   as is the chip id (which is auto identified)
+#   It preforms the following operations:
+#       1) Runs the mpy2c.py preprocessor program that translates the mpy format file into C.
+#       2) Runs mspgcc compiler
+#       3) Runs mspdebug and flashes the Launchpad MSP430 microcontroller
+#
+#    If the Editra file is a C file then step 1) is ommitted and the C file is compiled directly.
+#    Errors in the users mpy file and errors found with mspgcc are detected and hotspt (red links) in the
+#    Mpy window allow the user to click on the link and the corresponding line is highlighted in the source file
+#    tab, for both the mpy and C files.
+# 
+#    If the mspdebug flashing fails it will write a warning to connect a Launchpad board
+#    or to install the Launchpad driver
+#
+############################################################################
+  
+
 import subprocess
 import sys
 import os

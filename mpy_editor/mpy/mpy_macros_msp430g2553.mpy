@@ -1,3 +1,8 @@
+#  Macro definition file for MPY 
+#
+# (C) Copyright 2013 Mike Asker
+# Public Domain Licence:   Creative Commons CC0 
+
 
 
 # Pin to Port defs  (warning, these are chip dependant 14pin vs 20pin chips differ)

@@ -1,3 +1,32 @@
+###########################################################################
+#  
+#     This file is part of mpyEditor.
+# 
+#     mpyEditor is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+# 
+#     mpyEditor is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+# 
+#     You should have received a copy of the GNU General Public License
+#     along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
+#
+#     (C) Copyright 2013 Mike Asker    mike.asker@gmail.com
+#
+###########################################################################
+#
+#   run_uart_comport.py  
+#   
+#   This python script is used to make a windows COM port connection to the a Launchpad board.
+#   It runs the python scan_ports module to determine what Launchpad device (if any)
+#   is attached and which COM port number is is assigned.
+# 
+############################################################################
+
 import subprocess
 import sys
 import os

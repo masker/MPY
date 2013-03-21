@@ -1,8 +1,10 @@
+
+
 ;------------------------------------------------------------------------------
 ; Mpy Editor Windows Installer Build Script
 ; Author: Mike Asker
 ; Language: NSIS
-; Licence: wxWindows License
+; Licence: GPL
 ;------------------------------------------------------------------------------
 
 

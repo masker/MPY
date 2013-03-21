@@ -1,3 +1,44 @@
+###########################################################################
+#  
+#     This file is part of mpyEditor.
+# 
+#     mpyEditor is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+# 
+#     mpyEditor is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+# 
+#     You should have received a copy of the GNU General Public License
+#     along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
+#
+#     (C) Copyright 2013 Mike Asker    mike.asker@gmail.com
+#
+###########################################################################
+#
+#   mpy2c.py  
+#   
+#   This python program is used to preprocess a 'mpy' format file into C.
+#   It uses the python 'ast' python code parser to read a file, which is 
+#   then traversed and an output token list is built with a C syntax.
+#   More operations are performed to complete the translation, these include
+#       Multiple macro substitutions
+#       Loading in of included files
+#       Print statement processing
+#       Interrupt function insertion
+#       Adding variable declarations, including globals
+#       Converition of 'for' and 'range' loops
+#       Reordering of functions at top of file, and adding of main function
+#       Reading in of device macro mpy files for definition of portpin names and other inline type functions
+#       Source filename and line numbers are added to the output that allow errors to be highlighted in the source
+#
+############################################################################
+  
+
+
 import ast
 import types
 import sys

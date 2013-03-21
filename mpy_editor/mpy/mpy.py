@@ -2,11 +2,35 @@
 ###############################################################################
 # Name: mpy.py                                                                #
 # Purpose:                                                                    #
-# Authors: 
+# Authors:                                                                    #
 #         Cody Precord <cprecord@editra.org>                                  #
+#         Mike Asker                                                          #
 # Copyright: (c) 2008 Cody Precord <staff@editra.org>                         #
+#                                                                             #
 # License: wxWindows License                                                  #
 ###############################################################################
+#
+#  mpy.py
+# 
+#  This is an Editra plugin file modified from the launch.py plugin.
+#  It creates a MPY tab in the shelf window. It provides a console output
+#  for all output messages from the mpy toolchain operations.
+#  It also has a toolbar at the top which displays the connection status of the
+#  Launchpad board, and a 'Prog' button, which when pressed lauches the mpy toolchain
+#  program 'prog.py'. There is also a Driver Install button which when pressed runs an 
+#  NSIS installation script for the 2 drivers needed.
+# 
+#  Most of the code is the same as the original Editra launch.py with the following changes:
+#  Additional functions:
+#      OnTimerCheckConnection() to periodically check for Launchpad connection and update status bar
+#      run_mspdebug() and run_mspdebug_full() to run external system command mspdebug to determine connection status
+#      runcmd() to run process without creating console window.
+#      RunDrvInstScript() 
+#      StartStopProg()    launches mpy programmer
+#  Changed functions:
+#      __DoLayout()   modified from the original launch.py plugin for the MPY gui layout and functions 
+#
+#############################################################################
 
 """Launch User Interface"""
 __author__ = "Cody Precord <cprecord@editra.org>"

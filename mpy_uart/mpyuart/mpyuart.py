@@ -1,11 +1,32 @@
 # -*- coding: utf-8 -*-
 ###############################################################################
-# Name: launch.py                                                             #
-# Purpose: Launch Ui                                                          #
-# Author: Cody Precord <cprecord@editra.org>                                  #
+# Name: mpyuart.py                                                                #
+# Purpose:                                                                    #
+# Authors:                                                                    #
+#         Cody Precord <cprecord@editra.org>                                  #
+#         Mike Asker                                                          #
 # Copyright: (c) 2008 Cody Precord <staff@editra.org>                         #
+#                                                                             #
 # License: wxWindows License                                                  #
 ###############################################################################
+#
+#  mpyuart.py
+# 
+#  This is an Editra plugin file modified from the launch.py plugin.
+#  It creates a MPYUART tab in the shelf window. It provides a console output
+#  for COM output port from the Launchpad Board. This allows the launchpad print
+#  statements to be displayed in this window.
+#  It also has a toolbar at the top which allows the COM port connection to stopped
+#  or restarted. The connection is automatically started when the mpyEditra is started
+#  or when the Launchpad board is auto detected.
+# 
+#  Most of the code is the same as the original Editra launch.py with the following changes:
+#  Additional functions:
+#      StartStopUart()    launches the com port uart connection script run_uart_comport.py
+#  Changed functions:
+#      __DoLayout()   modified from the original launch.py plugin for the MPYUART gui layout and functions 
+#
+#############################################################################
 
 """Launch User Interface"""
 __author__ = "Cody Precord <cprecord@editra.org>"
