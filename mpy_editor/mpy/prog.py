@@ -188,8 +188,10 @@ idx = sys.argv[0].index(  r'\mpy_editor\mpy\prog.py' )
 mpy_dir = sys.argv[0][:idx]
 
 
-mspgcc_ver   = r'mspgcc-20120406'
-mspdebug_ver = r'mspdebug_v020'
+#mspgcc_ver   = r'mspgcc-20120406'
+#mspdebug_ver = r'mspdebug_v020'
+mspgcc_ver   = r'mspgcc'
+mspdebug_ver = r'mspdebug'
 
 file_contents = {}
 debug = False
@@ -306,6 +308,7 @@ if file != None:
         # Compile the C file using mspgcc
         print '(mspgcc started)  ...', 
         macro_def = get_macro_def( chip_id )
+        #print macro_def
         install_dir = r'%s\%s' % (mpy_dir, mspgcc_ver)
         cmd      = r'%s\bin\msp430-gcc.exe' % install_dir
         cmd_opts = r'%s -L"%s\msp430\lib\ldscripts\%s"   -mmcu=%s -Os -fdata-sections -ffunction-sections -o "%s.elf" "%s.c" -Wl,--gc-sections -Wl,--strip-all' % ( macro_def, install_dir, chip_id, chip_id, fileroot, fileroot )

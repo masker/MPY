@@ -13,7 +13,7 @@
 
 ; Global Variables
 !define PRODUCT_NAME "MpyEditor"
-!define PRODUCT_VERSION "0.1.a7"
+!define PRODUCT_VERSION "0.1.a8"
 !define PRODUCT_PUBLISHER "MpyProjects"
 !define PRODUCT_WEB_SITE "http://www.mpyprojects.com"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\${PRODUCT_NAME}.exe"
@@ -308,8 +308,10 @@ Section /o "MPY Tools" MpyToolsSection
   SetOverwrite try
   SetOutPath "$MpyDir"
   File /r "C:\MPY\devcon"
-  File /r "C:\MPY\mspgcc-20120406"
-  File /r "C:\MPY\mspdebug_v020"
+;  File /r "C:\MPY\mspgcc-20120406"
+;  File /r "C:\MPY\mspdebug_v020"
+  File /r "C:\MPY\mspgcc"
+  File /r "C:\MPY\mspdebug"
 SectionEnd
 
 
@@ -658,8 +660,10 @@ SectionEnd
 Section /o "un.MPY Tools" UNMpyToolsSection
   SectionIn  1
   RmDir /r "$INSTDIR\devcon"
-  RmDir /r "$INSTDIR\mspdebug_v020"
-  RmDir /r "$INSTDIR\mspgcc-20120406"
+  RmDir /r "$INSTDIR\mspdebug_*"
+  RmDir /r "$INSTDIR\mspgcc-*"
+  RmDir /r "$INSTDIR\mspdebug"
+  RmDir /r "$INSTDIR\mspgcc"
 SectionEnd
 
 
@@ -671,7 +675,7 @@ Section "un.MPY Editor" UNMpyEditorSection
   RmDir /r "$INSTDIR\mpy_uart"
   RmDir /r "$INSTDIR\mpy_examples"
   RmDir /r "$INSTDIR\mpy_setup"
-  Delete  "$INSTDIR/mpy_driver_installer.0.1.a2.exe"  
+  Delete  "$INSTDIR/mpy_driver_installer.*.exe"  
   Delete  "$INSTDIR/Mpy*.*"  
   
 #  RmDir "$INSTDIR"   ## Too dangerous !!  

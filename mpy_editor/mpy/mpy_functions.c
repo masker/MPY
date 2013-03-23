@@ -256,7 +256,7 @@ void  wait( int  dly ) { int i ; int k ;
               for ( k = 0 ; k < 280 ; k = k + 1 ) { 
                   _NOP ( ) ; } } } 
 
-static void __inline__ delay_cycles(register unsigned int n)
+static void __inline__ wait_cycles(register unsigned int n)
 {
     __asm__ __volatile__ (
 		"1: \n"
@@ -521,7 +521,9 @@ void interrupt_disable( int portpin_intr)
   }
   else if (portpin_intr == 2) 
   {  
+#ifdef MPY_USCI
       IE2 &= ~UCA0RXIE;                          // Disable USCI_A0 RX interrupt  }
+#endif
   }
   else if (portpin_intr == 1)  
   { 

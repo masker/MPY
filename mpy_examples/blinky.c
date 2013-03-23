@@ -1,6 +1,7 @@
 // &C:\MPY\mpy_examples\blinky.mpy&-1
 
 #include <msp430.h>
+#include <signal.h>
 #include "msp430g2231.h"
 #include "c:\mpy\mpy_editor\mpy\mpy_functions.c"
 
@@ -29,5 +30,5 @@ if ( 16 < 32 ) { P1DIR |= ( 1 << ( 16 & 15 ) ) ; P1SEL &= ~ ( 1 << ( 16 & 15 ) )
           if ( 1 ) { if ( 16 < 32 ) { P1OUT |= ( 1 << ( 16 & 15 ) ) ; } else { P2OUT |= ( 1 << ( 16 & 15 ) ) ; } ; } else { if ( 16 < 32 ) { P1OUT &= ~ ( 1 << ( 16 & 15 ) ) ; } else { P2OUT &= ~ ( 1 << ( 16 & 15 ) ) ; } ; } ; // &C:\MPY\mpy_examples\blinky.mpy&12
           wait ( 100 ) ; // &C:\MPY\mpy_examples\blinky.mpy&13
           if ( 0 ) { if ( 16 < 32 ) { P1OUT |= ( 1 << ( 16 & 15 ) ) ; } else { P2OUT |= ( 1 << ( 16 & 15 ) ) ; } ; } else { if ( 16 < 32 ) { P1OUT &= ~ ( 1 << ( 16 & 15 ) ) ; } else { P2OUT &= ~ ( 1 << ( 16 & 15 ) ) ; } ; } ; // &C:\MPY\mpy_examples\blinky.mpy&14
-          wait ( 100 ) ; } } // &C:\MPY\mpy_examples\blinky.mpy&15
+          wait ( 100 ) ; } while(1);} // &C:\MPY\mpy_examples\blinky.mpy&15
 
