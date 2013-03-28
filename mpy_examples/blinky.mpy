@@ -7,9 +7,9 @@
 # 
 ######################################################################
 
-dirout(REDLED)    # Setup pin 2 to be an output (connected to the red led)
+dirout(P1_0)      # Setup pin 2 to be an output (connected to the red led)
 while 1:          # Do the following lines forever and ever
-   out(REDLED,1)  # turn the green led on
-   wait(100)      # wait 500 miliseconds (0.5 sec)
-   out(REDLED,0)  # turn the green led off
+   out(P1_0,1)    # turn the red led on
+   wait(1000)     # wait 500 miliseconds (0.5 sec)
+   out(P1_0,0)    # turn the red led off
    wait(100)

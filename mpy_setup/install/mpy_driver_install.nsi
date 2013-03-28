@@ -11,7 +11,7 @@
 
 ; Global Variables
 !define PRODUCT_NAME "MpyDriverInstaller"
-!define PRODUCT_VERSION "0.1.a2"
+!define PRODUCT_VERSION "0.1"
 !define PRODUCT_PUBLISHER "MpyProjects"
 !define PRODUCT_WEB_SITE "http://www.mpyprojects.com"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\${PRODUCT_NAME}.exe"
@@ -173,7 +173,7 @@ Section "LibUsb MspDebug" LibUsbSection
 
   SetOverwrite try
   SetOutPath "$INSTDIR\mpy_setup\drivers\libusb-win32-bin-1.2.5.0"
-  File /r "C:\MPY\mpy_setup\drivers\libusb-win32-bin-1.2.5.0"
+  File /r "C:\MPY\mpy_setup\drivers\libusb-win32-bin-1.2.5.0\"
 
   # Change directory to the executable which matches the cpu
   ${If} ${RunningX64}
@@ -181,11 +181,13 @@ Section "LibUsb MspDebug" LibUsbSection
   ${Else}
      SetOutPath "$INSTDIR\mpy_setup\drivers\libusb-win32-bin-1.2.5.0\bin\x86"
   ${EndIf}
-  ExecWait 'install-filter.exe install --inf="$INSTDIR\mpy_setup\drivers\libusb-win32-bin-1.2.5.0\USB_Human_Interface_Device_(Interface_1).inf"' $0
+  ExecWait 'install-filter.exe uninstall --inf="$INSTDIR\mpy_setup\drivers\libusb-win32-bin-1.2.5.0\USB_Human_Interface_Device_(Interface_1).inf"' $0
+#  nsExec::Exec 'install-filter.exe uninstall --inf="$INSTDIR\mpy_setup\drivers\libusb-win32-bin-1.2.5.0\USB_Human_Interface_Device_(Interface_1).inf"' ## ERROR locks up
+  Pop $0
   DetailPrint "LibUsb install-filter.exe returned $0"
 
 #  ${If} $0 != 0
-#      MessageBox MB_OK|MB_ICONEXCLAMATION "Error ($0) while installing LibUsb MspDebug Driver. Try re-installing, or use inf-wizard.exe"
+#     MessageBox MB_OK|MB_ICONEXCLAMATION "Error ($0) while installing LibUsb MspDebug Driver. Try re-installing, or use inf-wizard.exe"
 #  ${EndIf}
 
 
@@ -204,7 +206,7 @@ Section "MSP430 Uart" CDC430Section
 
   SetOverwrite try
   SetOutPath "$INSTDIR\mpy_setup\drivers\eZ430-UART"
-  File /r "C:\MPY\mpy_setup\drivers\eZ430-UART"
+  File /r "C:\MPY\mpy_setup\drivers\eZ430-UART\"
 
   ExecWait '"$INSTDIR\mpy_setup\drivers\eZ430-UART\preinstalCDC.exe"' $0
   DetailPrint "MSP430 Uart preinstalCDC $0"

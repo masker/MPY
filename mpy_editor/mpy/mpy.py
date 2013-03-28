@@ -64,6 +64,8 @@ import shlex
 import time
 import re
 import threading
+import find_launchpad
+import serial
 
 
 #import run_uart_comport
@@ -73,7 +75,7 @@ import threading
 ID_EXECUTABLE = wx.NewId()
 ID_ARGS    = wx.NewId()
 ID_PROG    = wx.NewId()
-ID_DRVINST = wx.NewId()
+#ID_DRVINST = wx.NewId()
 
 # Profile Settings Key
 #LAUNCH_PREFS = 'Launch.Prefs' # defined in cfgdlg
@@ -121,6 +123,8 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         self._pbtn = None       # Created in __DoLayout
         self._clear = None      # Created in __DoLayout
         self._lockFile = None   # Created in __DoLayout
+        self._uartStopped = None   # Created in __DoLayout
+        self.uartStopped = False
         self._chFiles = None    # Created in __DoLayout
         self._chDevices = None
         self._worker = None
@@ -142,6 +146,9 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         self.mspDevices = ['Auto', 'msp430g2211','msp430g2231','msp430g2452','msp430g2553' ]
         self.mspDevice = 'Unknown'
         self.mspLaunchpadStatus_previous = 'Not_Connected'
+        self.mspLaunchpadStatus          = 'Not_Connected'
+        self.mspLaunchpadComPort         = None
+        self.prog_in_progress = None
         
         self.colors = { 'yellow'      : wx.Colour(255, 210,  95), 
                         'green'       : wx.Colour(174, 255, 111), 
@@ -150,7 +157,7 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
                         'grey'        : wx.Colour(128, 128, 128),  }
                         
         self.Locked = False
-        self.mspStatusStr  =  '.             unknown               .'
+        self.mspStatusStr  =  '.          Searching               .'
         self.mspStatusColor   = wx.Colour(255, 210, 95)
 
 
@@ -199,13 +206,20 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         ed_msg.RegisterCallback(self._CanLaunch, REQUEST_ACTIVE)
         ed_msg.RegisterCallback(self._CanReLaunch, REQUEST_RELAUNCH)
 
-        # Start the MPY uart serial COM-PORT interface        
+        # Start the Connection check loop. Once every 2 seconds it will look for the Launchpad device
+        # and updated the connection status        
         self.con_check_thread = threading.Thread(target=self.CheckConnectionLoop, args=())
         self.con_check_thread.start()
 
+        # Start the MPY uart serial COM-PORT interface. Enters a fast loop (0.05s) 
+        # When the Connection status shows the Launchpad present, it will open the port
+        # and wait for a line of data from the launchpad, and output it to the mpy window        
+        self.uart_thread = threading.Thread(target=self.UartLoop, args=())
+        self.uart_thread.start()
 
     #---- Properties ----#
 #    Locked = property(lambda self: self._lockFile.IsChecked())
+#    disableUart = property(lambda self: self._disableUart.IsChecked())
     MainWindow = property(lambda self: self._mw)
     Preferences = property(lambda self: Profile_Get(handlers.CONFIG_KEY, default=None),
                            lambda self, prefs: Profile_Set(handlers.CONFIG_KEY, prefs))
@@ -226,6 +240,13 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
             ed_msg.Unsubscribe(self.OnRunLastMsg)
             ed_msg.UnRegisterCallback(self._CanLaunch)
             ed_msg.UnRegisterCallback(self._CanReLaunch)
+            try:
+                print '[OnDestroy] trying to close serial_port'
+                self.serial_port.close()
+                print '[OnDestroy] succeeded in closing serial_port'
+            except AttributeError: 
+                print '[OnDestroy] failed to close serial_port (it may not have been openned!)'
+
 
     def __DoLayout(self):
         """Layout the window"""
@@ -277,7 +298,7 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         self._conStatus.SetBackgroundColour(self.mspStatusColor)
 #        self._conStatus.SetLabel(_(".             unknown               ."))
         ctrlbar.AddControl(self._conStatus, wx.ALIGN_LEFT)
-        self._conStatus.SetToolTipString(_("The Launchpad Chip Connection Status"))
+        self._conStatus.SetToolTipString(_("The Launchpad Chip Connection Status,\nCOM port and MSP430 chip number"))
 
 
         # List of Devices to choose from  
@@ -287,8 +308,6 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
 #         self._chDevices.SetToolTipString(_("Select the Microcontroller chip used in the Launchpad,\nor select 'Auto' to automatically detect the chip (recommended)"))
  
 
-        self._chFiles = wx.Choice(ctrlbar, wx.ID_ANY)#, choices=[''])
-        ctrlbar.AddControl(self._chFiles, wx.ALIGN_LEFT)
 
         ctrlbar.AddControl((5, 5), wx.ALIGN_LEFT)
         
@@ -301,15 +320,27 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
 #        self._run   = self.AddPlateButton(_("  PROG  "),   ID_PROG, wx.ALIGN_LEFT)
 #        self._run.SetPressColor( self.colors['green'] )        
 
-        # Spacer
+        ctrlbar.AddControl((5, 5), wx.ALIGN_LEFT)
+
+        self._chFiles = wx.Choice(ctrlbar, wx.ID_ANY)#, choices=[''])
+        ctrlbar.AddControl(self._chFiles, wx.ALIGN_LEFT)
+
+        ctrlbar.AddControl((10, 5), wx.ALIGN_LEFT)
+
+        self._uartStopped = wx.CheckBox(ctrlbar, wx.ID_ANY, 'Stop UART Output')
+        self._uartStopped.SetToolTipString(_("Stops the UART messages from appearing on the mpyEditor console"))       
+        ctrlbar.AddControl(self._uartStopped, wx.ALIGN_LEFT)
+
+
+        # Add a Stretch Spacer
         ctrlbar.AddStretchSpacer()
 
  
         # Button
-        self._drvinst = wx.Button(ctrlbar, ID_DRVINST,_("  Install Launchpad Driver  "))
-        self._drvinst.SetToolTipString(_("Runs the Launchpad Driver Software Installation Program"))
-        self._drvinst.SetBackgroundColour(self.colors['green'])
-        ctrlbar.AddControl(self._drvinst, wx.ALIGN_LEFT)
+#         self._drvinst = wx.Button(ctrlbar, ID_DRVINST,_("  Install Launchpad Driver  "))
+#         self._drvinst.SetToolTipString(_("Runs the Launchpad Driver Software Installation Program"))
+#         self._drvinst.SetBackgroundColour(self.colors['green'])
+#         ctrlbar.AddControl(self._drvinst, wx.ALIGN_LEFT)
 #        self._drvinst = self.AddPlateButton(_("  Install Launchpad Driver  "), ID_DRVINST,   wx.ALIGN_RIGHT)
 #        self._drvinst.SetPressColor( self.colors['green'] )
         ctrlbar.AddControl((5, 5), wx.ALIGN_LEFT)
@@ -376,9 +407,9 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
 #         elif e_obj is self._prog:
 #             # May be run or abort depending on current state
 #             self.StartStopProg()
-        elif e_obj is self._drvinst:
-            # May be run or abort depending on current state
-            self.RunDrvInstScript()
+#         elif e_obj is self._drvinst:
+#             # May be run or abort depending on current state
+#             self.RunDrvInstScript()
         elif e_obj == self._clear:
             self._buffer.Clear()
         else:
@@ -393,7 +424,7 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         """
  
         # Check to see if the launchpad board is connected or not
-        self.mspLaunchpadDetected, self.mspLaunchpadStatus, self.mspLaunchpadStatusColor = run_mspdebug(self)
+        self.mspLaunchpadComPort, self.mspLaunchpadStatus, self.mspLaunchpadStatusColor = is_launchpad_connected(self)
 
         # If the connection status changed from not connected to connected,
         # then do a full check to find out which microcontroller is on the board.
@@ -403,9 +434,13 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         if self.mspLaunchpadStatus == 'Connected' and self.mspLaunchpadStatus_previous != 'Connected':
             self.mspDeviceDetected, self.mspDeviceStatus, self.mspDeviceStatusColor = run_mspdebug_full(self)
             tstr = re.sub( '_', ' ', self.mspDeviceDetected.upper() )
-            tstr = 'Connected: %s' % tstr
+            tstr = '%s: %s' % (self.mspLaunchpadComPort, tstr)
             self.mspLaunchpadStatusStr = tstr
             self.mspStatusColor = self.colors[self.mspDeviceStatusColor]
+            # It may be connected, but mspdebug may not have recognised that it is connected yet
+            # if so then force the connection status to not connected, so that it will try again
+            if self.mspDeviceStatus == '_Launchpad_Not_Found':
+                self.mspLaunchpadStatus = 'Not_Connected'
         elif self.mspLaunchpadStatus == 'Not_Connected':   # not connected
             tstr = re.sub( '_', ' ', self.mspLaunchpadStatus )
             self.mspLaunchpadStatusStr = tstr
@@ -427,10 +462,13 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         '''Continuously running loop is run in a separate thread and is responsible for
         checcking the connection status to the Launchpad'''
         
-        while 1:    
-            time.sleep(2)
-            (tstr, color) = self.OnTimerCheckConnection()
-            wx.CallAfter( self.UpdateConnectionStatus, (tstr,color) )
+        try:
+            while 1:    
+                time.sleep(2)
+                (tstr, color) = self.OnTimerCheckConnection()
+                wx.CallAfter( self.UpdateConnectionStatus, (tstr,color) )
+        except wx.PyDeadObjectError: 
+                print 'CLOSING DOWN EXCEPTION CheckConnectionLoop PyDeadObjectError'
 
     #--------------------------------------------------------------------------------
     def UpdateConnectionStatus( self, status):
@@ -438,9 +476,92 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         CheckConnectionLoop funcion which is running in a separate thread
         '''
         
-        (tstr, color) = status    
-        self._conStatus.SetLabel( tstr )
-        self._conStatus.SetBackgroundColour(color)        
+        (tstr, color) = status
+        try:    
+            self._conStatus.SetLabel( tstr )
+            self._conStatus.SetBackgroundColour(color)        
+        except wx.PyDeadObjectError: 
+                print 'CLOSING DOWN EXCEPTION UpdateConnectionStatus PyDeadObjectError'
+
+    #--------------------------------------------------------------------------------
+    def print_outbuf(self,txt):
+        '''print text to output buffer, using AppendUpdate'''
+        
+        try:
+          self._buffer.AppendUpdate( txt  )
+          self._buffer.FlushBuffer()
+        except wx.PyDeadObjectError: 
+          print 'CLOSING DOWN EXCEPTION print_outbuf PyDeadObjectError'
+
+    #--------------------------------------------------------------------------------
+    def print_outbuf_from_uart(self,txt):
+        '''print text to output buffer, using AppendUpdate
+        alternate vertion that is color coded to indicate txt is from different source ie the uart
+        '''
+        
+        try:
+            cpos = self._buffer.GetLength()
+            self._buffer.AppendUpdate( txt  )
+            self._buffer.FlushBuffer()
+            
+            self._buffer.SetReadOnly(False)
+            self._buffer.StartStyling(cpos, 0x1f)
+            self._buffer.SetStyling(self._buffer.GetLength() - cpos, self._buffer.OPB_STYLE_UART)
+            self._buffer.SetReadOnly(True)
+            
+            
+        except wx.PyDeadObjectError: 
+          print 'CLOSING DOWN EXCEPTION print_outbuf PyDeadObjectError'
+
+
+    #--------------------------------------------------------------------------------
+    def UartLoop(self):
+        '''This function prints out the UART comport data onto the mpy console, it is run in a separate thread.
+        So as not to slow down responsiveness of the main gui.
+         
+        1) If connection status is 'connected' and currently is not connected, then open the comport
+        2) If connection status is 'not connected' and currently is connected, then close the comport
+        3) If connected read a line from the uart port and output the line to the output window.
+        '''
+
+        time.sleep(3)  # Wait before starting up the loop to give time for other processes to start
+
+        try:        
+            wx.CallAfter( self.print_outbuf, ('>>> [UartLoop] Started\n') )        
+            port_open = False
+            self.serial_port = None
+
+            while(1):
+                time.sleep(0.05)  # wait 1/20 sec before looking again (frees up the cpu)
+                if self.serial_port == None and self.mspLaunchpadStatus == 'Connected' and self.mspLaunchpadComPort != None:
+                    
+                    try:
+                        self.serial_port = serial.Serial( self.mspLaunchpadComPort, 9600, timeout=1 )   
+                        port_open = True
+                        wx.CallAfter( self.print_outbuf, ('openned comport %s\n' % self.mspLaunchpadComPort) )
+                    except:
+                        wx.CallAfter( self.print_outbuf, ('Error openning comport %s\n' % self.mspLaunchpadComPort) )
+
+                
+                if port_open == True and self.mspLaunchpadStatus != 'Connected': 
+                    if self.serial_port != None:
+                        self.serial_port.close()
+                        self.serial_port = None
+                        wx.CallAfter( self.print_outbuf, ('closed comport : %s\n' % self.mspLaunchpadComPort) )
+                    else:
+                        wx.CallAfter( self.print_outbuf, ('closed comport (comport was not open): %s\n' % self.mspLaunchpadComPort) )
+                    port_open = False
+
+
+                if self.serial_port:
+                    line = self.serial_port.readline()
+                    if self.prog_in_progress == None and line != '' and self.uartStopped != True : 
+                        wx.CallAfter( self.print_outbuf_from_uart, (line) )
+                        
+        except wx.PyDeadObjectError: 
+                print 'CLOSING DOWN EXCEPTION UartLoop PyDeadObjectError'
+
+                 
 
     
     #--------------------------------------------------------------------------------
@@ -470,21 +591,29 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
     def OnCheck(self, evt):
         """CheckBox for Lock File was clicked"""
         e_obj = evt.GetEventObject()
-        if 0 and e_obj is self._lockFile:
-            if self.Locked:
-                self._chFiles.Disable()
+#         if 0 and e_obj is self._lockFile:
+#             if self.Locked:
+#                 self._chFiles.Disable()
+#             else:
+#                 self._chFiles.Enable()
+#                 cbuff = GetTextBuffer(self.MainWindow)
+#                 if isinstance(cbuff, ed_basestc.EditraBaseStc):
+#                     self.UpdateCurrentFiles(cbuff.GetLangId())
+#                     self.SetupControlBar(cbuff)
+        if e_obj is self._uartStopped:
+            self.uartStopped = self._uartStopped.IsChecked()
+            if self.uartStopped:
+               self._buffer.AppendUpdate( "[uart stopped]\n" )
             else:
-                self._chFiles.Enable()
-                cbuff = GetTextBuffer(self.MainWindow)
-                if isinstance(cbuff, ed_basestc.EditraBaseStc):
-                    self.UpdateCurrentFiles(cbuff.GetLangId())
-                    self.SetupControlBar(cbuff)
+               self._buffer.AppendUpdate( "[uart started]\n" )
+                 
+            self._buffer.FlushBuffer()
         else:
             evt.Skip()
 
     def OnConfigChange(self, msg):
         """Update current state when the configuration has been changed
-        @param msg: Message Object
+        @param msg: Messa_UartStoppedge Object
 
         """
         util.Log("[MspPy][info] Saving config to profile")
@@ -700,7 +829,7 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
 
         
         cmd = r'%s -u %s\mpy_editor\mpy\driver_install.py'  % (self.python_exe, self.mpy_dir)       
-        cmd = r'%s\mpy_driver_installer.0.1.a2.exe'  % (self.mpy_dir)       
+        cmd = r'%s\mpy_driver_installer.0.1.exe'  % (self.mpy_dir)       
             
         util.Log("[mpy][RunDrvInstScript] Starting Script %s" % cmd)
         self.State['lcmd'] = cmd
@@ -708,7 +837,7 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         self.State['largs'] = args
 #        self._buffer.AppendUpdate( '[mpy] dir=%s cmd=%s\n' % (os.getcwd(), cmd) )
         self._buffer.AppendUpdate( "[mpy] Check for 'User Account Control' in background window\n[mpy] Click Yes to allow mpy_driver_installer.exe to make changes to this computer\n" )
-        self._drvinst.SetBackgroundColour(self.colors['grey'])
+        #self._drvinst.SetBackgroundColour(self.colors['grey'])
 
         # Must give it a python type file for some reason!
         self.Run(self.State['file'], cmd, args, 32161)   
@@ -798,6 +927,7 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
 #            self.mspDebugLock.acquire()
             self._run.SetBackgroundColour(self.colors['grey'])
 
+            self.prog_in_progress = True
             self.Run(self.State['file'], cmd, args, 32161)   
 
 
@@ -944,6 +1074,8 @@ class OutputDisplay(eclib.OutputBuffer, eclib.ProcessBufferMixin):
                                                     wx.FONTWEIGHT_NORMAL))
         self.SetFont(font)
         self.UpdateWrapMode()
+        self.OPB_STYLE_UART = 4
+        self.AddNewStyle(self.OPB_STYLE_UART, font, '#00AA00')
 
     Preferences = property(lambda self: Profile_Get(handlers.CONFIG_KEY, default=dict()),
                            lambda self, prefs: Profile_Set(handlers.CONFIG_KEY, prefs))
@@ -1008,7 +1140,8 @@ class OutputDisplay(eclib.OutputBuffer, eclib.ProcessBufferMixin):
         
 #        self.parent_obj.mspDebugLock.release()
         self.parent_obj._run.SetBackgroundColour(self.parent_obj.colors['green'])
-        self.parent_obj._drvinst.SetBackgroundColour(self.parent_obj.colors['green'])
+        #self.parent_obj._drvinst.SetBackgroundColour(self.parent_obj.colors['green'])
+        self.parent_obj.prog_in_progress = None
         
 #        self.AppendUpdate("DoProcessExit\n")
 #        self.FlushBuffer()
@@ -1055,6 +1188,28 @@ class OutputDisplay(eclib.OutputBuffer, eclib.ProcessBufferMixin):
         self.SetWrapMode(mode)
 
 
+    def AddNewStyle(self, Style_number, font, foreground_color):
+        '''Adds a new text style with the given color'''  
+
+        if font is None:
+            if wx.Platform == '__WXMAC__':
+                fsize = 11
+            else:
+                fsize = 10
+
+            font = wx.Font(fsize, wx.FONTFAMILY_MODERN,
+                           wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
+        style = (font.GetFaceName(), font.GetPointSize(), foreground_color, "#FFFFFF")
+#        wx.stc.StyledTextCtrl.SetFont(self, font)
+
+        # Custom Styles
+        self.StyleSetSpec(Style_number,
+                          "face:%s,size:%d,fore:%s,back:%s" % style)
+
+
+
+
+
 #--------------------------------------------------------
 def runcmd( command_line, log=False ):
         args = shlex.split(command_line)
@@ -1073,26 +1228,32 @@ def runcmd( command_line, log=False ):
         return output
 
 #------------------------------------------------------------------------
-def run_mspdebug(parent):
+def is_launchpad_connected(parent):
         '''This function runs mspdebug to determine whether the Launchpad is connected
         It does not cause the launchpad microcontroller chip to reset'''
 
 #        parent.mspDebugLock.acquire()
+#        parent._log("\n(RUN_MSPDEBUG)\n")
+#        parent.AppendUpdate("(run_mspdebug) started\n")
 
-        chip_id_dict = { '0xf201': 'msp430g2231', 
-                         '0x2553': 'msp430g2553',
-                         '0x2452': 'msp430g2452',
-                       }
-        chip_id = 'Unknown'
-        mspdebug_ver = r'mspdebug'
-#        print '(mspdebug started)...',
-        install_dir = r'%s\%s' % (parent.mpy_dir, mspdebug_ver)
-        cmd = r'%s\mspdebug.exe' % install_dir
-        cmd_opts = r'rf2500 "--usb-list"' 
-        command_line = '"%s" %s' % (cmd,cmd_opts)
-        op = runcmd( command_line )
+#         chip_id_dict = { '0xf201': 'msp430g2231', 
+#                          '0x2553': 'msp430g2553',
+#                          '0x2452': 'msp430g2452',
+#                        }
+#         chip_id = 'Unknown'
+#         mspdebug_ver = r'mspdebug'
+# #        print '(mspdebug started)...',
+#         install_dir = r'%s\%s' % (parent.mpy_dir, mspdebug_ver)
+#         cmd = r'%s\mspdebug.exe' % install_dir
+#         cmd_opts = r' tilib  "exit"' 
+#         command_line = '"%s" %s' % (cmd,cmd_opts)
+#         op = runcmd( command_line )
         
-        if re.search('0451:f432 eZ430-RF2500',op):
+        
+        Launchpad = find_launchpad.find_launchpad(parent)
+        
+        
+        if Launchpad.comport_name != None:
             connection_status = 'Connected'  # green
             color = 'yellow'
         else: 
@@ -1105,8 +1266,8 @@ def run_mspdebug(parent):
 
 
 #        parent.mspDebugLock.release()
-        
-        return 'unknown', connection_status, color
+#        parent._log("\n %s \n" % connection_status)        
+        return Launchpad.comport_name, connection_status, color
         
         
 #------------------------------------------------------------------------
@@ -1119,22 +1280,25 @@ def run_mspdebug_full(parent):
         chip_id_dict = { '0xf201': 'msp430g2231', 
                          '0x2553': 'msp430g2553',
                          '0x2452': 'msp430g2452',
+                         '0x0035': 'msp430g2231',
+                         '0x0036': 'msp430g2211',
+                         '0x00cf': 'msp430g2452',
                        }
         chip_id = 'Un-recognized'
         mspdebug_ver = r'mspdebug'
         print '(mspdebug started)...',
         install_dir = r'%s\%s' % (parent.mpy_dir, mspdebug_ver)
         cmd = r'%s\mspdebug.exe' % install_dir
-        cmd_opts = r'rf2500 "exit"' 
+        cmd_opts = r'tilib "exit"' 
         command_line = '"%s" %s' % (cmd,cmd_opts)
         op = runcmd( command_line )
-        if re.search('usbutil: unable to find a device matching 0451:f432',op):
-            print '*** ERROR *** Launchpad not connected, or driver not installed (click Install or run mpy_driver_install.exe)'
+        if not re.search('\nDevice: .* \(id =',op):
+            print '*** ERROR *** Check Launchpad is connected with MSP430 chip, or check driver installation'
             connection_status = '_Launchpad_Not_Found'  # red
             color = 'red'
-        elif re.search('Device ID: (\S+)',op):
+        else:
             print '(mspdebug passed)   ' , 
-            wds =  re.findall('Device ID: (\S+)', op)
+            wds =  re.findall(r'Device: .* \(id = (\S+)\)', op)    # Device: MSP430G2xx2 (id = 0x00cf)
             device_id = wds[-1]
             if device_id in chip_id_dict:  
                 chip_id = chip_id_dict[ device_id ]
@@ -1142,22 +1306,23 @@ def run_mspdebug_full(parent):
                 connection_status = 'Chip_Recognized'  # green
                 color = 'green'
             else:
+                chip_id = device_id
                 print  ' Device ID:', device_id, chip_id 
-                connection_status = '_Chip_Not_Recognized'  # yellow
+                connection_status =  device_id # yellow
                 color = 'yellow'
-        elif re.search('Could not find device',op):
-            print '*** ERROR *** MSP430 chip could not be found, make sure msp430 is plugged into socket and that it is the correct way round\n' 
-            connection_status = '_Launchpad_Chip_Not_Found'   # yellow
-            color = 'yellow'
-        elif re.search("can't claim interface: The requested resource is in use", op):
-            print '*** ERROR *** mspdebug is already running, close the other program\n' 
-            connection_status = '_mspdebug_in_use'   # yellow
-            color = 'red'
-        else:
-            print 'error !!\n'
-            print op
-            connection_status = '_Unknown_Error'  # red
-            color = 'red'
+#         elif re.search('Could not find device',op):
+#             print '*** ERROR *** MSP430 chip could not be found, make sure msp430 is plugged into socket and that it is the correct way round\n' 
+#             connection_status = '_Launchpad_Chip_Not_Found'   # yellow
+#             color = 'yellow'
+#         elif re.search("can't claim interface: The requested resource is in use", op):
+#             print '*** ERROR *** mspdebug is already running, close the other program\n' 
+#             connection_status = '_mspdebug_in_use'   # yellow
+#             color = 'red'
+#         else:
+#             print 'error !!\n'
+#             print op
+#             connection_status = '_Unknown_Error'  # red
+#             color = 'red'
         
         
         if connection_status[0] == '_':
@@ -1168,6 +1333,7 @@ def run_mspdebug_full(parent):
         
         return chip_id, connection_status, color
     
+
 
 #-----------------------------------------------------------------------------#
 def GetLangIdFromMW(mainw):

@@ -337,7 +337,8 @@ if file != None:
         install_dir = r'%s\%s' % (mpy_dir, mspdebug_ver)
         # Run mspdebug to program the msp430 microcontroller
         cmd = r'%s\mspdebug.exe' % install_dir
-        cmd_opts = r'rf2500 "prog %s.elf"' % fileroot
+#        cmd_opts = r'rf2500 "prog %s.elf"' % fileroot
+        cmd_opts = r'tilib "prog %s.elf"' % fileroot
         command_line = '"%s" %s' % (cmd,cmd_opts)
         op = runcmd( command_line )
 #        if not re.search("Done, \d+ bytes written",op):  # v0.19

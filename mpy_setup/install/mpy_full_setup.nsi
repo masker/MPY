@@ -13,7 +13,7 @@
 
 ; Global Variables
 !define PRODUCT_NAME "MpyEditor"
-!define PRODUCT_VERSION "0.1.a8"
+!define PRODUCT_VERSION "0.1.a9"
 !define PRODUCT_PUBLISHER "MpyProjects"
 !define PRODUCT_WEB_SITE "http://www.mpyprojects.com"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\${PRODUCT_NAME}.exe"
@@ -28,6 +28,8 @@ SetCompressor lzma
 
 !include StrRep.nsh
 !include ReplaceInFile.nsh
+!include LogicLib.nsh
+!include "x64.nsh"
 
 
 !macro RepInFile SOURCE_FILE SEARCH_TEXT REPLACEMENT
@@ -63,7 +65,8 @@ Var MpyUserSettings
 ; Welcome page
 !insertmacro MUI_PAGE_WELCOME
 
-; License page (Read the Licence)
+; License page (Read the Licence)license
+!define MUI_LICENSEPAGE_TEXT_TOP "MpyEditor is Licenced under GPL3 - Click Next to Agree" 
 !insertmacro MUI_PAGE_LICENSE "COPYING"
 
 ; Directory page (Set Where to Install)
@@ -198,8 +201,6 @@ SectionEnd
 Section /o "WXPython" WXPythonSection
 
 
-
-
   StrCpy "$MpyDir" "$INSTDIR"
 
 
@@ -252,10 +253,6 @@ Section /o "WXPython" WXPythonSection
 
 ;  MessageBox MB_OK "pyserial install"
 
-
-
-
-
 SectionEnd
 
 
@@ -296,7 +293,7 @@ SectionEnd
 
 
 ;------------------------------------------
-; SECTION 4
+; SECTION 
 ; Install MPY tools
 ;------------------------------------------
 Section /o "MPY Tools" MpyToolsSection
@@ -307,12 +304,59 @@ Section /o "MPY Tools" MpyToolsSection
 
   SetOverwrite try
   SetOutPath "$MpyDir"
-  File /r "C:\MPY\devcon"
-;  File /r "C:\MPY\mspgcc-20120406"
-;  File /r "C:\MPY\mspdebug_v020"
   File /r "C:\MPY\mspgcc"
   File /r "C:\MPY\mspdebug"
+  File    "C:\MPY\mpy_driver_installer.0.1.exe"
+
 SectionEnd
+
+;------------------------------------------
+; SECTION 
+; Install Driver
+;------------------------------------------
+#Section /o "MSP430 CDC Uart Driver" MpyDriverSection
+#  SectionIn 1 2
+
+Section "MSP430 CDC Uart Driver" MpyDriverSection
+
+  StrCpy "$MpyDir" "$INSTDIR"
+
+  ; Remove any remnants of the libusb driver, just in case.
+  SetOverwrite try
+  SetOutPath "$MpyDir\mpy_setup\drivers\libusb-win32-bin-1.2.5.0"
+
+  File /r "C:\MPY\mpy_setup\drivers\libusb-win32-bin-1.2.5.0\"
+
+  # Change directory to the executable which matches the cpu
+  ${If} ${RunningX64}
+     SetOutPath "$MpyDir\mpy_setup\drivers\libusb-win32-bin-1.2.5.0\bin\amd64"
+  ${Else}
+     SetOutPath "$MpyDir\mpy_setup\drivers\libusb-win32-bin-1.2.5.0\bin\x86"
+  ${EndIf}
+  ExecWait 'install-filter.exe uninstall --inf="$MpyDir\mpy_setup\drivers\libusb-win32-bin-1.2.5.0\USB_Human_Interface_Device_(Interface_1).inf"' $0
+  DetailPrint "LibUsb install-filter.exe returned $0"
+#  MessageBox MB_OK|MB_ICONEXCLAMATION "Error ($0) while installing LibUsb MspDebug Driver. Try re-installing, or use inf-wizard.exe"
+
+
+
+  SetOverwrite try
+  SetOutPath "$MpyDir\mpy_setup\drivers\eZ430-UART"
+  File /r    "C:\MPY\mpy_setup\drivers\eZ430-UART\"
+
+  ExecWait '"$MpyDir\mpy_setup\drivers\eZ430-UART\preinstalCDC.exe"' $0
+  DetailPrint "MSP430 Uart preinstalCDC $0"
+
+  ${If} ${RunningX64}
+      ExecWait '"$MpyDir\mpy_setup\drivers\eZ430-UART\dpinst64.exe" /c /q /sa /sw ' $0
+  ${Else}
+      ExecWait '"$MpyDir\mpy_setup\drivers\eZ430-UART\dpinst.exe" /c /q /sa /sw ' $0
+  ${EndIf}
+  DetailPrint "MSP430 Uart dpinst.exe returned $0"
+#  MessageBox MB_OK|MB_ICONEXCLAMATION "Error ($0) while installing eZ430-UART Driver. Try re-installing, or use Device Manager to install"
+
+ 
+SectionEnd
+
 
 
 ;------------------------------------------
@@ -329,7 +373,6 @@ Section /o "MPY Editor" MpyEditorSection
   File /r "C:\MPY\mpy_uart"
   File /r "C:\MPY\mpy_setup"
   File /r "C:\MPY\mpy_examples"
-  File    "C:\MPY\mpy_driver_installer.0.1.a2.exe"
 
 
   SetOverwrite try  
@@ -431,7 +474,7 @@ Section -Post
 
   ; run the driver installer
   SetOutPath "$MpyDir"
-  ExecWait "$MpyDir\mpy_driver_installer.0.1.a2.exe" $0
+;  ExecWait "$MpyDir\mpy_driver_installer.0.1.exe" $0
   
 
 
@@ -519,8 +562,6 @@ Function detect_components_already_installed
       StrCpy $PythonDir "C:\Python27"
   ${ElseIf} ${FileExists} "C:\Python26\python.exe"
       StrCpy $PythonDir "C:\Python26"
-#  ${ElseIf} ${FileExists} "C:\Python25\python.exe"
-#      StrCpy $PythonDir "C:\Python25"
   ${EndIf}
   
   ${If} $PythonDir == "?"
@@ -553,6 +594,8 @@ Function detect_components_already_installed
   !insertmacro SelectSection ${MpyToolsSection}
   DoneMpyToolsCheck:
 
+  ; MSP430 CDC Driver, always install the driver
+  !insertmacro SelectSection ${MpyDriverSection}
 
   ; MPY_EDITOR
   IfFileExists "$MpyDir\mpy_editor" DoneMpyEditorCheck MpyEditorDoesNotExist
@@ -605,6 +648,7 @@ FunctionEnd
   !insertmacro MUI_DESCRIPTION_TEXT ${WXPythonSection} "WxPython Graphics Module, PySerial and PyWin32"
   !insertmacro MUI_DESCRIPTION_TEXT ${EditraSection}   "Editra Editor"
   !insertmacro MUI_DESCRIPTION_TEXT ${MpyToolsSection} "Tools to program the Launchpad MSP430 (MSPGCC and MSPDEBUG)"
+  !insertmacro MUI_DESCRIPTION_TEXT ${MpyDriverSection} "MSP430 Uart 430CDC Driver"
   !insertmacro MUI_DESCRIPTION_TEXT ${MpyEditorSection}         "Mpy Editor"
   !insertmacro MUI_DESCRIPTION_TEXT ${MpyEditorSettingsSection} "Mpy Load Default User Settings"
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
@@ -675,8 +719,8 @@ Section "un.MPY Editor" UNMpyEditorSection
   RmDir /r "$INSTDIR\mpy_uart"
   RmDir /r "$INSTDIR\mpy_examples"
   RmDir /r "$INSTDIR\mpy_setup"
-  Delete  "$INSTDIR/mpy_driver_installer.*.exe"  
-  Delete  "$INSTDIR/Mpy*.*"  
+  Delete  "$INSTDIR\mpy_driver_installer.*.exe"  
+  Delete  "$INSTDIR\Mpy*.*"  
   
 #  RmDir "$INSTDIR"   ## Too dangerous !!  
   
