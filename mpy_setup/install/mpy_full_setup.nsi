@@ -370,7 +370,7 @@ Section /o "MPY Editor" MpyEditorSection
   SetOverwrite try
   SetOutPath "$MpyDir"
   File /r "C:\MPY\mpy_editor"
-  File /r "C:\MPY\mpy_uart"
+  ;File /r "C:\MPY\mpy_uart"
   File /r "C:\MPY\mpy_setup"
   File /r "C:\MPY\mpy_examples"
 
@@ -716,7 +716,6 @@ Section "un.MPY Editor" UNMpyEditorSection
   ; Ensure shortcuts are removed from user directory as well
   
   RmDir /r "$INSTDIR\mpy_editor"
-  RmDir /r "$INSTDIR\mpy_uart"
   RmDir /r "$INSTDIR\mpy_examples"
   RmDir /r "$INSTDIR\mpy_setup"
   Delete  "$INSTDIR\mpy_driver_installer.*.exe"  
@@ -740,6 +739,8 @@ Section "un.MPY Editor" UNMpyEditorSection
   DeleteRegKey HKLM "${PRODUCT_DIR_REGKEY}"
   DeleteRegKey HKCR "MpyEditor.Document"
   DeleteRegKey HKCR ".mpy"
+
+  RmDir /r "$INSTDIR\mpy_uart"
 
   SetAutoClose false
 SectionEnd
