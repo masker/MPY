@@ -66,7 +66,7 @@ Var MpyUserSettings
 !insertmacro MUI_PAGE_WELCOME
 
 ; License page (Read the Licence)license
-!define MUI_LICENSEPAGE_TEXT_TOP "MpyEditor is Licenced under GPL3 - Click Next to Agree" 
+!define MUI_LICENSEPAGE_TEXT_TOP "MpyEditor is Licenced under GPL3" 
 !insertmacro MUI_PAGE_LICENSE "COPYING"
 
 ; Directory page (Set Where to Install)

@@ -38,6 +38,7 @@ import serial
 import re
 import threading
 import traceback
+import wx
 
 import scan_ports
 
@@ -77,6 +78,7 @@ class find_launchpad( object ):
         
         
         # Report the ports that have a hardwareinstance (HWID) that matches the device_id
+        wx.CallAfter( self.pr, ('\n') )
         for p in all_ports:
             if 'name'             in p and   \
                'hardwareinstance' in p and   \
@@ -84,11 +86,11 @@ class find_launchpad( object ):
                'available'        in p and   \
                'class'            in p :
               if device_id in p['hardwareinstance']:
-#                    print '%8s active=%s avail=%s class=%s HWID=%30s' % (p['name'], p['active'], p['available'], p['class'], p['hardwareinstance'])
+                    txt = '%8s active=%s avail=%s class=%s HWID=%30s\n' % (p['name'], p['active'], p['available'], p['class'], p['hardwareinstance'])
+                    wx.CallAfter( self.pr, (txt) )     
                     if p['active'] == True:
                         self.lp_nc_message_done = False
                         return p['name']
-    
 #         if self.lp_nc_message_done == False:
 #              print '* No active Launchpad found, either it is not connected, or the comport driver is not installed *'
 #              self.lp_nc_message_done = True
@@ -97,10 +99,12 @@ class find_launchpad( object ):
     #--------------------------------------------------------------------------------    
     def pr( self, txt ):  
 
-        if self.parent_window != None:
-            self.parent_window._buffer.AppendUpdate('%s' % txt)
-        else:
-            print txt,
+        if 0 and not self.parent_window.uartStopped:
+            if self.parent_window != None:
+                self.parent_window._buffer.AppendUpdate('%s' % txt)
+                self.parent_window._buffer.FlushBuffer()
+            else:
+                print txt,
 
         
 

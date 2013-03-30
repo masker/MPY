@@ -425,13 +425,17 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
  
         # Check to see if the launchpad board is connected or not
         self.mspLaunchpadComPort, self.mspLaunchpadStatus, self.mspLaunchpadStatusColor = is_launchpad_connected(self)
+        if 0 and self.uartStopped != True:
+             wx.CallAfter( self.print_outbuf, ('                    --->>>  comport=%s  LPstatus=%s  StatColor=%s\n' % (self.mspLaunchpadComPort, self.mspLaunchpadStatus,self.mspLaunchpadStatusColor )))
+
+
 
         # If the connection status changed from not connected to connected,
         # then do a full check to find out which microcontroller is on the board.
         # Be aware that this will reset the microcontroller, so we only do a 
         # full check when the launchpad connection status changes
 
-        if self.mspLaunchpadStatus == 'Connected' and self.mspLaunchpadStatus_previous != 'Connected':
+        if self.mspLaunchpadStatus == 'Connected' and ( self.mspLaunchpadStatus_previous != 'Connected' or self.mspDeviceStatus == '_Launchpad_Not_Found'):
             self.mspDeviceDetected, self.mspDeviceStatus, self.mspDeviceStatusColor = run_mspdebug_full(self)
             tstr = re.sub( '_', ' ', self.mspDeviceDetected.upper() )
             tstr = '%s: %s' % (self.mspLaunchpadComPort, tstr)
@@ -440,7 +444,8 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
             # It may be connected, but mspdebug may not have recognised that it is connected yet
             # if so then force the connection status to not connected, so that it will try again
             if self.mspDeviceStatus == '_Launchpad_Not_Found':
-                self.mspLaunchpadStatus = 'Not_Connected'
+                #self.mspLaunchpadStatus = 'Not_Connected'
+                pass
         elif self.mspLaunchpadStatus == 'Not_Connected':   # not connected
             tstr = re.sub( '_', ' ', self.mspLaunchpadStatus )
             self.mspLaunchpadStatusStr = tstr
@@ -525,31 +530,37 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         '''
 
         time.sleep(3)  # Wait before starting up the loop to give time for other processes to start
-
+        port_open = False
+        self.serial_port = None
+        openned_comport = None
+       
         try:        
             wx.CallAfter( self.print_outbuf, ('>>> [UartLoop] Started\n') )        
-            port_open = False
-            self.serial_port = None
-
+ 
             while(1):
                 time.sleep(0.05)  # wait 1/20 sec before looking again (frees up the cpu)
+                if 0 and self.uartStopped != True:
+                     wx.CallAfter( self.print_outbuf, ('>>>                     [UartLoop] running  %s\n'  % self.mspLaunchpadStatus) )
                 if self.serial_port == None and self.mspLaunchpadStatus == 'Connected' and self.mspLaunchpadComPort != None:
                     
                     try:
                         self.serial_port = serial.Serial( self.mspLaunchpadComPort, 9600, timeout=1 )   
                         port_open = True
-                        wx.CallAfter( self.print_outbuf, ('openned comport %s\n' % self.mspLaunchpadComPort) )
+                        wx.CallAfter( self.print_outbuf, ('[openned comport %s]\n' % self.mspLaunchpadComPort) )
+                        self.mspLaunchpadStatus = 'Connected'
+                        openned_comport = self.mspLaunchpadComPort
                     except:
-                        wx.CallAfter( self.print_outbuf, ('Error openning comport %s\n' % self.mspLaunchpadComPort) )
-
+                        #wx.CallAfter( self.print_outbuf, ('[*** error openning comport *** : %s]\n' % self.mspLaunchpadComPort) )
+                        pass
                 
                 if port_open == True and self.mspLaunchpadStatus != 'Connected': 
                     if self.serial_port != None:
                         self.serial_port.close()
-                        self.serial_port = None
-                        wx.CallAfter( self.print_outbuf, ('closed comport : %s\n' % self.mspLaunchpadComPort) )
+                        wx.CallAfter( self.print_outbuf, ('[closed comport : %s]\n' % \
+                          (openned_comport)))
+                        self.serial_port = None                
                     else:
-                        wx.CallAfter( self.print_outbuf, ('closed comport (comport was not open): %s\n' % self.mspLaunchpadComPort) )
+                        wx.CallAfter( self.print_outbuf, ('[warning: closed comport (comport was not open): %s]\n' % openned_comport) )
                     port_open = False
 
 
@@ -557,6 +568,7 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
                     line = self.serial_port.readline()
                     if self.prog_in_progress == None and line != '' and self.uartStopped != True : 
                         wx.CallAfter( self.print_outbuf_from_uart, (line) )
+                        
                         
         except wx.PyDeadObjectError: 
                 print 'CLOSING DOWN EXCEPTION UartLoop PyDeadObjectError'
@@ -1283,6 +1295,8 @@ def run_mspdebug_full(parent):
                          '0x0035': 'msp430g2231',
                          '0x0036': 'msp430g2211',
                          '0x00cf': 'msp430g2452',
+                         '0x00ab': 'msp430fr5739',
+                         '0x00de': 'msp430g2553',
                        }
         chip_id = 'Un-recognized'
         mspdebug_ver = r'mspdebug'
