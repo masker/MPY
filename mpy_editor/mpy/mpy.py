@@ -50,6 +50,7 @@ import cfgdlg
 
 # Editra Libraries
 import ed_glob
+import ed_theme
 import ed_basestc
 import util
 from profiler import Profile_Get, Profile_Set
@@ -75,6 +76,7 @@ import serial
 ID_EXECUTABLE = wx.NewId()
 ID_ARGS    = wx.NewId()
 ID_PROG    = wx.NewId()
+ed_glob.ID_MPY_DOC = wx.NewId()
 #ID_DRVINST = wx.NewId()
 
 # Profile Settings Key
@@ -134,11 +136,36 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
                            lastlang=0, prelang=0, largs='', lcmd='')
 
 
+       
         # MPY setup
         self.python_exe   = r'%s\python.exe' % ( sys.exec_prefix )
         tstr = sys.modules[__name__].__file__
         idx = tstr.index(  r'\mpy_editor\mpy' )
         self.mpy_dir = tstr[:idx]
+
+
+        # Add the mpy help menu, but only do it once, even if the mpy plugin is disabled and enabled multiple times
+        do_mpy_help = False
+        try:
+          if ed_glob.done_mpy_help == True:
+             do_mpy_help = False
+        except:
+          ed_glob.done_mpy_help = True
+          do_mpy_help = True
+          
+        if do_mpy_help:
+            # Add the mpy help to the main help menu
+            # first temporarily change the THEME_DIR so that we can load the png from a local mpy dir
+            # the png file is in C:/mpy/mpy_editor/mpy/Tango/menu/mpy_logo_30.png directory        
+            theme_dir = ed_glob.CONFIG['THEME_DIR']
+            ed_glob.CONFIG['THEME_DIR'] = os.path.join( self.mpy_dir, 'mpy_editor', 'mpy', '')
+            ed_theme.ART[ ed_glob.ID_MPY_DOC ] = 'mpy_logo_30.png'
+            helpmenu = self._mw.GetMenuBar().GetMenuByName("help")
+            mpy_help = helpmenu.AppendEx(ed_glob.ID_MPY_DOC, _("&MPY Help..."),
+                            _("Help with MPY language"))
+            ed_glob.CONFIG['THEME_DIR'] = theme_dir
+        
+        
 
         self.mspDebugLock = threading.Lock()
         self.mspDeviceSelected = 'Auto'
@@ -216,6 +243,7 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         # and wait for a line of data from the launchpad, and output it to the mpy window        
         self.uart_thread = threading.Thread(target=self.UartLoop, args=())
         self.uart_thread.start()
+
 
     #---- Properties ----#
 #    Locked = property(lambda self: self._lockFile.IsChecked())

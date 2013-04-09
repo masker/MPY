@@ -232,7 +232,7 @@ int _lcd_enable()
 }
 
 
-
+#ifdef MPY_ADC
 int adc(int pin) {
 //    if ((pin & 15) > 7) { ADC10CTL0 |= (REFON | REF2_5V); } // turn on the Ref generator for the Temp sensor (shouldn't need to do this!)
     ADC10CTL1 = (pin & 15) << 12;
@@ -242,7 +242,7 @@ int adc(int pin) {
 //    if ((pin & 15) > 7) { ADC10CTL0 &= ~(REFON | REF2_5V); }  // turn off the reference
     ADC10CTL0 &= ~ENC;
     return ADC10MEM; }              // return the result
-    
+#endif
 
 int   random( int  S ) { 
           S = ( ( (S>>1) * (-18121) ) + 359 ) ; 
