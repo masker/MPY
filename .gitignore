@@ -10,6 +10,7 @@ mpy_setup/install/mpy_driver_install_1.nsi
 mpy_setup/install/mpy_full_setup_a6.nsi
 mpy_setup/drivers/eZ430-UART/eZ430-UART/
 mpy_setup/drivers/libusb-win32-bin-1.2.5.0/libusb-win32-bin-1.2.5.0/
+www.mpyprojects.com/
 
 #################
 ## Eclipse

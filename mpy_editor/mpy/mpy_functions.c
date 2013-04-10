@@ -34,6 +34,13 @@
 // #include <msp430.h>
 // #include "msp430g2553.h"
 // #define TXD BIT1 // TXD on P1.1
+
+
+#define _setbit(reg,bit)     reg |=   ( 1 << (bit & 15))
+#define _resetbit(reg,bit)   reg &= ~ ( 1 << (bit & 15))  
+#define _testbit(reg,bit)   ((reg & (1 << (bit & 15))) >> (bit & 15)) 
+
+
  
 #include  <stdarg.h>
 
@@ -83,6 +90,8 @@ void __out(int portpin, int value)
   }
 }
 //---------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
+
 void __dirout(int portpin)
 // generic output command, does the same as the 'dirout' and 'out' macro combined
 // It is defined here as a function so that it can be called from a C function 
@@ -99,6 +108,85 @@ void __dirout(int portpin)
       P2REN &=   ~ (1 << (portpin & 15));
   }
 }
+
+
+//---------------------------------------------------------------------------------------
+static void __inline__ __pindir(int portpin, int direction)
+// Sets the port direction 
+{
+  if(direction == 0x02) // OUT out
+  {
+      if (portpin < 0x20)
+      {
+          _setbit(P1DIR,portpin);
+          _resetbit(P1SEL,portpin);
+          _resetbit(P1REN,portpin);
+      } else {
+          _setbit(P2DIR,portpin);
+          _resetbit(P2SEL,portpin);
+          _resetbit(P2REN,portpin);
+      }
+  }
+  else if (direction == 0x00)    // IN input
+  {
+      if (portpin < 0x20)
+      {
+          _resetbit(P1DIR,portpin);
+          _resetbit(P1SEL,portpin);
+          _resetbit(P1REN,portpin);
+      } else {
+          _resetbit(P2DIR,portpin);
+          _resetbit(P2SEL,portpin);
+          _resetbit(P2REN,portpin);
+      }
+  }
+  else if (direction == 0x05)    // INPU input pullup
+  {
+      if (portpin < 0x20)
+      {
+          _resetbit(P1DIR,portpin);
+          _resetbit(P1SEL,portpin);
+          _setbit(P1REN,portpin);
+          _setbit(P1OUT,portpin);
+      } else {
+          _resetbit(P2DIR,portpin);
+          _resetbit(P2SEL,portpin);
+          _setbit(P2REN,portpin);
+          _setbit(P2OUT,portpin);
+      }
+  }
+  else if (direction == 0x04)    // INPD input pulldown
+  {
+      if (portpin < 0x20)
+      {
+          _resetbit(P1DIR,portpin);
+          _resetbit(P1SEL,portpin);
+          _setbit(P1REN,portpin);
+          _resetbit(P1OUT,portpin);
+      } else {
+          _resetbit(P2DIR,portpin);
+          _resetbit(P2SEL,portpin);
+          _setbit(P2REN,portpin);
+          _resetbit(P2OUT,portpin);
+      }
+  }
+  else if (direction == 0x0a)    // PULSEOUT pulse circuit output
+  {
+      if (portpin < 0x20)
+      {
+          _setbit(P1DIR,portpin);
+          _setbit(P1SEL,portpin);
+          _resetbit(P1REN,portpin);
+      } else {
+          _setbit(P2DIR,portpin);
+          _setbit(P2SEL,portpin);
+          _resetbit(P2REN,portpin);
+      }
+  }
+
+
+}
+
 
 
 //---------------------------------------------------------------------------------------
@@ -484,8 +572,8 @@ void interrupt_setup( int portpin_intr, int param, int (*func)(int) )
 
 
 //---------------------------------------------------------------------------
-int interrupt_reset( int portpin_intr)
-// resets the interrupt flag for thegiven extended portpin
+int interrupt_clear( int portpin_intr)
+// clear the interrupt flag for thegiven extended portpin
 {
   int flag;
   // First setup the IO interrupts for port 1 and port 2

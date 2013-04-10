@@ -23,6 +23,16 @@ macro( P2_5, 0x25 )
 macro( P2_6, 0x26 )
 macro( P2_7, 0x27 )
 
+# pindir settings
+# register settings for each of the different pindir modes
+# these bit setting are used for macro pintype definitions
+#          7  6  5          4       3      2       1      0
+#                         PxSEL2  PxSEL  PxREN   PxDIR  PxOUT
+macro( OUT,  0x02 )   #     0       0      0       1      0
+macro( IN,   0x00 )   #     0       0      0       0      0
+macro( INPD, 0x04 )   #     0       0      1       0      0
+macro( INPU, 0x05 )   #     0       0      1       0      1
+macro( PULSEOUT,0x0a) #     0       1      0       1      0
 
 
 # COMMON IO FUNCTIONS
@@ -49,6 +59,7 @@ macro( testbit(reg,bit),  '((reg & (1 << (bit & 15))) >> (bit & 15))'   )
 
 # OUTPUT COMMANDS
 
+macro( pindir(portpin,pintype), 'if(pintype==IN): dirinp(portpin); elif(pintype==OUT): dirout(portpin); elif(pintype==INPD): dirinpd(portpin); elif(pintype==INPU): dirinpu(portpin); elif(pintype==PULSEOUT): dirpulse(portpin);')
 
 macro( out(portpin, value ) , 'if( value ): out1(portpin); else: out0(portpin);' )
 macro( out0(portpin),  'if(portpin<0x20): resetbit(P1OUT,portpin) else: resetbit(P2OUT,portpin)')

@@ -59,6 +59,8 @@ import ed_msg
 import ebmlib
 import eclib
 import ed_basewin
+import syntax.synglob as synglob
+import webbrowser
 
 import subprocess
 import shlex
@@ -77,6 +79,7 @@ ID_EXECUTABLE = wx.NewId()
 ID_ARGS    = wx.NewId()
 ID_PROG    = wx.NewId()
 ed_glob.ID_MPY_DOC = wx.NewId()
+ID_MPY_HELP = wx.NewId()
 #ID_DRVINST = wx.NewId()
 
 # Profile Settings Key
@@ -124,6 +127,7 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         self._run = None        # Created in __DoLayout
         self._pbtn = None       # Created in __DoLayout
         self._clear = None      # Created in __DoLayout
+        self._help = None      # Created in __DoLayout
         self._lockFile = None   # Created in __DoLayout
         self._uartStopped = None   # Created in __DoLayout
         self.uartStopped = False
@@ -144,26 +148,26 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         self.mpy_dir = tstr[:idx]
 
 
-        # Add the mpy help menu, but only do it once, even if the mpy plugin is disabled and enabled multiple times
-        do_mpy_help = False
-        try:
-          if ed_glob.done_mpy_help == True:
-             do_mpy_help = False
-        except:
-          ed_glob.done_mpy_help = True
-          do_mpy_help = True
-          
-        if do_mpy_help:
-            # Add the mpy help to the main help menu
-            # first temporarily change the THEME_DIR so that we can load the png from a local mpy dir
-            # the png file is in C:/mpy/mpy_editor/mpy/Tango/menu/mpy_logo_30.png directory        
-            theme_dir = ed_glob.CONFIG['THEME_DIR']
-            ed_glob.CONFIG['THEME_DIR'] = os.path.join( self.mpy_dir, 'mpy_editor', 'mpy', '')
-            ed_theme.ART[ ed_glob.ID_MPY_DOC ] = 'mpy_logo_30.png'
-            helpmenu = self._mw.GetMenuBar().GetMenuByName("help")
-            mpy_help = helpmenu.AppendEx(ed_glob.ID_MPY_DOC, _("&MPY Help..."),
-                            _("Help with MPY language"))
-            ed_glob.CONFIG['THEME_DIR'] = theme_dir
+#         # Add the mpy help menu, but only do it once, even if the mpy plugin is disabled and enabled multiple times
+#         do_mpy_help = False
+#         try:
+#           if ed_glob.done_mpy_help == True:
+#              do_mpy_help = False
+#         except:
+#           ed_glob.done_mpy_help = True
+#           do_mpy_help = True
+#           
+#         if do_mpy_help:
+#             # Add the mpy help to the main help menu
+#             # first temporarily change the THEME_DIR so that we can load the png from a local mpy dir
+#             # the png file is in C:/mpy/mpy_editor/mpy/Tango/menu/mpy_logo_30.png directory        
+#             theme_dir = ed_glob.CONFIG['THEME_DIR']
+#             ed_glob.CONFIG['THEME_DIR'] = os.path.join( self.mpy_dir, 'mpy_editor', 'mpy', '')
+#             ed_theme.ART[ ed_glob.ID_MPY_DOC ] = 'mpy_logo_30.png'
+#             helpmenu = self._mw.GetMenuBar().GetMenuByName("help")
+#             mpy_help = helpmenu.AppendEx(ed_glob.ID_MPY_DOC, _("&MPY Help..."),
+#                             _("Help with MPY language"))
+#             ed_glob.CONFIG['THEME_DIR'] = theme_dir
         
         
 
@@ -219,6 +223,7 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
 
         # Event Handlers
         self.Bind(wx.EVT_BUTTON, self.OnButton)
+        self._mw.Bind(wx.EVT_BUTTON, self.OnButton)
         self.Bind(wx.EVT_CHOICE, self.OnChoice)
         self.Bind(wx.EVT_CHECKBOX, self.OnCheck)
         self.Bind(wx.EVT_WINDOW_DESTROY, self.OnDestroy, self)
@@ -351,6 +356,7 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         ctrlbar.AddControl((5, 5), wx.ALIGN_LEFT)
 
         self._chFiles = wx.Choice(ctrlbar, wx.ID_ANY)#, choices=[''])
+        self._chFiles.SetToolTipString(_('File to Program'))
         ctrlbar.AddControl(self._chFiles, wx.ALIGN_LEFT)
 
         ctrlbar.AddControl((10, 5), wx.ALIGN_LEFT)
@@ -373,11 +379,18 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
 #        self._drvinst.SetPressColor( self.colors['green'] )
         ctrlbar.AddControl((5, 5), wx.ALIGN_LEFT)
         
-        # Button
+        # Clear mpy window Button
         self._clear = self.AddPlateButton(_("Clear"), ed_glob.ID_DELETE,   wx.ALIGN_RIGHT)
         self._clear.SetPressColor( self.colors['green'] )
-        self.SetWindow(self._buffer)
+        self._clear.SetToolTipString(_("Clears the MPY console editor window"))       
+
         
+        # MPY Help Button
+        self._help = self.AddPlateButton(_("Help"), ed_glob.ID_ABOUT,   wx.ALIGN_RIGHT)
+        self._help.SetPressColor( self.colors['green'] )
+        self._help.SetToolTipString(_("MPY HELP"))       
+
+        self.SetWindow(self._buffer)
 
 
 
@@ -418,6 +431,7 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
 
     def OnButton(self, evt):
         """Handle events from the buttons on the control bar"""
+        e_id = evt.Id
         e_obj = evt.GetEventObject()
 #         if e_obj == self._pbtn:
 #             app = wx.GetApp()
@@ -439,6 +453,17 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
 #             # May be run or abort depending on current state
 #             self.RunDrvInstScript()
         elif e_obj == self._clear:
+            self._buffer.Clear()
+        elif e_obj == self._help or e_id == ed_glob.ID_MPY_DOC :
+            # It seems under some cases when running under windows the call to
+            # subprocess in webbrowser will fail and raise an exception here. So
+            # simply trap and ignore it.
+            page = r'file:///%s/www.mpyprojects.com/software/mpy-language/index.html' % (self.mpy_dir)
+            try:
+                webbrowser.open(page, 0)
+            except:
+                pass
+                
             self._buffer.Clear()
         else:
             evt.Skip()
@@ -529,7 +554,7 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
     #--------------------------------------------------------------------------------
     def print_outbuf_from_uart(self,txt):
         '''print text to output buffer, using AppendUpdate
-        alternate vertion that is color coded to indicate txt is from different source ie the uart
+        alternate version that is color coded to indicate txt is from different source ie the uart
         '''
         
         try:
@@ -594,6 +619,7 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
 
                 if self.serial_port:
                     line = self.serial_port.readline()
+                        
                     if self.prog_in_progress == None and line != '' and self.uartStopped != True : 
                         wx.CallAfter( self.print_outbuf_from_uart, (line) )
                         
@@ -615,7 +641,7 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         if e_id == self._chFiles.GetId():
             fname = self._fnames[e_sel]
             self.SetFile(fname)
-            self._chFiles.SetToolTipString(fname)
+#            self._chFiles.SetToolTipString(fname)
         elif e_id == self._chDevices.GetId():
             self.mspDeviceSelected = self._chDevices.GetStringSelection()
 
@@ -1089,7 +1115,8 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
             if len(u''.join(items)):
                 self._chFiles.SetItems(items)
                 if len(self._fnames):
-                    self._chFiles.SetToolTipString(self._fnames[0])
+#                    self._chFiles.SetToolTipString(self._fnames[0])
+                    pass
         except TypeError:
             util.Log("[mpy][err] UpdateCurrent Files: " + str(items))
             self._chFiles.SetItems([''])

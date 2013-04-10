@@ -7,7 +7,7 @@
 # 
 ######################################################################
 
-dirout(P1_0)      # Setup the pin P1_0 to be an output (connected to red led)
+pindir(P1_0, OUT)      # Setup the pin P1_0 to be an output (connected to red led)
 while 1:          # Do the following lines forever and ever
    out(P1_0,1)    # turn the red led on
    wait(1000)     # wait 1000 miliseconds (1 sec)
