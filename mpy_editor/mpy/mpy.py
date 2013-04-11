@@ -188,7 +188,7 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
                         'grey'        : wx.Colour(128, 128, 128),  }
                         
         self.Locked = False
-        self.mspStatusStr  =  '.          Searching               .'
+        self.mspStatusStr  =  '.       Searching            .'
         self.mspStatusColor   = wx.Colour(255, 210, 95)
 
 
@@ -345,13 +345,13 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         ctrlbar.AddControl((5, 5), wx.ALIGN_LEFT)
         
         # Button
-        self._run = wx.Button(ctrlbar, ID_PROG, "Program")
-        self._run.SetBackgroundColour(self.colors['green'])
-        self._run.SetToolTipString(_("PROGRAM the Launchpad\n - Compiles the file (mpy2c, mspgcc)\n - Downloads the program to the Launchpad\n - Programs the Microcontroller\n - Then it will run (mspdebug)"))
-        ctrlbar.AddControl(self._run, wx.ALIGN_LEFT)
+        self._run   = self.AddPlateButton(_("  PROG  "),   ID_PROG, wx.ALIGN_LEFT)
+        self._run.SetPressColor( self.colors['green'] )        
+#        self._run = wx.Button(ctrlbar, ID_PROG, "Program")
+#        self._run.SetBackgroundColour(self.colors['green'])
+        self._run.SetToolTipString(_("Program the Launchpad\n - Compiles the file (mpy2c, mspgcc)\n - Downloads the program to the Launchpad\n - Programs the Microcontroller\n - Then it will run (mspdebug)"))
+#        ctrlbar.AddControl(self._run, wx.ALIGN_LEFT)
 #        self._run   = self.AddPlateButton(_("  PROG  "),   ed_glob.ID_BIN_FILE, wx.ALIGN_LEFT)
-#        self._run   = self.AddPlateButton(_("  PROG  "),   ID_PROG, wx.ALIGN_LEFT)
-#        self._run.SetPressColor( self.colors['green'] )        
 
         ctrlbar.AddControl((5, 5), wx.ALIGN_LEFT)
 
@@ -570,8 +570,18 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
             
         except wx.PyDeadObjectError: 
           print 'CLOSING DOWN EXCEPTION print_outbuf PyDeadObjectError'
-
-
+          
+    #--------------------------------------------------------------------------------
+    def prog_in_progress_loop(self):
+        '''Loop to flash the PROGRAM button while the program is being flashed'''
+        
+        while self.prog_in_progress:
+            wx.CallAfter( self._run.SetPressColor, ( self.colors['red'] ))
+            time.sleep(0.05)
+            if self.prog_in_progress:
+                wx.CallAfter( self._run.SetPressColor, ( self.colors['green'] ))
+                time.sleep(0.05)
+            
     #--------------------------------------------------------------------------------
     def UartLoop(self):
         '''This function prints out the UART comport data onto the mpy console, it is run in a separate thread.
@@ -993,7 +1003,7 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
 #            self.mspDebugLock.acquire()
             self._run.SetBackgroundColour(self.colors['grey'])
 
-            self.prog_in_progress = True
+
             self.Run(self.State['file'], cmd, args, 32161)   
 
 
@@ -1043,12 +1053,19 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
                                                  wx.ART_MENU, (16, 16))
 #            self._run.SetBitmap(abort)
             self._run.SetLabel(_("  PROG  "))
+            self._run.SetPressColor( self.colors['grey'] )
+            self.prog_in_progress = True
+
+            self.prog_in_progress_thread = threading.Thread(target=self.prog_in_progress_loop, args=())
+            self.prog_in_progress_thread.start()
+
         else:
             rbmp = wx.ArtProvider.GetBitmap(str(ed_glob.ID_BIN_FILE), wx.ART_MENU)
             if rbmp.IsNull() or not rbmp.IsOk():
                 rbmp = None
 #            self._run.SetBitmap(rbmp)
             self._run.SetLabel(_("  PROG  "))
+#            self._run.SetPressColor( self.colors['green'] )
             # If the buffer was changed while this was running we should
             # update to the new buffer now that it has stopped.
             self.SetFile(self.State['cfile'])
@@ -1206,9 +1223,8 @@ class OutputDisplay(eclib.OutputBuffer, eclib.ProcessBufferMixin):
         """Do all that is needed to be done after a process has exited"""
         
 #        self.parent_obj.mspDebugLock.release()
-        self.parent_obj._run.SetBackgroundColour(self.parent_obj.colors['green'])
+        
         #self.parent_obj._drvinst.SetBackgroundColour(self.parent_obj.colors['green'])
-        self.parent_obj.prog_in_progress = None
         
 #        self.AppendUpdate("DoProcessExit\n")
 #        self.FlushBuffer()
@@ -1217,6 +1233,8 @@ class OutputDisplay(eclib.OutputBuffer, eclib.ProcessBufferMixin):
         
         # Peek in the queue to see the last line before the exit line
         queue = self.GetUpdateQueue()
+        
+        
         prepend_nl = True
         if len(queue):
             line = queue[-1]
@@ -1224,6 +1242,8 @@ class OutputDisplay(eclib.OutputBuffer, eclib.ProcessBufferMixin):
             line = self.GetLine(self.GetLineCount() - 1)
         if line.endswith('\n') or line.endswith('\r'):
             prepend_nl = False
+        print line
+            
         final_line = u">>> %s: %d%s" % (_("Exit Code"), code, os.linesep)
         # Add an extra line feed if necessary to make sure the final line
         # is output on a new line.
@@ -1232,6 +1252,18 @@ class OutputDisplay(eclib.OutputBuffer, eclib.ProcessBufferMixin):
         self.AppendUpdate(final_line)
         self.Stop()
         self.GetParent().SetProcessRunning(False)
+
+        # if the last line written to the console showed (mspdebug passed) then it was successful
+        # so color the button green, anything else then it failed and we color the button red
+        self.parent_obj.prog_in_progress = None
+        time.sleep(0.1)
+        if line.find( '(mspdebug passed)' ) >= 0:
+            self.parent_obj._run.SetPressColor(self.parent_obj.colors['green'])
+        else:
+            self.parent_obj._run.SetPressColor(self.parent_obj.colors['red'])
+
+        
+
 
     def DoProcessStart(self, cmd=''):
         """Do any necessary preprocessing before a process is started"""

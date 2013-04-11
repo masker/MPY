@@ -326,6 +326,11 @@ if file != None:
         # Make the C error log output look like Python style errors, so that Editra Hotspot Python Handler will highlight it  
         if status == 'failed mspgcc':
             hotspotify_c_log( op, file)
+
+        if re.search("`rom' overflowed",op):
+                overflow = re.findall(r"`rom' overflowed by (\d+) bytes", op)[0]
+                print '*** ERROR *** Program is too big to fit into %s, it is %s bytes too large\n' % (chip_id.upper(), overflow)
+                print '     try reducing your program, or try another MSP430 chip with more memory\n'
     
 #        print op
     
