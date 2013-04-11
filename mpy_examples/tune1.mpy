@@ -1,0 +1,38 @@
+
+
+def play_note( portpin, freq, duration ):
+
+    dirout(portpin)
+    x = 0
+    period = freq
+    cycles = duration
+    for i in range(cycles):
+        x = x ^ 1
+        out(portpin,x)
+        j = period
+        while j > 0:
+            _NOP()
+            j -= 1
+        out(portpin,0)
+
+DATA  = P1_0
+CLOCK = P1_6
+
+lcd2w_enable( DATA, CLOCK )
+lcd_print( '12345678901234567890')
+dirinpu(SWITCH)
+
+portpin = P2_4
+dirout(portpin)
+out(portpin,0)
+period  = 30000
+period1 = period/2
+period2 = period - period1
+
+while 1:
+        delay_cycles(period1)
+        out(portpin,1)
+        delay_cycles(period2)
+        out(portpin,0)
+
+ 

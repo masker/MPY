@@ -1,0 +1,24 @@
+
+
+def read_bt():
+    global c_hex
+    c_hex = UCA0RXBUF
+
+
+def print_bt_command():
+    global count
+    if count % 5 == 0:
+        lcd_print( c_hex )    
+    count += 1
+
+count = 0    
+c_hex = 0
+DATA = P1_0
+CLOCK = P1_6
+lcd2w_enable( DATA, CLOCK )
+lcd_print( '12345678901234567890')
+print 'hello mikey, this should be ok now '
+interrupt_setup( UART_RX, 0, read_bt)    # setup a Rising pin interupt on P1_3, which will run the flash_led function 
+interrupt_setup( WATCHDOG_TIMER, WDT_MDLY_32, print_bt_command ) 
+eint()      
+

@@ -2,7 +2,7 @@
 
 #include <msp430.h>
 #include <signal.h>
-#include "msp430g2553.h"
+#include "msp430g2452.h"
 #include "c:\mpy\mpy_editor\mpy\mpy_functions.c"
 
 int v7 ; 

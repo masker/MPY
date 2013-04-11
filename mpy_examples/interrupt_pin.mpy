@@ -1,0 +1,33 @@
+######################################################################
+#
+# interrupt_pin.mpy  
+# 
+# This is a simple example of an pin interrupt.
+#
+# This program sets up an interrupt on a pin P1_3 (which is the Launchpad SWITCH)
+# The interrupt function flash_led() is run every time there is a rising edge on P1_3
+# flash_led() will toggle the Launchpad red led on pin P1_0.
+#
+# ( Mike Asker 16-Mar-2013 www.mpyprojects.com)
+# 
+######################################################################
+
+
+
+# The interrupt function flash_led is defined in the same way as any other mpy function
+def toggle_led():   
+
+    global x
+    x = ~x       # x is the on/off value for the Led , toggle its value  
+    out(P1_0,x)   # Turn the LED on or off
+    wait(200)
+    # clear the interrupt flag for P1_3, this allows new interrupts to occur 
+    interrupt_clear(P1_3)
+
+# Main code
+x = 0             # variable holding the LED state, set it off to start with
+pindir(P1_0, OUT)      # set the REDLED pin as an output
+pindir(P1_3, INPU)     # set the switch as an input with a pullup resistor
+interrupt_setup( P1_3, RISE, toggle_led)    # setup a Rising pin interupt on P1_3, which will run the flash_led function 
+eint()            # Enable the global interrupt switch. No interrupts will happen until this has been set
+

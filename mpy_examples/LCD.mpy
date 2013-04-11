@@ -1,0 +1,22 @@
+
+DB7 = P1_7
+DB6 = P1_2
+DB5 = P1_5
+DB4 = P1_4
+EN  = P1_3
+RS  = P1_0
+
+
+
+lcd_enable( DB7, DB6, DB5, DB4, EN, RS )
+lcd_print( '12345678901234567890')
+
+print 'hello mikey, this should be ok now '
+
+s = 0
+i = 0
+while i < 50:
+    lcd_print('value i=', s, '  ', '>', i) 
+    s = random(s)
+    wait(100)
+    i += 1

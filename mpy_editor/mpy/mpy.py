@@ -361,7 +361,7 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
 
         ctrlbar.AddControl((10, 5), wx.ALIGN_LEFT)
 
-        self._uartStopped = wx.CheckBox(ctrlbar, wx.ID_ANY, 'Stop UART Output')
+        self._uartStopped = wx.CheckBox(ctrlbar, wx.ID_ANY, 'Stop UART')
         self._uartStopped.SetToolTipString(_("Stops the UART messages from appearing on the mpyEditor console"))       
         ctrlbar.AddControl(self._uartStopped, wx.ALIGN_LEFT)
 

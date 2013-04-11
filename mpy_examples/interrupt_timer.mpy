@@ -1,0 +1,58 @@
+
+######################################################################
+#
+# interrupt_timer.mpy  
+#
+# (C) Copyright 2013 Mike Asker
+# Public Domain Licence:   Creative Commons CC0 
+# 
+# This is a simple example of an interval timer interrupt.
+#
+# This program sets up an timer interval (using the msp430 watchdog timer
+# to toggle the LED once every 3 seconds. 
+# 
+# Interrupt function toggle_led() will toggle the Launchpad red led on pin P1_0.
+# 
+# The interval delay is specified as a paramter to the interrupt_setup() function, it
+# can be any one of these values.
+#
+# Delays use the MCLK running at the default 1MHz, different delays will occur if the SCLK is set to run at a different frequency.
+# WDT_MDLY_32       /* 32ms interval */
+# WDT_MDLY_8        /* 8ms     " */
+# WDT_MDLY_0_5      /* 0.5ms   " */
+# WDT_MDLY_0_064    /* 0.064ms " */
+#
+# Delays use the ACLK using VLO running at ~10kHz (ACLK is set to VLO by default) 
+# WDT_ADLY_1000     /* 3000ms  " */
+# WDT_ADLY_250      /* 750ms   " */
+# WDT_ADLY_16       /* 50ms    " */
+# WDT_ADLY_1_9      /* 6ms   " */
+#
+# Note: Using the interrupt_setup() command with the WATCHDOG_TIMER automatically 
+# enables interrupts (GIE) and puts the device into LPM0 mode, 
+# As a result code after the interrupt_setup() will not be executed.
+#
+# ( Mike Asker 16-Mar-2013 www.mpyprojects.com)
+# 
+######################################################################
+
+
+
+# The interrupt function toggle_led is defined in the same way as any other mpy function
+# However it has no parameters and does not return a value
+
+def toggle_led():   
+    global x      # x is defined at the toplevel, but to change it within the function it needs to be made a global variable
+    x = x ^ 1     # x is the on/off value for the Led , toggle its value using an exclusive-or function
+    out(P1_0,x)   # Turn the LED on or off
+
+
+
+# Main code
+
+x = 0             # variable holding the LED state, set it off to start with
+dirout(P1_0)      # set the REDLED pin as an output
+interrupt_setup( WATCHDOG_TIMER, WDT_ADLY_250, toggle_led)    # setup an interval timer interrupt which will run the toggle_led function 
+eint()           # no need for enable Global Interrupt Enable when using the WATCHDOG_TIMER.
+
+
