@@ -9,7 +9,6 @@ def rand( S ):
 
 
 if 1:
-
     MASK2047 = (1<<11)-1
     MASK1023 = (1<<10)-1
     MASK8    = (1<<8)
@@ -44,13 +43,13 @@ if 1:
 #    TACTL = TASSEL_2 + MC_1  # SMCLK, up mode
    
 
-
-    pindir( P1_6, OUT )   # Launchpad green LED
-    pindir( P1_7, OUT )   # Creeper eyes LEDs
-    pindir( P1_1, INPU )  # switch input
-    pindir( P1_3, INPU )  # switch input  (Launchpad S2)
-    
+#    pindir(P1_0,OUT)
+    pindir(P1_6,OUT)
+    pindir( P1_7, OUT )
     pindir( P1_2, PULSEOUT )
+    pindir( P1_1, INPU )
+    pindir( P1_3, INPU )
+    
     pulse_enable(0)
     pulse_period(0,10000)
     pulse_width(0,2000)
@@ -70,7 +69,7 @@ if 1:
 
         # slowly increment or decrement the pwm value
         # to wards the pwm_random value so that it increments
-        # or decrements in 100 unit steps until it hits get to
+        # or decrements in 100 unit steps until it gets to
         # the value of rval
         if (rval - pwm_random >  100) :
            pwm_random = pwm_random + 100
@@ -78,27 +77,26 @@ if 1:
            pwm_random = pwm_random - 100
 
 
-        # Look to see if either of the switches are activated
-        # Add a small 0.1 sec delay and set the pwm output
         for j in range( 500 ):
             # in the inner loop we will randomly flash the creeper eyes
             if 1 and (j % 50 == 0) :
                 S = rand(S)
                 if ((S | MASK8 ) > 0 ):     # if bit 8 happens to be set then light up led7 and led6
-                    v = 1
+                    out(P1_6,1)
+                    out(P1_7,1)
                 else:
-                    v = 0
-                            
+                    out(P1_6,0)
+                    out(P1_7,0)
                # short delay
     
-        out(P1_7, v)
 
         # Look to see if any of the switches are high. 
-        if inp(P1_3) == 0: 
+        # increase or decrease the pwm value
+        if (P1IN & BIT1): 
             pwm = pwm + 100  # If BIT1 switch is active then increment the base pwm variable by 100
     
-#        if (P1IN & BIT5) :
-#            pwm = pwm - 100;  # If BIT1 switch is active then decrement the base pwm variable by 100
+        if (P1IN & BIT5) :
+            pwm = pwm - 100;  # If BIT1 switch is active then decrement the base pwm variable by 100
 
 
             
@@ -109,5 +107,6 @@ if 1:
         if pwm_sum > 3200:  pwm_sum = 3200
         if (pwm_sum < 400): pwm_sum = 400
 
-        pulse_width(0, pwm_sum)
+        pulse_width(0,pwm_sum)
+#        CCR1 = pwm_sum
       

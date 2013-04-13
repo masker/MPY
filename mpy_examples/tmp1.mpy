@@ -1,0 +1,18 @@
+######################################################################
+#
+# adc.mpy  
+# 
+# Program that runs the ADC (Analog to Digital Converter) 
+# and prints the value out onto the MpyEditor console window
+# Note: this only works on chips that have an ADC block (msp430g2553, msp430g2231, msp430g2452)
+# ( Mike Asker 5-May-2012 www.mpyprojects.com)
+# 
+######################################################################
+
+def dummy():
+     x = 3
+
+wait(2000)
+v7_bin = 0b0001000100010001
+print( 'ADC value on pin p1_7 ', v7_bin )    # print out the value on the mpyEditor console window
+

@@ -20,37 +20,15 @@ if 1:
     k   = 0
     pwm_random  = 0
 
-#    WDTCTL = WDTPW | WDTHOLD   # may want have this done automatically
-
-#    P1DIR = 0x00
-#    P1DIR |= BIT2 # P1.2 to output
-#    P1DIR |= BIT0 # P1.0 to output led 1 red
-#    P1DIR |= BIT6 # P1.6 to output led 2 green
-#    P1DIR |= BIT7 # P1.7 to output led creeper eyes
-    
-    
-#    P1SEL = 0x00
-#    P1SEL |= BIT2  # P1.2 to output TA0.1
-
-#    P1REN = 0x00
-#    P1REN |= BIT1  # P1.1 pullup input
-#    P1REN |= BIT5  # P1.3 pullup input
-#    P1OUT = BIT1 + BIT5 
-    
-  
-#    CCR0  = 10000-1          # PWM Period
-#    CCTL1 = OUTMOD_7         # CCR1 reset/set
-#    CCR1  = pwm              # CCR1 PWM duty cycle
-#    TACTL = TASSEL_2 + MC_1  # SMCLK, up mode
-   
 
 
-    pindir( P1_6, OUT )   # Launchpad green LED
-    pindir( P1_7, OUT )   # Creeper eyes LEDs
-    pindir( P1_1, INPU )  # switch input
-    pindir( P1_3, INPU )  # switch input  (Launchpad S2)
-    
+    pindir(P1_0,OUT)
+    pindir( P1_6, OUT )
+    pindir( P1_7, OUT )
     pindir( P1_2, PULSEOUT )
+    pindir( P1_1, INPU )
+    pindir( P1_3, INPU )
+    
     pulse_enable(0)
     pulse_period(0,10000)
     pulse_width(0,2000)
@@ -70,7 +48,7 @@ if 1:
 
         # slowly increment or decrement the pwm value
         # to wards the pwm_random value so that it increments
-        # or decrements in 100 unit steps until it hits get to
+        # or decrements in 100 unit steps until it gets to
         # the value of rval
         if (rval - pwm_random >  100) :
            pwm_random = pwm_random + 100
@@ -78,27 +56,30 @@ if 1:
            pwm_random = pwm_random - 100
 
 
-        # Look to see if either of the switches are activated
-        # Add a small 0.1 sec delay and set the pwm output
         for j in range( 500 ):
             # in the inner loop we will randomly flash the creeper eyes
             if 1 and (j % 50 == 0) :
                 S = rand(S)
                 if ((S | MASK8 ) > 0 ):     # if bit 8 happens to be set then light up led7 and led6
-                    v = 1
+                    led7 = BIT7
+                    led6 = BIT6
+                    out(P1_6,1)
+                    out(P1_7,1)
+                    led_val = 1
                 else:
-                    v = 0
-                            
+                    out(P1_6,0)
+                    out(P1_7,0)
+                    led_val = 0
                # short delay
     
-        out(P1_7, v)
-
+#        out(P1_7,led_val)
         # Look to see if any of the switches are high. 
-        if inp(P1_3) == 0: 
+        # increase or decrease the pwm value
+        if (P1IN & BIT1): 
             pwm = pwm + 100  # If BIT1 switch is active then increment the base pwm variable by 100
     
-#        if (P1IN & BIT5) :
-#            pwm = pwm - 100;  # If BIT1 switch is active then decrement the base pwm variable by 100
+        if (P1IN & BIT5) :
+            pwm = pwm - 100;  # If BIT1 switch is active then decrement the base pwm variable by 100
 
 
             
@@ -109,5 +90,6 @@ if 1:
         if pwm_sum > 3200:  pwm_sum = 3200
         if (pwm_sum < 400): pwm_sum = 400
 
-        pulse_width(0, pwm_sum)
+#        pulse_width(0,pwm_sum)
+        CCR1 = pwm_sum
       

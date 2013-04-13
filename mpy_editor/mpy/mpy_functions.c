@@ -52,7 +52,7 @@ void __mpy_write_uart_TxByte(unsigned int);
 void __mpy_write_lcd_TxByte(unsigned int);
 void wait ( int  dly );
 void print_str(int (*func)(int), char *string); 
-void print_hex(int (*func)(int), unsigned int num);
+void print_hex(int (*func)(int), unsigned int num, unsigned int bit_count);
 void print_num(int (*func)(int), int num);
 void print_value(char *string, int num);
 void __out(int portpin, int value);
@@ -383,8 +383,13 @@ void print__mpy__( int (*func)(int), char *fmt, ... )
               break;
           case 'h':
               ival = va_arg(ap, int);
-              print_hex( func, ival );
+              print_hex( func, ival, 4 );
               break;
+          case 'b':
+              ival = va_arg(ap, int);
+              print_hex( func, ival, 1 );
+              break;
+
           case 's':
               sval = va_arg(ap, char *);
               print_str( func, sval);
@@ -406,12 +411,13 @@ void print_str( int (*func)(int), char *string)
 }
 
 
-void print_hex( int (*func)(int), unsigned int num)
+void print_hex( int (*func)(int), unsigned int num, unsigned int bit_count)
 {
     unsigned int __mpy_TxByte;
     char chr, i, hex_dig; 
-    for (i=12; i>=0; i=i-4 ) {
-        hex_dig =  ((num >> i) & 0xF); 
+    for (i=16; i>0; i=i-bit_count ) {
+//        hex_dig =  ((num >> (i-bit_count)) & 0xF); 
+        hex_dig =  ((num >> (i-bit_count)) & ((1<<bit_count)-1)); 
         if (hex_dig >= 10) hex_dig += 7;
         __mpy_TxByte = 48 + hex_dig;   
         (func)(__mpy_TxByte);

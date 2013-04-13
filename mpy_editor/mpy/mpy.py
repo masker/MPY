@@ -188,7 +188,7 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
                         'grey'        : wx.Colour(128, 128, 128),  }
                         
         self.Locked = False
-        self.mspStatusStr  =  '.       Searching            .'
+        self.mspStatusStr  =  '       Searching            '
         self.mspStatusColor   = wx.Colour(255, 210, 95)
 
 
@@ -249,6 +249,9 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         self.uart_thread = threading.Thread(target=self.UartLoop, args=())
         self.uart_thread.start()
 
+        # Setup filetype settings
+        self.RefreshControlBar()
+
 
     #---- Properties ----#
 #    Locked = property(lambda self: self._lockFile.IsChecked())
@@ -274,12 +277,12 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
             ed_msg.UnRegisterCallback(self._CanLaunch)
             ed_msg.UnRegisterCallback(self._CanReLaunch)
             try:
-                print '[OnDestroy] trying to close serial_port'
+#                print '[OnDestroy] trying to close serial_port'
                 self.serial_port.close()
-                print '[OnDestroy] succeeded in closing serial_port'
+#                print '[OnDestroy] succeeded in closing serial_port'
             except AttributeError: 
-                print '[OnDestroy] failed to close serial_port (it may not have been openned!)'
-
+#                print '[OnDestroy] failed to close serial_port (it may not have been openned!)'
+                 pass
 
     def __DoLayout(self):
         """Layout the window"""
@@ -326,7 +329,7 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
         ctrlbar.AddControl(self._conStatusTxt, wx.ALIGN_LEFT)
 
         # Connection Status of Launchpad  
-        self._conStatus = wx.StaticText(ctrlbar, wx.ID_ANY, self.mspStatusStr)
+        self._conStatus = wx.StaticText(ctrlbar, wx.ID_ANY, self.mspStatusStr, size=(120,15))
         self._conStatus.SetForegroundColour(wx.Colour(0, 0, 0))
         self._conStatus.SetBackgroundColour(self.mspStatusColor)
 #        self._conStatus.SetLabel(_(".             unknown               ."))
@@ -464,7 +467,6 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
             except:
                 pass
                 
-            self._buffer.Clear()
         else:
             evt.Skip()
 
@@ -496,7 +498,7 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
             self.mspStatusColor = self.colors[self.mspDeviceStatusColor]
             # It may be connected, but mspdebug may not have recognised that it is connected yet
             # if so then force the connection status to not connected, so that it will try again
-            if self.mspDeviceStatus == '_Launchpad_Not_Found':
+            if self.mspDeviceStatus == '_No_Launchpad_':
                 #self.mspLaunchpadStatus = 'Not_Connected'
                 pass
         elif self.mspLaunchpadStatus == 'Not_Connected':   # not connected
@@ -526,8 +528,8 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
                 (tstr, color) = self.OnTimerCheckConnection()
                 wx.CallAfter( self.UpdateConnectionStatus, (tstr,color) )
         except wx.PyDeadObjectError: 
-                print 'CLOSING DOWN EXCEPTION CheckConnectionLoop PyDeadObjectError'
-
+#                print 'CLOSING DOWN EXCEPTION CheckConnectionLoop PyDeadObjectError'
+             pass
     #--------------------------------------------------------------------------------
     def UpdateConnectionStatus( self, status):
         '''Updates the GUI connection status, from the wx.CallAfter call from the  
@@ -539,8 +541,8 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
             self._conStatus.SetLabel( tstr )
             self._conStatus.SetBackgroundColour(color)        
         except wx.PyDeadObjectError: 
-                print 'CLOSING DOWN EXCEPTION UpdateConnectionStatus PyDeadObjectError'
-
+#                print 'CLOSING DOWN EXCEPTION UpdateConnectionStatus PyDeadObjectError'
+            pass
     #--------------------------------------------------------------------------------
     def print_outbuf(self,txt):
         '''print text to output buffer, using AppendUpdate'''
@@ -549,8 +551,8 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
           self._buffer.AppendUpdate( txt  )
           self._buffer.FlushBuffer()
         except wx.PyDeadObjectError: 
-          print 'CLOSING DOWN EXCEPTION print_outbuf PyDeadObjectError'
-
+#          print 'CLOSING DOWN EXCEPTION print_outbuf PyDeadObjectError'
+           pass
     #--------------------------------------------------------------------------------
     def print_outbuf_from_uart(self,txt):
         '''print text to output buffer, using AppendUpdate
@@ -569,18 +571,18 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
             
             
         except wx.PyDeadObjectError: 
-          print 'CLOSING DOWN EXCEPTION print_outbuf PyDeadObjectError'
-          
+#          print 'CLOSING DOWN EXCEPTION print_outbuf PyDeadObjectError'
+           pass         
     #--------------------------------------------------------------------------------
     def prog_in_progress_loop(self):
         '''Loop to flash the PROGRAM button while the program is being flashed'''
         
         while self.prog_in_progress:
             wx.CallAfter( self._run.SetPressColor, ( self.colors['red'] ))
-            time.sleep(0.05)
+            time.sleep(0.1)
             if self.prog_in_progress:
                 wx.CallAfter( self._run.SetPressColor, ( self.colors['green'] ))
-                time.sleep(0.05)
+                time.sleep(0.1)
             
     #--------------------------------------------------------------------------------
     def UartLoop(self):
@@ -635,8 +637,8 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
                         
                         
         except wx.PyDeadObjectError: 
-                print 'CLOSING DOWN EXCEPTION UartLoop PyDeadObjectError'
-
+#                print 'CLOSING DOWN EXCEPTION UartLoop PyDeadObjectError'
+            pass
                  
 
     
@@ -1242,7 +1244,7 @@ class OutputDisplay(eclib.OutputBuffer, eclib.ProcessBufferMixin):
             line = self.GetLine(self.GetLineCount() - 1)
         if line.endswith('\n') or line.endswith('\r'):
             prepend_nl = False
-        print line
+#        print line
             
         final_line = u">>> %s: %d%s" % (_("Exit Code"), code, os.linesep)
         # Add an extra line feed if necessary to make sure the final line
@@ -1395,7 +1397,7 @@ def run_mspdebug_full(parent):
         op = runcmd( command_line )
         if not re.search('\nDevice: .* \(id =',op):
             print '*** ERROR *** Check Launchpad is connected with MSP430 chip, or check driver installation'
-            connection_status = '_Launchpad_Not_Found'  # red
+            connection_status = '_No_Launchpad_'  # red
             color = 'red'
         else:
             print '(mspdebug passed)   ' , 

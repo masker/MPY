@@ -704,8 +704,8 @@ class PythonHandler(FileTypeHandler):
         commands = dict(python='python -u', pylint='pylint',
                              pylinterr='pylint -e')
         default = 'python'
-        error = re.compile('File "(.+)", line ([0-9]+)')
-        hotspot = re.compile('File "(.+)", line ([0-9]+)')
+        error = re.compile('File "(.+\.mpy)", line ([0-9]+)')
+        hotspot = re.compile('File "(.+\.mpy)", line ([0-9]+)')
 
     def GetEnvironment(self):
         """Get the environment to run the python script in"""
@@ -862,10 +862,13 @@ def _OpenToLine(fname, line, mainw):
         if ebmlib.ComparePaths(fname, name):
             nbook.ChangePage(page)
             nbook.GetPage(page).GotoLine(line)
+            nbook.GetPage(page).LineScroll(0,-10)
+            
             break
     else:
         nbook.OnDrop([fname])
         nbook.GetPage(nbook.GetSelection()).GotoLine(line)
+        nbook.GetPage(nbook.GetSelection()).LineScroll(0,-10)
 
 def _StyleError(stc, start, txt, regex):
     """Style Error message groups

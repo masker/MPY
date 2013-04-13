@@ -72,6 +72,7 @@ class mpy2c( object ):
         # look for the presence  of __mpy_debug_on__
         self.switch_debug_on(code)
 
+
         # Change the print statements to a print_mpy function call
         # this is most easily done before we pass the code to the ast parser
         code = self.replace_print( code ) 
@@ -2146,6 +2147,15 @@ script_dir  = os.path.dirname( sys.argv[0] )
 fip = open( file, 'rb')
 lines = fip.readlines()
 fip.close()
+
+# Make the first line non blank.
+# we need to do this, becuase I strongly suspect that the python ast module
+# starts numbering its lines from the first non-blank line.
+# and we need to preserve the real line numbers so that we can do hot-spot debug properly
+if lines[0].strip() == '':
+    lines[0] = '#' + lines[0]
+    
+
 jlines = ''.join(lines)
 jlines = re.sub(r'\r','',jlines)
 
