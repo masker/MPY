@@ -461,7 +461,8 @@ class MpyWindow(ed_basewin.EdBaseCtrlBox):
             # It seems under some cases when running under windows the call to
             # subprocess in webbrowser will fail and raise an exception here. So
             # simply trap and ignore it.
-            page = r'file:///%s/www.mpyprojects.com/software/mpy-language/index.html' % (self.mpy_dir)
+#            page = r'file:///%s/www.mpyprojects.com/software/mpy-language/index.html' % (self.mpy_dir)
+            page = r'file:///%s/www.mpyprojects.com/software/index.html' % (self.mpy_dir)
             try:
                 webbrowser.open(page, 0)
             except:
