@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-US">
+
+<!-- Mirrored from www.mpyprojects.com/software/mpy-language/mpy_functions/adc_io_functions/adc/ by HTTrack Website Copier/3.x [XR&CO'2010], Wed, 03 Apr 2013 03:32:46 GMT -->
+<!-- Added by HTTrack --><meta http-equiv="content-type" content="text/html;charset=UTF-8" /><!-- /Added by HTTrack -->
+<head>
+<meta charset="UTF-8" />
+<title>Mpy Projects  |  adc( pinname )</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="robots" content="index, follow" />
+<link rel="stylesheet" type="text/css" href="../../../../../wp-content/themes/swatch/style.css" media="screen" />
+<link rel="pingback" href="../../../../../xmlrpc.php" />
+
+<link rel="alternate" type="application/rss+xml" title="Mpy Projects &raquo; Feed" href="../../../../../feed/index.html" />
+<link rel="alternate" type="application/rss+xml" title="Mpy Projects &raquo; Comments Feed" href="../../../../../comments/feed/index.html" />
+<link rel="alternate" type="application/rss+xml" title="Mpy Projects &raquo; adc( pinname ) Comments Feed" href="feed/index.html" />
+<link rel='stylesheet' id='codecolorer-css'  href='../../../../../wp-content/plugins/codecolorer/codecolorere2dc.css?ver=0.9.9' type='text/css' media='screen' />
+<link rel='stylesheet' id='column-styles-css'  href='../../../../../wp-content/plugins/ultimate-tinymce/css/column-stylee735.css?ver=3.4' type='text/css' media='all' />
+<script type='text/javascript' src='../../../../../wp-includes/js/comment-replye735.js?ver=3.4'></script>
+<script type='text/javascript' src='../../../../../wp-includes/js/jquery/jqueryba3a.js?ver=1.7.2'></script>
+<script type='text/javascript' src='../../../../../wp-content/themes/swatch/includes/js/slides.min.jquerye735.js?ver=3.4'></script>
+<script type='text/javascript' src='../../../../../wp-content/themes/swatch/includes/js/feedbacke735.js?ver=3.4'></script>
+<script type='text/javascript' src='../../../../../wp-includes/js/jquery/ui/jquery.ui.core.mine8d2.js?ver=1.8.20'></script>
+<script type='text/javascript' src='../../../../../wp-includes/js/jquery/ui/jquery.ui.widget.mine8d2.js?ver=1.8.20'></script>
+<script type='text/javascript' src='../../../../../wp-includes/js/jquery/ui/jquery.ui.tabs.mine8d2.js?ver=1.8.20'></script>
+<script type='text/javascript' src='../../../../../wp-content/themes/swatch/includes/js/generale735.js?ver=3.4'></script>
+<link rel="EditURI" type="application/rsd+xml" title="RSD" href="../../../../../xmlrpc0db0.php?rsd" />
+<link rel="wlwmanifest" type="application/wlwmanifest+xml" href="../../../../../wp-includes/wlwmanifest.xml" /> 
+<link rel='prev' title='adc_enable( )' href='../adc_enable/index.html' />
+<link rel='next' title='Getting Started' href='../../../../getting_started/index.html' />
+<meta name="generator" content="WordPress 3.4" />
+<link rel='canonical' href='index.html' />
+
+<!-- Theme version -->
+<meta name="generator" content="Swatch 1.4.8" />
+<meta name="generator" content="WooFramework 5.3.12" />
+<!-- Woo Custom Styling -->
+<style type="text/css">
+body { background-color: #dae1e3 !important; }
+body { background-image: none; }
+#wrapper a, .post-more a:link, .post-meta a:link, .post p.tags a:link, #wrapper #comments .reply a { color: #702670 !important; }
+#wrapper a, .post-more a:visited, .post-meta a:visited, .post p.tags a:visited, #wrapper #comments .reply a:visited { color: #702670 !important; }
+#wrapper a:hover, .post-more a:hover, .post-meta a:hover, .post p.tags a:hover, #wrapper #comments .reply a:hover { color: #c250c2 !important; }
+a.button, #commentform #submit, #contact-page .submit { background: #297d53; border-color: #297d53 !important; }
+a.button:hover, a.button.hover, a.button.active, #commentform #submit:hover, #contact-page .submit:hover { background: #297d53 !important; opacity: 0.9; }
+</style>
+
+<!-- Google Webfonts -->
+<link href="http://fonts.googleapis.com/css?family=Ubuntu:r,b,i,bi|Ubuntu+Mono" rel="stylesheet" type="text/css" />
+<!-- Woo Custom Typography -->
+<style type="text/css">
+body { font:normal 18px/1.5em 'Ubuntu Mono', arial, sans-serif;color:#444444 !important; }
+#navigation, #navigation .nav a { font:normal 16px/1.4em 'Ubuntu', arial, sans-serif;color:#FFFFFF !important; !important; }
+.post .title { font:bold 30px/1em Arial, sans-serif;color:#88AC0B !important; }
+.post-meta { font:normal 12px/1em "Lucida Grande", "Lucida Sans Unicode", "Lucida Sans", sans-serif;color:#444444 !important; }
+.entry, .entry p { font:normal 14px/1.5em Arial, sans-serif;color:#444444 !important; } h1, h2, h3, h4, h5, h6 { font-family: Arial, sans-serif, arial, sans-serif; }
+#sidebar .widget h3 { font:bold 16px/1em 'Ubuntu', arial, sans-serif;color:#444444 !important; }
+#footer-widgets .widget h3 { font:normal 10px/1em Arial, sans-serif;color:#AAA8A8 !important; }
+</style>
+
+
+<!-- Alt Stylesheet -->
+<link href="../../../../../wp-content/themes/swatch/styles/green.css" rel="stylesheet" type="text/css" />
+
+<!-- Custom Favicon -->
+<link rel="shortcut icon" href="../../../../../wp-content/uploads/2012/01/mpy_favicon1.ico"/>
+
+<!-- Woo Shortcodes CSS -->
+<link href="../../../../../wp-content/themes/swatch/functions/css/shortcodes.css" rel="stylesheet" type="text/css" />
+
+<!-- Custom Stylesheet -->
+<link href="../../../../../wp-content/themes/swatch/custom.css" rel="stylesheet" type="text/css" />
+
+</head>
+
+<body class="page page-id-168 page-child parent-pageid-597 page-template-default unknown two-col-right">
+
+<div id="wrapper">
+
+		<div id="header">
+		<div class="col-full">
+			<div id="logo">
+		    							<a href="../../../../../index.html" title="Mpy Projects for the Launchpad MSP430 Microcontroller">
+					<img src="../../../../../../mpyprojects.com/uploads/3/0/5/7/3057496/1332218336.png" alt="Mpy Projects" />
+				</a>
+	        
+	        				<span class="site-title"><a href="../../../../../index.html">Mpy Projects</a></span>
+	        				<span class="site-description">Mpy Projects for the Launchpad MSP430 Microcontroller</span>
+
+			</div><!-- /#logo -->
+
+			<div id="navigation" class="fr">
+
+				<ul id="main-nav" class="nav fl"><li id="menu-item-1789" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-home menu-item-1789"><a href="../../../../../index.html">Home</a></li>
+<li id="menu-item-48" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-48"><a href="../../../../../hardware/index.html">hardware</a></li>
+<li id="menu-item-49" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-49"><a href="../../../../index.html">software</a>
+<ul class="sub-menu">
+	<li id="menu-item-258" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-258"><a href="../../../../getting_started/index.html">Getting Started</a></li>
+	<li id="menu-item-58" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-58"><a href="../../../../mpy-editor/index.html">mpy Editor</a></li>
+	<li id="menu-item-45" class="menu-item menu-item-type-post_type menu-item-object-page current-page-ancestor menu-item-45"><a href="../../../index.html">mpy Language</a></li>
+</ul>
+</li>
+<li id="menu-item-46" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-46"><a href="../../../../../projects/index.html">projects</a></li>
+<li id="menu-item-51" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-51"><a href="../../../../../download/index.html">download</a></li>
+<li id="menu-item-47" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-47"><a href="http://www.43oh.com/forum/viewforum.php?f=39">forum</a></li>
+<li id="menu-item-1587" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-1587"><a href="http://www.43oh.com/forum/viewforum.php?f=39">contact</a></li>
+</ul>				
+			</div><!-- /#navigation -->
+
+		</div><!--/.col-full-->
+	</div><!--/#header-->       
+    <div id="content" class="page col-full">
+		<div id="main" class="col-left">
+		           
+		  			
+
+                                                                                    
+            <div class="post-168 page type-page status-publish hentry drop-shadow lifted">
+
+			    <h1 class="title">adc( pinname )</h1>
+
+                <div class="entry">
+                	<table style="width: 702px; height: 169px;" border="0">
+<tbody>
+<tr align="left" valign="top">
+<td>Syntax:</td>
+<td colspan="2"><span style="font-size: 16px;"><strong>adc( pinname<strong></strong>)</strong></span></td>
+</tr>
+<tr align="left" valign="top">
+<td>Description:</td>
+<td colspan="2">Reads an analog input input.</td>
+</tr>
+<tr align="left" valign="top">
+<td>Parameters:</td>
+<td> <strong>pinname</strong></td>
+<td>Name of an input pin. The name should be in the form <strong>Px_y</strong>. Where <strong>x</strong> is the port number, and <strong>y</strong> is the bit number which is between <strong>0</strong> and <strong>7</strong>. (e.g. <strong>P1_3</strong>). Only pins <strong>P1_0</strong> through <strong>P1_7</strong> can be used for the ADC input.<br />
+The input pinname can also be the name of <strong>TEMPERATURE</strong> which will measure the temperature of the chip. The input pinname can also be the name <strong>VCC</strong> which will measure the supply voltage for the chip.<br />
+(<a href="../../../wip_language_structure/mpy_language/macro/index.html">macro</a> substituted pinname is allowed)</td>
+</tr>
+<tr align="left" valign="top">
+<td>Returns:</td>
+<td></td>
+<td>A 10 bit integer number in the range 0 through 1023.</td>
+</tr>
+<tr align="left" valign="top">
+<td>Related:</td>
+<td colspan="2"><a href="../adc_enable/index.html">adc_enable()</a></td>
+</tr>
+</tbody>
+</table>
+<hr noshade="noshade" width="1" />
+<hr width="100%" />
+<p>Example:</p>
+<pre>adc_enable()                           # Enable the ADC block
+while 1:
+   val = adc( P1_4 )                   # Use the ADC to convert voltage at ppin P1_4 into a 10 bit number
+   print_value( 'ADC P1_4 is:', val )
+   wait( 1000 )</pre>
+<p>8 pins from <strong>P1_0</strong> through to <strong>P1_7</strong> can be measured.</p>
+<p>The value returned is measured with reference to the chip reference voltage which is set to 2.5v</p>
+<p>The voltage is is calculated using the following equation</p>
+<pre>V = (adc( pinname ) * 32) / xxxx    # result is in millivolts, (thousandths of a volt)</pre>
+<p>It is best to convert the number into <strong>millivolts</strong> because the we can only use integer arithmetic in <strong>mpy</strong>, and our voltage measurement would be rounded to the nearest volt.</p>
+<p>If the name <strong>TEMPERATURE</strong> is used temperature of the chip will be measured. The temperature is calculated using the following equations</p>
+<pre>C = adc(TEMPERATURE) * xxxx / yyyy + zzzz  # this will give the temperature in Celcius</pre>
+<pre>F = adc(TEMPERATURE) * xxxx / yyyy + zzzz  # this will give the temperature in Farenheit</pre>
+<p>If the name <strong>VCC</strong> is used then the power supply voltage of the chip will be measured. The actual voltage is calculated using the following equation</p>
+<pre>Vsupply = (adc(VCC) * 20) / 40  # the result will be in millivolts</pre>
+
+					               	</div><!-- /.entry -->
+
+				                
+            </div><!-- /.post -->
+            
+                                                            
+		  
+        
+		</div><!-- /#main -->
+
+        	
+<div id="sidebar" class="col-right">
+
+	    <div class="primary">
+		<div id="nav_menu-2" class="widget widget_nav_menu"><div class="menu-mpy_language_menu-container"><ul id="menu-mpy_language_menu" class="menu"><li id="menu-item-747" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-747"><a href="../../digital-io-functions/index.html">Digital IO Functions</a>
+<ul class="sub-menu">
+	<li id="menu-item-748" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-748"><a href="../../digital-io-functions/inp/index.html">inp( pinname )</a></li>
+	<li id="menu-item-749" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-749"><a href="../../digital-io-functions/out/index.html">out( pinname, value )</a></li>
+	<li id="menu-item-752" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-752"><a href="../../digital-io-functions/dirinp/index.html">dirinp( pinname )</a></li>
+	<li id="menu-item-753" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-753"><a href="../../digital-io-functions/dirinpu/index.html">dirinpu( pinname )</a></li>
+	<li id="menu-item-754" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-754"><a href="../../digital-io-functions/dirinpd/index.html">dirinpd( pinname)</a></li>
+	<li id="menu-item-755" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-755"><a href="../../digital-io-functions/dirout/index.html">dirout( pinname )</a></li>
+</ul>
+</li>
+<li id="menu-item-756" class="menu-item menu-item-type-post_type menu-item-object-page current-page-ancestor current-menu-ancestor current-menu-parent current-page-parent current_page_parent current_page_ancestor menu-item-756"><a href="../index.html">ADC IO Functions</a>
+<ul class="sub-menu">
+	<li id="menu-item-757" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-757"><a href="../adc_enable/index.html">adc_enable( )</a></li>
+	<li id="menu-item-758" class="menu-item menu-item-type-post_type menu-item-object-page current-menu-item page_item page-item-168 current_page_item menu-item-758"><a href="index.html">adc( pinname )</a></li>
+</ul>
+</li>
+<li id="menu-item-759" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-759"><a href="../../print_functions/index.html">Print Functions</a>
+<ul class="sub-menu">
+	<li id="menu-item-761" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-761"><a href="../../print_functions/print/index.html">print( value1, value2, &#8230; )</a></li>
+</ul>
+</li>
+<li id="menu-item-764" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-764"><a href="../../pulse-functions/index.html">Pulse Functions</a>
+<ul class="sub-menu">
+	<li id="menu-item-765" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-765"><a href="../../pulse-functions/pulse_enable/index.html">pulse_enable( timer )</a></li>
+	<li id="menu-item-767" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-767"><a href="../../pulse-functions/pulse_period/index.html">pulse_period( pulse, clocks )</a></li>
+	<li id="menu-item-769" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-769"><a href="../../pulse-functions/pulse_width/index.html">pulse_width( pulse, clocks )</a></li>
+	<li id="menu-item-773" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-773"><a href="../../pulse-functions/dirpulse/index.html">dirpulse( portpin )</a></li>
+</ul>
+</li>
+<li id="menu-item-776" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-776"><a href="../../software_functions/index.html">Software Functions</a>
+<ul class="sub-menu">
+	<li id="menu-item-984" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-984"><a href="../../software_functions/halt/index.html">halt( )</a></li>
+	<li id="menu-item-778" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-778"><a href="../../software_functions/wait/index.html">wait(milliseconds)</a></li>
+	<li id="menu-item-777" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-777"><a href="../../software_functions/random/index.html">random(seed)</a></li>
+</ul>
+</li>
+<li id="menu-item-779" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-779"><a href="../../interrupt_functions/index.html">Interrupt Functions</a>
+<ul class="sub-menu">
+	<li id="menu-item-780" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-780"><a href="../../interrupt_functions/tbd/index.html">TBD</a></li>
+</ul>
+</li>
+</ul></div></div>		           
+	</div>        
+		
+</div><!-- /#sidebar -->
+
+    </div><!-- /#content -->
+		
+	
+	<div id="footer">
+		<div class="col-full">
+
+		<div id="copyright" class="col-left">
+					<p>Mpy Projects &copy; 2013. All Rights Reserved.</p>
+				</div>
+
+		<div id="credit" class="col-right">
+        			<p>Powered by <a href="http://www.wordpress.org/">WordPress</a>. Designed by <a href="http://www.woothemes.com/"><img src="../../../../../wp-content/themes/swatch/images/woothemes.png" width="74" height="19" alt="Woo Themes" /></a></p>
+				</div></div>
+	</div><!-- /#footer  -->
+</div><!-- /#wrapper -->
+</body>
+
+<!-- Mirrored from www.mpyprojects.com/software/mpy-language/mpy_functions/adc_io_functions/adc/ by HTTrack Website Copier/3.x [XR&CO'2010], Wed, 03 Apr 2013 03:32:52 GMT -->
+<!-- Added by HTTrack --><meta http-equiv="content-type" content="text/html;charset=UTF-8" /><!-- /Added by HTTrack -->
+</html>
+<!-- This Quick Cache file was built for (  www.mpyprojects.com/software/mpy-language/mpy_functions/adc_io_functions/adc/ ) in 1.97333 seconds, on Apr 3rd, 2013 at 3:26 am UTC. -->
+<!-- This Quick Cache file will automatically expire ( and be re-built automatically ) on Apr 3rd, 2013 at 3:27 am UTC -->
