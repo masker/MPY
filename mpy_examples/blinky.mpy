@@ -13,3 +13,6 @@ while 1:          # Do the following lines forever and ever
    wait(1000)     # wait 1000 miliseconds (1 sec)
    out(P1_0,0)    # turn the red led off
    wait(1000)     # wait 1000 miliseconds (1 sec)
+   
+   
+   

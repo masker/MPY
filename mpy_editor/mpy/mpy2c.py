@@ -234,7 +234,7 @@ class mpy2c( object ):
                 intr_function = txt
                 
 
-            print  txt , arg_count, portpin, param, intr_function
+#            print  txt , arg_count, portpin, param, intr_function
 
         # Go round again looking for all the function definitions
         # when a function matches one of the interrupt function names
@@ -901,6 +901,8 @@ class mpy2c( object ):
                 #  for ( i=min;  i<max; i=i+inc )
                 #        lv=min;  lv<max; lv=lv+inc ) {
                 
+                
+                
                 if len(finfo) == 3:
                     lv  = finfo[0]
                     min = 0
@@ -918,8 +920,9 @@ class mpy2c( object ):
                     inc = finfo[4]
                 else:
                     print '*** ERROR ***  FOR LOOP '
+
                     
-                if inc > 0:
+                if int(inc) > 0:
                     comp = '<'
                 else:
                     comp = '>'
@@ -2003,7 +2006,7 @@ void main (void) {
                         self.add_mpy_include( '%s\mpy_macros_%s.mpy' % (script_dir, self.micro_name) )
 
                 
-                if node_count < node_len and parent_node_name == 'BoolOp' and node_name in ['list'] and parent_arg_name in ['test', None] and node0_name in ['Compare', 'Num']:
+                if node_count < node_len and parent_node_name == 'BoolOp' and node_name in ['list'] and parent_arg_name in ['test', None] and node0_name in ['Compare', 'Num', 'Name', 'BoolOp']:
                     idx = self.op_names.index( first_node_name )
                     self.add_element( '%s' % (self.op_chars[idx]) )
                     done = True

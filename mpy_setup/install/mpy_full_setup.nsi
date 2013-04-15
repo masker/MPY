@@ -25,7 +25,7 @@ SetCompressor lzma
 ; MUI 2.0 compatible ------
 !include "MUI2.nsh"
 !include Sections.nsh
-
+!include "Locate.nsh"  
 !include StrRep.nsh
 !include ReplaceInFile.nsh
 !include LogicLib.nsh
@@ -319,6 +319,33 @@ SectionEnd
 
 Section "MSP430 CDC Uart Driver" MpyDriverSection
 
+
+    ###################################
+    # Look to see if a previous libusb driver has been installed by looking for it's inf file in the system dirs 
+	${locate::Open} "$WINDIR\system32|$WINDIR\system|$WINDIR\sysWOW64" `/F=1 \
+					/D=0 \
+					/M=usb_human_interface_device_(interface_1).inf \
+					/B=1`  $0 					
+
+	StrCmp $0 0  done_libusb	
+	${locate::Find} $0 $1 $2 $3 $4 $5 $6
+    # If we didn't find traces of a previous libusb then don't try uninstalling it
+    StrCmp $1 '' done_libusb
+
+    MessageBox MB_OK|MB_ICONEXCLAMATION 'Found previous libusb driver inf file. It will now be uninstalled$\n\
+           [$1]$\n\
+           $\n\ 
+           Please PLUG IN LAUNCHPAD BOARD so the driver can be recognized and removed.$\n\
+           Also please OK any rollback driver messages that may pop up.$\n\
+           This can sometimes take a few minutes...'
+    #
+    ###################################
+
+
+
+
+  #### Remove the last libusb driver, maybe skipped if the inf file was not found
+
   StrCpy "$MpyDir" "$INSTDIR"
 
   ; Remove any remnants of the libusb driver, just in case.
@@ -336,6 +363,10 @@ Section "MSP430 CDC Uart Driver" MpyDriverSection
   ExecWait 'install-filter.exe uninstall --inf="$MpyDir\mpy_setup\drivers\libusb-win32-bin-1.2.5.0\USB_Human_Interface_Device_(Interface_1).inf"' $0
   DetailPrint "LibUsb install-filter.exe returned $0"
 #  MessageBox MB_OK|MB_ICONEXCLAMATION "Error ($0) while installing LibUsb MspDebug Driver. Try re-installing, or use inf-wizard.exe"
+
+  done_libusb:
+  ${locate::Close} $0
+  ${locate::Unload}
 
 
 

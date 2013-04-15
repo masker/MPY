@@ -172,6 +172,16 @@ Section "LibUsb MspDebug" LibUsbSection
 */
 
   SetOverwrite try
+  
+  IfFileExists  file_to_check_for jump_if_present
+
+  IfFileExists "$SYSDIR\" DoneWXPythonCheck WXPython28DoesNotExist
+  WXPython28DoesNotExist:
+ 
+
+
+
+
   SetOutPath "$INSTDIR\mpy_setup\drivers\libusb-win32-bin-1.2.5.0"
   File /r "C:\MPY\mpy_setup\drivers\libusb-win32-bin-1.2.5.0\"
 

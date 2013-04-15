@@ -1,0 +1,7 @@
+# __mpy_x_verbose_debug_on__
+
+a123=2
+b321=21
+c555=4
+if (a123<10 and b321>20) or c555!=5:
+    print( 'the moons must be aligned')
