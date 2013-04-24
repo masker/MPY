@@ -862,13 +862,20 @@ def _OpenToLine(fname, line, mainw):
         if ebmlib.ComparePaths(fname, name):
             nbook.ChangePage(page)
             nbook.GetPage(page).GotoLine(line)
-            nbook.GetPage(page).LineScroll(0,-10)
+            
+            #scroll to place the lin in the middle of the window
+            los = nbook.GetPage(page).LinesOnScreen()
+            nlines = nbook.GetPage(page).GetLineCount()
+            scroll_count = int(los/2)
+            if los >= nlines-line:
+                 scroll_count = int((nlines-line)/2)
+            nbook.GetPage(page).LineScroll(0,-scroll_count)
             
             break
     else:
         nbook.OnDrop([fname])
         nbook.GetPage(nbook.GetSelection()).GotoLine(line)
-        nbook.GetPage(nbook.GetSelection()).LineScroll(0,-10)
+#        nbook.GetPage(nbook.GetSelection()).LineScroll(0,-10)
 
 def _StyleError(stc, start, txt, regex):
     """Style Error message groups

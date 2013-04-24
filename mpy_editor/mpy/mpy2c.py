@@ -735,7 +735,7 @@ class mpy2c( object ):
         
         
         # Add any global variable definition to the __top_level__ (if they are not already present)
-        print '(add_variable_definitions) global_vars=', self.global_vars
+#        print '(add_variable_definitions) global_vars=', self.global_vars
         for k in self.global_vars:
             gvl = self.global_vars[k]
             if len(gvl) > 0:
@@ -1725,17 +1725,22 @@ void main (void) {
         else:
             fullfile = file
     
-        fip = open( fullfile, 'rb')
-        lines = fip.readlines()
-        fip.close()
-        jlines = ''.join(lines)
-        jlines = re.sub(r'\r','',jlines)
-        
-        uc_inc = mpy2c( jlines, filename=fullfile , full_conversion=False, vlist=self.standard_var_list)
-        
-        self.op.extend( uc_inc.op )
     
-        self.add_marker( 'INCLUDE_%s  end' % file )
+        if not os.access(fullfile, os.R_OK):
+                print "*** error *** the include file '%s' cannot be read, check you have the correct file, mpy2c failed" % (fullfile)
+                print ' File "%s", line %s' % (self.filename, self.current_lineno)
+        else:
+            fip = open( fullfile, 'rb')
+            lines = fip.readlines()
+            fip.close()
+            jlines = ''.join(lines)
+            jlines = re.sub(r'\r','',jlines)
+            
+            uc_inc = mpy2c( jlines, filename=fullfile , full_conversion=False, vlist=self.standard_var_list)
+            
+            self.op.extend( uc_inc.op )
+        
+            self.add_marker( 'INCLUDE_%s  end' % file )
 
         
     ########################################################################            

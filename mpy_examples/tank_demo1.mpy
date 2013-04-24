@@ -1,3 +1,8 @@
+
+
+
+
+
 def drive( direction, duration):
     
     if direction == STOP :
@@ -14,7 +19,7 @@ def drive( direction, duration):
         out(MLO,0)
         out(MLW,1)
         out(MRY,0)
-        out(MRG,1)
+        out(MRG,1) 
     elif direction == LEFT :
         out(MLO,0)
         out(MLW,1)
@@ -46,26 +51,11 @@ def drive( direction, duration):
 
 
 
-DB7 = P1_7
-DB6 = P1_2
-DB5 = P1_5
-DB4 = P1_4
-EN  = P1_3
-RS  = P1_0
 
 
-lcd_enable( DB7, DB6, DB5, DB4, EN, RS )
-lcd_print( '12345678901234567890')
+#print( 'hello mikey, this should be ok now ' )
 
-print( 'hello mikey, this should be ok now ' )
 
-s = 0
-i = 0
-while i < 10:
-    lcd_print('value i=', s, '  ', '>', i) 
-    s = random(s)
-    wait(100)
-    i += 1
     
 STOP    = 0
 FORWARD = 1
@@ -84,17 +74,16 @@ MRG = P2_3
 pindir( MLO, OUT)
 pindir( MLW, OUT)
 pindir( MRY, OUT)
-pindir( MRG, OUT)
+pindir( MRG, OUT) 
 
 
-drive( FORWARD,  2000 )
-drive( REVERSE,  1000 )
+drive( FORWARD,  6000 )   
+drive( REVERSE,  4000 )
+drive( STOP,     1000 ) 
+drive( LEFT,     2000 )
 drive( STOP,     1000 )
-drive( LEFT,     1000 )
+drive( RIGHT,    2000 )  
 drive( STOP,     1000 )
-drive( RIGHT,    2000 )
-drive( STOP,     1000 )
-drive( FORWARD,  2000 )
-drive( REVERSE,  2000 )
+drive( FORWARD,  5000 )  
+drive( REVERSE,  4000 )
 
-   

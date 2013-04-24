@@ -558,6 +558,18 @@ Function .onInit
   StrCmp $R0 0 +3
     MessageBox MB_OK|MB_ICONEXCLAMATION "The MPY installer is already running."
     Abort
+    
+  FindProcDLL::FindProc "python.exe"
+  IntCmp $R0 1 0 PythonNotRunning
+    MessageBox MB_OK|MB_ICONEXCLAMATION "The mpyEditor program or an other Python program is running please close it first. (You may have to reboot your computer)"
+    Abort
+  PythonNotRunning:  
+  FindProcDLL::FindProc "pythonw.exe"
+  IntCmp $R0 1 0 PythonNotRunning2
+    MessageBox MB_OK|MB_ICONEXCLAMATION "The mpyEditor program or an other Python window program is running please close it first. (You may have to reboot your computer)"
+    Abort
+  PythonNotRunning2:  
+
 
   ; Check for existing installation warn before installing new one
   ReadRegStr $R0 ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "UninstallString"
