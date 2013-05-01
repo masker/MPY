@@ -13,7 +13,7 @@
 
 ; Global Variables
 !define PRODUCT_NAME "MpyEditor"
-!define PRODUCT_VERSION "0.1.a11"
+!define PRODUCT_VERSION "1.0"
 !define PRODUCT_PUBLISHER "MpyProjects"
 !define PRODUCT_WEB_SITE "http://www.mpyprojects.com"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\${PRODUCT_NAME}.exe"
@@ -268,11 +268,11 @@ Section /o "Editra" EditraSection
 ;  MessageBox MB_OK "Editra install"
   SetOverwrite try
   SetOutPath "$TEMP\Editra"
-  File  /r "C:\mpy_temp\Editra-0.7.12.tar\dist\Editra-0.7.12\Editra-0.7.12"
+  File  /r "C:\mpy_temp\Editra-0.7.20.tar\dist\Editra-0.7.20\Editra-0.7.20"
 
 
   ; install wxpython
-  SetOutPath "$TEMP\Editra\Editra-0.7.12"
+  SetOutPath "$TEMP\Editra\Editra-0.7.20"
   ExecWait '"$PythonDir\python.exe" setup.py install' $0
   DetailPrint "Editra installer returned $0"
   ${If} $0 != 0
