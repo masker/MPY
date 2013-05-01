@@ -357,7 +357,17 @@ static void __inline__ wait_cycles(register unsigned int n)
 void  halt(void) { 
           for ( ; ;  ) { 
                   _NOP ( ) ; } }  
-                
+
+// map command to map a value (val) from one range (ri1->ri2) to another range (ro1->ro2)
+//    return (ro1 + (  ((val-ri1)*(ro2-ro1)) /(ri2-ri1)))
+int   map( int val, int ri1, int ri2, int ro1, int ro2    ) { 
+          long tmpl;
+          tmpl = (((long)val-(long)ri1)*((long)ro2-(long)ro1))/((long)ri2-(long)ri1);
+          return (ro1 + (int)tmpl);
+          }
+
+
+
 
 /* Generic mpy print function 
    The low-level character output write function is passed in a the first argument 'func'

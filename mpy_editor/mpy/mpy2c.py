@@ -921,19 +921,37 @@ class mpy2c( object ):
                 else:
                     print '*** ERROR ***  FOR LOOP '
 
-                    
-                if int(inc) > 0:
-                    comp = '<'
-                else:
-                    comp = '>'
-                    
-                txt = '  %s=%s; %s%s%s;  %s=%s+%s ) {' % (
-                        lv, min,
-                        lv, comp, max, 
-                        lv, lv, inc    )
+                # determine which compare is required, if the value of inc is specified as a number then
+                # it is easy to get the compare equality 
+                # if its not known then we must test the value 
+#                 x = int(inc)
+#                         
+#                 if int(inc) > 0:
+#                     comp = '<'
+#                 else:
+#                     comp = '>'
+#                     
+#                 txt = '  %s=%s; %s%s%s;  %s=%s+%s ) {' % (
+#                         lv, min,
+#                         lv, comp, max, 
+#                         lv, lv, inc    )
+
+
+# make the for loop conditon dependant on the polarity of the inc variable                
+#                  ((inc > 0 and lv < max) or (inc < 0 and lv > max))
+                
+                for_txt = ' %s = %s ; ( ( %s > 0 && %s < %s ) || ( %s < 0 && %s > %s ) ) ;  %s = %s + %s ) {' % (
+                            lv, min,
+                            inc, lv, max,  inc, lv, max,  
+                            lv, lv, inc    )
+                
+                for_txt_wds = for_txt.split()
+     
+     
                 
                 i = 0
-                for txt in [ lv, '=', min, ';',    lv, comp, max, ';',   lv, '=', lv, '+', inc, ')', '{' ]:
+#                for txt in [ lv, '=', min, ';',    lv, comp, max, ';',   lv, '=', lv, '+', inc, ')', '{' ]:
+                for txt in for_txt_wds:
                     tn = t[:]
                     tn[0] = str(txt) 
                     if i == 0:

@@ -51,6 +51,11 @@ def drive( direction, duration):
 
 
 
+DATA  = P1_2
+CLOCK = P1_0
+
+lcd2w_enable( DATA, CLOCK )
+lcd_print( 'tank demo')
 
 
 #print( 'hello mikey, this should be ok now ' )
@@ -65,10 +70,10 @@ CCW     = 4
 LEFT    = 5
 RIGHT   = 6
 
-MLO = P1_6
-MLW = P2_5
-MRY = P2_4
-MRG = P2_3
+MLO = P1_5
+MLW = P2_1
+MRY = P1_4
+MRG = P2_0
     
     
 pindir( MLO, OUT)
