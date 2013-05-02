@@ -1,0 +1,148 @@
+######################################################################
+#
+# ultrasonic_ping.mpy  
+# 
+# Program to flash the red led on the MSP430 Launchpad board
+# ( Mike Asker 14-Apr-2012 www.mpyprojects.com)
+# 
+######################################################################
+
+
+###################################################################
+def ping():
+   '''Function to ping the ultrasonic sensor and measure
+   the width of the echo pulse.
+   The ECHO pulse width is the detected object distance'''
+    
+   # first trigger the sensor by pulsing the TRIG signal
+   # (this is the ping!) 
+   out(TRIG, 1)
+   wait_cycles(5)
+   out(TRIG, 0)
+
+   # Then look for a +ve going pulse on the ECHO signal
+   
+   # wait in the loop until we see the start of the ECHO pulse 
+   count1 = 0
+   while inp(ECHO) == 0:
+      count1 = count1 + 1
+      # if ECHO is low for too long then something must be wrong so break out of the loop 
+      if count1 > 300:      
+         break
+
+   if count1 < 30000:
+     count2 = 0
+     # We have now detected the start of the pulse, 
+     # so now measure how long it stays high in another loop.
+     # Variable count2 will count the number of times round the loop
+     # while the ECHO signal is high. The final value will be the
+     # ECHO distance.
+     count2 = 0
+     while inp(ECHO) == 1:
+         count2 = count2 + 1
+         # if it stays high for too long then no ECHO was detected so break out of the loop
+         if count2 > 300:
+              break
+
+   # The value of count2 is the distance, but it may be a bad value,
+   # if it is then make the count2 value a negative large number to
+   # show that the value should not be used.
+   if count1 > 30000 or count2 > 300 or count2 < 1:
+      count2 = -999
+      
+   return count2
+
+########################################################################
+def move_servo(servo,new_pos,duration):
+    # moves the servo from cur_pos to new_pos in fine steps
+    # 
+    
+    global cur_pos
+    
+    #start by updating the cur_pos
+    pos = cur_pos
+    pulse_width(servo,pos)
+    
+    diff_pos = new_pos - cur_pos
+    
+    step_delay = 10
+    num_steps = duration / step_delay
+    inc_pos = diff_pos / num_steps
+    
+    for i in range(num_steps):
+        pos = pos + inc_pos
+        pulse_width(servo,pos)
+        wait(step_delay)
+    
+    pulse_width(servo,new_pos)
+    
+    cur_pos = new_pos
+    
+    
+
+
+########################################################################
+#  Main program
+########################################################################
+
+
+TRIG  = P1_3
+ECHO  = P1_7
+
+pindir(TRIG,OUT)       # pulse0
+pindir(ECHO,IN)
+
+DATA  = P1_2
+CLOCK = P1_0
+lcd2w_enable( DATA, CLOCK )
+
+pindir(P2_2,PULSEOUT)
+pulse_enable(1)
+pulse_period(1,20000)
+
+pulse_width(1,1000)
+pwm_min = 900 
+pwm_max = 2000
+inc     = 200
+pwm_pos = pwm_min
+cur_pos = pwm_pos
+
+min_echo = 999
+
+c = 0
+while 1:
+    
+   echo = ping()
+
+
+   if  echo > 0:
+      print pwm_pos, echo
+      lcd_print pwm_pos, echo
+   
+      if echo < min_echo:
+          min_echo = echo
+          min_pos = pwm_pos
+          
+      lcd_print  min_pos, min_echo, '    ',pwm_pos, echo
+          
+   
+   c = c + 1
+   
+
+   wait(5)
+        
+   pwm_pos = pwm_pos + inc
+       
+   move_servo(1, pwm_pos, 100)
+     
+   if pwm_pos > pwm_max :
+        
+        inc = -inc
+   if pwm_pos < pwm_min :
+        print '  - - - - - - - - >>>  ', min_pos, min_echo
+        
+        min_echo = 999
+        inc = -inc
+   
+       
+   

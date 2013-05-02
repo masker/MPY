@@ -1,0 +1,48 @@
+######################################################################
+#
+# zom1.mpy  
+# 
+# Program to scare kids
+# ( Mike Asker 28-Apr-2013 www.mpyprojects.com)
+# 
+######################################################################
+
+
+pindir(P1_2,PULSEOUT)  # pulse0
+pindir(P2_1,PULSEOUT)  # pulse1
+pindir(P2_4,PULSEOUT)  # pulse2
+
+pulse_enable(0)
+pulse_enable(1)
+pulse_enable(2)
+
+pulse_period(0,20000)
+pulse_period(1,20000)
+pulse_period(2,20000)
+
+max = 1500
+min = 700
+
+width = (min+max)/2
+
+
+inc = +10
+
+while 1:
+    
+    pulse_width(0, width)
+    pulse_width(1, width)
+    pulse_width(2, width)
+
+    width = width + inc
+    
+    if width >= max:
+        inc = -inc
+
+    if width <= min:
+        inc = -inc
+        
+    wait(20)
+
+       
+   

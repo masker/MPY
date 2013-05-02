@@ -1,0 +1,227 @@
+######################################################################
+#
+# rob1.mpy  
+# 
+# Program to control a robot using the DRV8833 motor controller
+# ( Mike Asker 22-Jul-2012 www.mpyprojects.com)
+# 
+######################################################################
+
+
+macro( AIN1, P1_6 )     # also the green LED
+macro( AIN2, P1_7 )
+macro( BIN1, P1_4 )
+macro( BIN2, P1_5 )
+macro( SENSOR, P1_0 )   # also the switch
+macro( SERVO,  P1_2)    # only P1_2, amd P1_6 can be used for a pulse on the smaller chips
+
+macro( STOP,         0)
+macro( FORWARD,      1)
+macro( REVERSE,      2)
+macro( LEFT,         3)
+macro( RIGHT,        4)
+macro( CW,           5)
+macro( CCW,          6)
+
+
+
+macro( forward_right_motor(), "out(AIN1,1); out(AIN2,0);" )
+macro( forward_left_motor(),  "out(BIN1,1); out(BIN2,0);" )
+macro( reverse_right_motor(), "out(AIN1,0); out(AIN2,1);" )
+macro( reverse_left_motor(),  "out(BIN1,0); out(BIN2,1);" )
+macro( stop_right_motor(),    "out(AIN1,0); out(AIN2,0);" )
+macro( stop_left_motor(),     "out(BIN1,0); out(BIN2,0);" )
+
+# macro( forward(delay),    "forward_left_motor(); forward_right_motor(); wait(delay)" )
+# macro( reverse(delay),    "reverse_left_motor(); reverse_right_motor(); wait(delay)" )
+# macro( stop(delay),       "stop_left_motor();    stop_right_motor();    wait( delay) " )
+
+
+########################################################################    
+def enable_motors( direction ):
+    '''This will switch on or switch off the motors depending on the direction'''
+    if direction == STOP:
+        stop_right_motor()
+        stop_left_motor()
+    elif direction == FORWARD:
+        forward_right_motor()
+        forward_left_motor()
+    elif direction == REVERSE:
+        reverse_right_motor()
+        reverse_left_motor()
+    elif direction == LEFT:
+        forward_right_motor()
+    elif direction == RIGHT:
+        forward_left_motor()
+    elif direction == CCW:
+        forward_right_motor()
+        reverse_left_motor()
+    elif direction == CW:
+        forward_left_motor()
+        reverse_right_motor()
+
+
+
+
+#################################################################
+def get_distance_mm():
+    '''measure the distance using the optical range sensor.
+    The sensor output voltage of the sensor is the inverse of the distance (providing the distance is greater than 10cm)
+    We measure the sensor output voltage using the adc() command which returns a number which is scaled 2.5v -> 1023
+    The returned value is a measure of distance in units of mm.
+    '''
+    
+    for i in range(1):
+        v = (adc( SENSOR ) * 25)/102    # an adc value of 1023 is equivelant to 2.5v, therefore scale by 25/100 to get v in 100th's of a volt
+        dist = 25000 / v
+#        print dist,
+    
+    return dist 
+
+
+#####################################################################################
+
+def move( direction, speed, duration ):
+    '''Move the mpy bug specifying direction, speed, duration.
+    The move can be optionally stopped if an obstical is closer or further than a given limit.
+    parmeters:
+        direction:   
+        speed:       a value from  1 - 10
+        duration:    how long to move in ms
+    returns:
+        0  if no obstical limit was detected
+        -l if obstical is less than lower_limit
+        +1 if obstical is greater than upper_limit
+
+    lower_distance_limit:  abort move if the obstical distance is less than this value, returning -1
+    upper_distance_limit:  abort move if the obsiical distance is greater than this value, returning +1
+
+    '''
+    
+    
+    
+    retval = 0
+    
+    # To control the speed of the motors we will switch the motor on and off very quickly.
+    # by changing the ratio of the on_time to the off_time we can speed up or slow down the motors
+    # First define the repeat period, this is the total time for the motor on and off.
+    # If we do it too slowly then the motor will judder along. So define the repeat period as 50ms
+    period = 10
+    on_time = (period * speed)/10
+    off_time = period - on_time
+    t = 0
+    while t < duration:
+        retval = 0  
+        dist = get_distance_mm()
+#        if upper_distance_limit != 0 and dist > upper_distance_limit: 
+#            retval = +1
+#            break
+#        if lower_distance_limit != 0 and dist < lower_distance_limit:
+#            retval = -1
+#            break
+        enable_motors(direction)
+        wait(on_time)
+        enable_motors(STOP)
+        wait(off_time)
+        t = t + period 
+
+        
+    
+    return retval
+
+###############################################################
+def scan():
+    '''Turns looks left and right and returns direction and distance of the nearest obstical'''
+    global min_distance, min_angle
+    
+    center = 1500
+        
+    span = 700
+    steps = 5
+    inc   = span/steps
+    pos   = center 
+    min_distance = 30000
+    min_angle    = -1
+
+
+    # Look to the left
+    pos = scan_sub(pos, -inc, steps)
+    # Look to the right
+    pos = scan_sub(pos, +inc, steps)
+    # Look to the right again
+    pos = scan_sub(pos, +inc, steps)
+    # Look to the left and return back to center position
+    pos = scan_sub(pos, -inc, steps)
+    
+    pulse_width(0, min_angle)
+    
+    print 'min_angle=', min_angle, '  min_distance=', min_distance
+    
+    
+
+######################################        
+def scan_sub( p, inc, steps ):
+    
+    global min_distance, min_angle
+
+
+    for i in range(steps):
+        pulse_width(0, p)
+        wait(5)
+        distance = get_distance_mm()
+        if distance < min_distance:
+            min_distance = distance
+            min_angle = p
+        print '  angle=', p, '  min_angle=', min_angle, '  min_distance=', min_distance
+        p = p + inc
+
+            
+    return p
+    
+
+#############################################
+# Main program starts here!
+#############################################
+
+dirout( AIN1 )
+dirout( AIN2 )
+dirout( BIN1 )
+dirout( BIN2 )
+dirinp( SENSOR )
+adc_enable()
+
+
+pulse_enable(0)
+pulse_period(0, 20000)        # Set the pulse repition rate to 20000 clocks
+pulse_width(0, 5000)
+dirpulse(SERVO)
+
+print '::::::::::::::::: STARTING ::::::::::::'
+
+
+#i = 1
+#while i < 20:
+#    width = i * 50 + 1000
+#    pulse_width(0, width)
+#    wait(10)
+#    dist = get_distance_mm()
+    
+#    i = i + 1
+
+#upper_distance_limit = 0
+#lower_distance_limit = 0
+
+s = 0
+#dist = get_distance_mm()
+print 'done' 
+
+#move(STOP,0,3000)
+
+
+
+for j in range(20):
+
+    scan()
+    wait(2000)
+
+ 

@@ -1,112 +1,25 @@
+######################################################################
+#
+# rob1.mpy  
+# 
+# Program to control a robot using the DRV8833 motor controller
+# ( Mike Asker 22-Jul-2012 www.mpyprojects.com)
+# 
+######################################################################
+
+define_micro('msp430g2231')   # Tell the compiler which msp430 microcontroller to program
 
 
 
+macro( forward(delay),    "setbit(P2OUT,P1_6); wait(delay)" )
 
 
-def rand( S ):
-    S = S * 181 + 359
-    return S
+#def fout(p1,p2):
+#    x = p1+p2
 
 
-if 1:
-    MASK2047 = (1<<11)-1
-    MASK1023 = (1<<10)-1
-    MASK8    = (1<<8)
+forward(1000)
 
 
-    pwm = 2000
-    S   = 1000
-    k   = 0
-    pwm_random  = 0
 
-#    WDTCTL = WDTPW | WDTHOLD   # may want have this done automatically
-
-#    P1DIR = 0x00
-#    P1DIR |= BIT2 # P1.2 to output
-#    P1DIR |= BIT0 # P1.0 to output led 1 red
-#    P1DIR |= BIT6 # P1.6 to output led 2 green
-#    P1DIR |= BIT7 # P1.7 to output led creeper eyes
-    
-    
-#    P1SEL = 0x00
-#    P1SEL |= BIT2  # P1.2 to output TA0.1
-
-#    P1REN = 0x00
-#    P1REN |= BIT1  # P1.1 pullup input
-#    P1REN |= BIT5  # P1.3 pullup input
-#    P1OUT = BIT1 + BIT5 
-    
-  
-#    CCR0  = 10000-1          # PWM Period
-#    CCTL1 = OUTMOD_7         # CCR1 reset/set
-#    CCR1  = pwm              # CCR1 PWM duty cycle
-#    TACTL = TASSEL_2 + MC_1  # SMCLK, up mode
-   
-
-#    pindir(P1_0,OUT)
-    pindir(P1_6,OUT)
-    pindir( P1_7, OUT )
-    pindir( P1_2, PULSEOUT )
-    pindir( P1_1, INPU )
-    pindir( P1_3, INPU )
-    
-    pulse_enable(0)
-    pulse_period(0,10000)
-    pulse_width(0,2000)
-
-
-    rval = 0
-
-    while 1:
-    
-        k += 1
-
-        # Calculate a new random pwm value
-        if (k%30) == 0 :
-            S = rand(S);
-            rval = S & MASK1023
-            rval = rval - 1000
-
-        # slowly increment or decrement the pwm value
-        # to wards the pwm_random value so that it increments
-        # or decrements in 100 unit steps until it gets to
-        # the value of rval
-        if (rval - pwm_random >  100) :
-           pwm_random = pwm_random + 100
-        if (rval - pwm_random < -100) :
-           pwm_random = pwm_random - 100
-
-
-        for j in range( 500 ):
-            # in the inner loop we will randomly flash the creeper eyes
-            if 1 and (j % 50 == 0) :
-                S = rand(S)
-                if ((S | MASK8 ) > 0 ):     # if bit 8 happens to be set then light up led7 and led6
-                    out(P1_6,1)
-                    out(P1_7,1)
-                else:
-                    out(P1_6,0)
-                    out(P1_7,0)
-               # short delay
-    
-
-        # Look to see if any of the switches are high. 
-        # increase or decrease the pwm value
-        if (P1IN & BIT1): 
-            pwm = pwm + 100  # If BIT1 switch is active then increment the base pwm variable by 100
-    
-        if (P1IN & BIT5) :
-            pwm = pwm - 100;  # If BIT1 switch is active then decrement the base pwm variable by 100
-
-
-            
-        # Write the pwm value into CCR1 (condition count register 1) which sets the
-        # on duty time for the servo. The value is the sum of the base pwm value
-        # and the random pwm value
-        pwm_sum = pwm + pwm_random
-        if pwm_sum > 3200:  pwm_sum = 3200
-        if (pwm_sum < 400): pwm_sum = 400
-
-        pulse_width(0,pwm_sum)
-#        CCR1 = pwm_sum
-      
+ 

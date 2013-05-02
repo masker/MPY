@@ -366,6 +366,20 @@ int   map( int val, int ri1, int ri2, int ro1, int ro2    ) {
           return (ro1 + (int)tmpl);
           }
 
+// limit command that limits the range a value can have
+int   limit( int val, int lim1, int lim2 ) {
+
+            if (lim2 > lim1) {
+                if (val > lim2)
+                    return lim2;
+                else if (val < lim1)
+                    return lim1; }
+            else {
+                if (val > lim1)
+                    return lim1;
+                else if (val < lim2)
+                    return lim2; }
+          }
 
 
 

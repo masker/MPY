@@ -1,0 +1,21 @@
+#
+# (C) Copyright 2013 Mike Asker
+# Public Domain Licence:   Creative Commons CC0 
+#
+
+
+DATA  = P1_2
+CLOCK = P1_0
+
+lcd2w_enable( DATA, CLOCK )
+lcd_print( '12345678901234567890')
+
+print 'hello mikey, this should be ok now '
+
+s = 0
+i = 0
+while i < 50:
+    lcd_print('value i=', s, '  ', '>', i) 
+    s = random(s)
+    wait(100)
+    i += 1

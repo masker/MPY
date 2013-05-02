@@ -1,0 +1,40 @@
+
+#def mapl( val, ri1, ri2, ro1, ro2 ):
+    
+#    # first determine if the intermediate result will overflow the 16 bit
+#    # range (32767) , calculate 2 scaling factors to apply to the 
+#    # ratio calculation to keep each of the math terms within the 15bit working range.
+    
+#    scli = abs(ri2-ri1)/180 + 1
+#    sclo = abs(ro2-ro1)/180 + 1
+          
+#    return (ro1 + scli*sclo*(  (((val-ri1)/scli)*((ro2-ro1)/sclo)) /(ri2-ri1)))
+
+
+max = 100
+min =  0
+
+
+ro2 = 30000
+ro1 =  -30000
+
+
+step = (max - min) / 10
+#step = -600
+
+maxlp = max + step
+minlp = min 
+
+print  '====================================', width
+
+
+
+for width in range(minlp,maxlp,step):
+    
+
+    width_r = map(width, min, max, ro1, ro2)
+    print width, width_r
+
+
+
+

@@ -7,8 +7,6 @@
 # 
 ######################################################################
 
-define_micro('msp430g2231')   # Tell the compiler which msp430 microcontroller to program
-
 
 macro( AIN1, P1_6 )
 macro( AIN2, P1_7 )
@@ -30,22 +28,26 @@ macro( reverse_left_motor(),  "out(BIN1,0); out(BIN2,1);" )
 macro( stop_right_motor(),    "out(AIN1,0); out(AIN2,0);" )
 macro( stop_left_motor(),     "out(BIN1,0); out(BIN2,0);" )
 
-macro( forward(delay),    "forward_left_motor(); forward_right_motor(); wait(delay)" )
-macro( reverse(delay),    "reverse_left_motor(); reverse_right_motor(); wait(delay)" )
-macro( stop(delay),       "stop_left_motor();    stop_right_motor();    wait( delay) " )
+# macro( forward(delay),    "forward_left_motor(); forward_right_motor(); wait(delay)" )
+# macro( reverse(delay),    "reverse_left_motor(); reverse_right_motor(); wait(delay)" )
+# macro( stop(delay),       "stop_left_motor();    stop_right_motor();    wait( delay) " )
 
 
-#def move( direction, delay ):
-#    if direction == STOP:
-#        stop_right_motor()
-#        stop_left_motor()
-#    elif direction == FORWARD:
-#        forward_right_motor()
-#        forward_left_motor()
-#    elif direction == REVERSE:
-#        reverse_right_motor()
-#        reverse_left_motor()
-#    wait(delay)
+def move( direction, delay ):
+    if direction == STOP:
+        stop_right_motor()
+        stop_left_motor()
+    elif direction == FORWARD:
+        forward_right_motor()
+        forward_left_motor()
+    elif direction == REVERSE:
+        reverse_right_motor()
+        reverse_left_motor()
+    wait(delay)
+
+#############################################
+# Main program starts here!
+#############################################
 
 dirout( AIN1 )
 dirout( AIN2 )
@@ -55,10 +57,10 @@ dirout( BIN2 )
                
 
 wait(2000)
-forward(1000)
-stop(2000)
-reverse(1000)
-stop(0)
+move(FORWARD,1000)
+move(STOP,2000)
+move(REVERSE,1000)
+move(STOP,0)
 
 
  

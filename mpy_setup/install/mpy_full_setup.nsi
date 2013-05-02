@@ -260,7 +260,8 @@ SectionEnd
 ;------------------------------------------
 ; Section to install Editra if necessary
 ;------------------------------------------
-Section /o "Editra" EditraSection
+#Section /o "Editra" EditraSection          # make editra on by default
+Section  "Editra" EditraSection
 
   StrCpy "$MpyDir" "$INSTDIR"
  
@@ -296,7 +297,8 @@ SectionEnd
 ; SECTION 
 ; Install MPY tools
 ;------------------------------------------
-Section /o "MPY Tools" MpyToolsSection
+# Section /o "MPY Tools" MpyToolsSection      # make mpy tools on by default
+Section  "MPY Tools" MpyToolsSection      
   SectionIn 1 2
   ; Extract the files and make shortcuts
 
@@ -394,7 +396,8 @@ SectionEnd
 ; SECTION 4
 ; Install MPY editor
 ;------------------------------------------
-Section /o "MPY Editor" MpyEditorSection
+# Section /o "MPY Editor" MpyEditorSection    # on by default   (/o makes it off by default)
+Section  "MPY Editor" MpyEditorSection
   SectionIn 1 2
   ; Extract the files and make shortcuts
 
@@ -459,7 +462,8 @@ SectionEnd
 ; SECTION 4
 ; Install MPY Default User Settings
 ;------------------------------------------
-Section /o "MPY User Settings" MpyEditorSettingsSection
+#Section /o "MPY User Settings" MpyEditorSettingsSection  # on by default
+Section "MPY User Settings" MpyEditorSettingsSection  # on by default
   SectionIn 1
   SetOverwrite try
   
@@ -471,7 +475,7 @@ Section /o "MPY User Settings" MpyEditorSettingsSection
   SetOutPath "$LOCALAPPDATA\Editra\"
   File /r "C:\Documents and Settings\mike asker\Application Data\Editra\*.*"
 
-#  # re define the link to point to the actual MPY instalation directory
+#  # re define the link to point to the actual MPY installation directory
 #  !insertmacro RepInFile       "$APPDATA\Editra\sessions\default.session"   "C:\MPY" "$INSTDIR"
 #  !insertmacro RepInFile  "$LOCALAPPDATA\Editra\sessions\default.session"   "C:\MPY" "$INSTDIR"
 #  !insertmacro RepInFile       "$APPDATA\Editra\sessions\__default.session" "C:\MPY" "$INSTDIR"
@@ -582,7 +586,13 @@ Function .onInit
   ; Run the uninstaller
   ClearErrors
   ExecWait '$R0 _?=$INSTDIR' ; Do not copy the uninstaller to a temp file
+#  Abort
+  
+  MessageBox MB_YESNO|MB_ICONEXCLAMATION \
+  "$(^Name) has been removed. $\nDo you want to install the new $(^Name) version ?" \
+  IDYES done
   Abort
+  
 
   done:
   

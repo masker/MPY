@@ -1,0 +1,10 @@
+
+
+
+print( "\nOh no it's a creeper\n")
+print('sssss BOOM\n')
+
+a = 49
+b = 13
+
+print_value( 'Forty nine times thirteen is equal to', a*b )

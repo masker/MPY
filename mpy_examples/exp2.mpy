@@ -1,9 +1,0 @@
-
-define_micro('msp430g2553')
-macro( PIN2,  P1_0 )
-macro( IN(P1_0), 'P1IN & 1' )
-
-if 1:  
-  x = IN(PIN2)
-
-

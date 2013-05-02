@@ -1,0 +1,73 @@
+######################################################################
+#
+# zom1.mpy  
+# 
+# Program to scare kids
+# ( Mike Asker 28-Apr-2013 www.mpyprojects.com)
+# 
+######################################################################
+
+def map( val, ri1, ri2, ro1, ro2 ):
+    if abs(ro2-ro1) > 150:
+          scale = abs(ro2-ro1)
+    else: 
+          scale = 1
+          
+    return (ro1 + scale*(((val-ri1)*((ro2-ro1)/scale))/(ri2-ri1)))
+
+
+
+pindir(P2_3,OUT)       # scarey eyes
+pindir(P1_2,PULSEOUT)  # pulse0   right arm
+pindir(P2_1,PULSEOUT)  # pulse1   left arm
+pindir(P2_4,PULSEOUT)  # pulse2   body
+
+RIGHTARM = 0
+LEFTARM  = 1
+BODY     = 2
+
+
+pulse_enable(RIGHTARM)
+pulse_enable(LEFTARM)
+pulse_enable(BODY)
+
+pulse_period(RIGHTARM,20000)
+pulse_period(LEFTARM, 20000)
+pulse_period(BODY,    20000)
+
+max = 1500
+min = 700
+
+width = (min+max)/2
+
+
+inc = +10
+eyes = 0
+r = 0
+
+while 1:
+    
+    
+    width_r = map(width, min, max, max, min)
+    print width, width_r
+    
+    pulse_width(RIGHTARM, width_r)
+    pulse_width(LEFTARM, width)
+    pulse_width(BODY, width)
+
+    width = width + inc
+    
+    if width >= max:
+        inc = -inc
+
+    if width <= min:
+        inc = -inc
+        
+    wait(500)
+
+
+    r = random(r)
+    if r % 2 == 0:
+       eyes = eyes ^ 1   
+       
+    out(P2_3, eyes)
