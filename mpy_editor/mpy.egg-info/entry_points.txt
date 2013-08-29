@@ -1,0 +1,4 @@
+
+    [Editra.plugins]
+    Mpy = mpy:Mpy
+    

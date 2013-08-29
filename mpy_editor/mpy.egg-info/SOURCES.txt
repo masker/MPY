@@ -1,0 +1,7 @@
+setup.py
+Msp.egg-info/PKG-INFO
+Msp.egg-info/SOURCES.txt
+Msp.egg-info/dependency_links.txt
+Msp.egg-info/entry_points.txt
+Msp.egg-info/top_level.txt
+mpy/__init__.py
