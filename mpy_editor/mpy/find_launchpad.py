@@ -13,7 +13,7 @@
 #     GNU General Public License for more details.
 # 
 #     You should have received a copy of the GNU General Public License
-#     along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
+#     along with mpyEditor.  If not, see <http://www.gnu.org/licenses/>.
 #
 #     (C) Copyright 2013 Mike Asker    mike.asker@gmail.com
 #
@@ -90,6 +90,7 @@ class find_launchpad( object ):
                     wx.CallAfter( self.pr, (txt) )     
                     if p['active'] == True:
                         self.lp_nc_message_done = False
+                        self.pr(p)
                         return p['name']
 #         if self.lp_nc_message_done == False:
 #              print '* No active Launchpad found, either it is not connected, or the comport driver is not installed *'
