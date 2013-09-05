@@ -46,9 +46,17 @@ import re
 #import traceback
 #import wx
 import glob
-import util
+import telnetlib
 
+try:
+   import util
+except ImportError:
+   pass
+   
 #import scan_ports
+
+
+MPY_STATUS_FLAG_ADDR  = 0x2000000
 
 
 #--------------------------------------------------------
@@ -74,7 +82,15 @@ def runcmd( command_line, read_output=True, log=False ):
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         startupinfo.wShowWindow = subprocess.SW_HIDE
 
-        proc = subprocess.Popen( args , stdout=subprocess.PIPE,stderr=subprocess.STDOUT, startupinfo=startupinfo)
+        if read_output==True:
+            op    = subprocess.PIPE
+            operr = subprocess.STDOUT
+        else:
+            fh = open("NUL","w")
+            op = fh
+            operr = fh
+
+        proc = subprocess.Popen( args , stdout=op,stderr=operr, startupinfo=startupinfo)
 #         while True:
 #             data = proc.stdout.read(1)
 #             if len(data) == 0:
@@ -86,7 +102,7 @@ def runcmd( command_line, read_output=True, log=False ):
             output = proc.communicate()[0] 
         # remove any double linefeeds
         output = re.sub('\r', '', output)
-        if log:   print 'x=', output
+        if log:   print '<runcmd op>=', output
         return output, proc 
 
 #------------------------------------------------------------------------
@@ -101,9 +117,7 @@ class find_stlink( object ):
                   parent_window, 
                   config_pattern=None,
                   config_file_guess=None,
-                  openocd_exe=None,
-                  previous_micro=None,
-                 ):
+                  openocd_exe=None, ):
         '''Finds a connected STM STLINK/V2 board, and starts an openocd session. 
         @param  parent_window   window object to send output 
         @param  config_pattern  Glob pattern to match config files (if it 
@@ -112,72 +126,219 @@ class find_stlink( object ):
         @param  config_file_guess   Name of config file to try first, which is
                                 probably the name of the previously found board
         @param  openocd_exe     Full pathname for the openocd exe
-        @param  previous_micro id of a previous object, this is required for 
-                                the openocd session which is already running
-        ''' 
+        '''
 
-        if previous_micro == None:
-            proc = None
-        else:
-            proc = previous_micro.openocd_popen
-        util.Log("[mpy][info](find_stlink)  %s  %s" % (previous_micro,proc ) )
-        
-        
-        
-        # If the previous session is still running don't do anything, but
-        # return with all the previous data
-        if previous_micro and previous_micro.openocd_popen:
-            util.Log("[mpy][info](find_stlink) using previous process 1 %s" % (previous_micro.openocd_popen) )
-            if not previous_micro.openocd_popen.poll():
-                self.parent_window = previous_micro.parent_window
-                self.stlink_device = previous_micro.stlink_device
-                self.config_file = previous_micro.config_file
-                self.openocd_exe = previous_micro.openocd_exe
-                self.openocd_popen = previous_micro.openocd_popen
-                util.Log("[mpy][info](find_stlink) using previous process 2 %s" % (previous_micro.openocd_popen) )
-                return
-             
-        
-        self.parent_window = parent_window
-        self.stlink_device     = None
-        self.config_file = None
-        self.openocd_exe = openocd_exe
-        self.openocd_popen = None
-        
-        self.openocd_dir  = r'C:\openocd-0.7.0\openocd-0.7.0'
-        scripts_dir        = os.path.join( self.openocd_dir, 'scripts' )
-        config_dir        = os.path.join( scripts_dir, 'board' )
-        config_fullpath_pattern = os.path.join(config_dir, config_pattern)
+        self.parent_window  = parent_window
+        self.stlink_device  = None
+        self.config_file    = None
+        self.openocd_exe    = openocd_exe
+        self.openocd_popen  = None
+        self.telnet_session = None
+        self.comport_name   = None
+
+
+        self.openocd_dir    = r'C:\openocd-0.7.0\openocd-0.7.0'
+        scripts_dir         = os.path.join( self.openocd_dir, 'scripts' )
+        config_dir          = os.path.join( scripts_dir, 'board' )
+
 
         # if the config_file_guess is not a fullpath then prepend with the config_dir
         if not (re.search(r'\\.', config_file_guess) or 
                 re.search(r'\/.', config_file_guess)):
               config_file_guess = os.path.join(config_dir, config_file_guess)
-        
-        # If we are given a config file as a guess try it first. It is likely 
-        # that the guess is the result of the previous successful connection
-        if config_file_guess != None:
-            self.config_file, self.stlink_device = self.find_openocd_config(config_file_guess)    
-        
-        # if the guess doesn't work look through all the config files that match
-        
-        config_dir = os.path.join( self.openocd_dir, config_pattern )
-        if not self.config_file:
-            # Find all the stm config files in the 
-            
-            for cfg in glob.glob(config_fullpath_pattern ):
-                self.config_file, self.stlink_device = self.find_openocd_config(cfg)    
-                if self.config_file:
-                    break
+
+
+        # Forcefully kill any previously running openocd process (windows only)
+        try:
+           os.system('taskkill /f /im "openocd*"')
+        except:
+           pass
+
+
+        self.find_config_top( config_dir, config_pattern, config_file_guess)
                     
         if self.config_file:           
-            util.Log("[mpy][info](find_stlink)    config found")
-            time.sleep(0.5)
-            self.openocd_popen = self.start_openocd_session(self.config_file)
-            util.Log("[mpy][info](find_stlink)            self.openocd_popen= %s" % (self.openocd_popen) )
+            pr("    found stlink config %s" % self.config_file)
+#            time.sleep(0.5)
+            self.openocd_popen  = self.start_openocd_session(self.config_file)
+#            time.sleep(0.5)
+            self.telnet_session = self.start_telnet_session()
+
 
         
-        
+    #---------------------------------------------------------------------------
+    def find_config_top(self, config_dir, config_pattern, config_file_guess):
+
+
+        # If we are given a config file as a guess try it first. It is likely
+        # that the guess is the result of the previous successful connection
+        if config_file_guess != None:
+            self.config_file, self.stlink_device = self.find_openocd_config(config_file_guess)
+
+        # if the guess doesn't work look through all the config files that match
+
+        if not self.config_file:
+            # Find all the stm config files in the
+            config_fullpath_pattern = os.path.join(config_dir, config_pattern)
+
+            for cfg in glob.glob(config_fullpath_pattern ):
+                self.config_file, self.stlink_device = self.find_openocd_config(cfg)
+                if self.config_file:
+                    break
+
+    #---------------------------------------------------------------------------
+    def get_mpy_data(self, input=None):
+        '''Return data from the STLINK connection using the mpy_data_buffer and
+        mpy_data_flag.
+        This is a higher level function. If the stlink terminal connection is
+        not running then start it up now. If the terminal connection is not
+        responding then the board is likely not connected anymore so kill the
+        openocd_popen process.
+        '''
+
+        opstr = ''
+        # The openocd session must be running first to do anything
+        if self.openocd_popen:
+
+            if self.telnet_session:
+                 # Send command to probe whether it is still alive
+                 mpy_flag = self.get_mpy_flag_status()
+                 if mpy_flag > 0:
+                     opstr = self.read_mpy_buffer(mpy_flag)
+                 if mpy_flag == 0:
+                     opstr = ' get_mpy_data=0\n'
+                 if mpy_flag == None:
+                     self.close_telnet_session()
+                     self.kill_openocd_session()
+            else:
+                 pr('(get_mpy_data) openocd running but telnet is not running')
+                 self.kill_openocd_session()
+
+        return opstr
+
+    #-----------------------------------------------------------------------------------------
+    def get_mpy_flag_status(self):
+        '''Reads the mpy status flag on the microcontroller, and returns status
+        @return status: 1 = data available in the mpy_data_buffer
+                        0 = no new data avaliable
+                        None = Connection lost
+        '''
+
+
+        # Read the flag up to 10 times to ensure that we get a good
+        # read (in case of bad communication)
+        count = 0
+        while count < 10:
+             byte = self.read_mem(MPY_STATUS_FLAG_ADDR, 1)
+             if byte != None:
+                break
+             count += 1
+
+        if count > 0:
+            pr('(get_mpy_flag_status) got <%s> data from read_mem %d times' % (byte,count))
+
+        if byte != None:
+            byte = byte[0]
+
+        return byte
+
+    #---------------------------------------------------------------------------
+    def read_mem(self, address, count):
+        '''Reads count memory bytes (8bit) locations starting at address
+        Returns None if the read was not able to be done (closed session)
+        '''
+
+        cmd =   'mdb 0x%0x %s' % (MPY_STATUS_FLAG_ADDR, count)
+        optxt = self.send_telnet_command( cmd )
+
+        mem_list = None
+        if optxt != None:
+
+            flds = optxt.split()
+            for wd in flds:
+                wd = wd.strip()
+                if len(wd) == 2:
+                    try:
+                        num = int(wd,16)
+                    except ValueError:
+                        mem_list = None
+                        break
+                    if mem_list == None:
+                        mem_list = [num]
+                    else:
+                        mem_list.append(num)
+
+        if mem_list == None:
+            pr('(read_mem) *Error* no data read for command "%s"' % cmd)
+            pr('(read_mem) optxt= "%s"' % optxt)
+
+        if mem_list and len(mem_list) != count:
+            pr('(read_mem) *Error* read different read %d bytes expected %d' \
+                % ( len(flds), count ) )
+            mem_list = None
+
+
+        return mem_list
+
+    #---------------------------------------------------------------------------
+    def send_telnet_command(self, cmd):
+        '''Sends a command to the telnet session and waits for a response
+        @param cmd: command line to be sent, (no \n need, added in this func)
+        @return resp: String containing the response
+        '''
+
+        if cmd[-1] != '\n':
+            cmd += '\n'
+
+        try:
+            self.telnet_session.write(cmd)
+#            time.sleep(0.001)
+            op = self.telnet_session.read_until( '>', 1 )
+        except EOFError:
+            op = None
+        except AttributeError:
+            op = None
+
+        return op
+
+    #-----------------------------------------------------------------------------------------
+    def read_mpy_buffer(self, input=None, string=True):
+        '''Reads the mpy data in the mpy_data_buffer
+        @param string:  True returns data as a null terminated ascii string
+                        False returns the data as a list of numbers
+        @return data:   returns string or data depending on the string param
+        '''
+
+
+
+
+#         if input not in [None,'']:
+#             input +=  '\n'
+#             pr('writing %s' % input )
+#             self.telnet_session.write(input)
+#             pr('wrote %s' % input )
+
+        op = 'reading mpy buffer  <%s>\n' % input
+
+        return op
+
+
+    #-----------------------------------------------------------------------------------------
+    def kill_openocd_session(self):
+        '''Tries to kill an openocd process'''
+
+        if self.openocd_popen and not self.openocd_popen.poll():
+            self.openocd_popen.kill()
+            self.openocd_popen = None
+
+    #-----------------------------------------------------------------------------------------
+    def close_telnet_session(self):
+        '''Tries to kill the running telnet session'''
+
+        if self.telnet_session:
+            self.telnet_session.close()
+            self.telnet_session = None
+
 
 
     #-----------------------------------------------------------------------------------------
@@ -220,24 +381,41 @@ class find_stlink( object ):
         cmd_opts = r'-f "%s"' % config 
         command_line = '"%s" %s' % (cmd,cmd_opts)
         (op,proc) = runcmd( command_line, read_output=False )
-        
-        
+
         return proc
+
+
+   #-----------------------------------------------------------------------------------------
+    def start_telnet_session(self):
+        '''Starts a telnet session communicating with the openocd process
+        The port is localhost port 4444
+        '''
+
+        HOST = 'localhost'
+        PORT = 4444
+        telnet = telnetlib.Telnet(HOST,PORT)
+
+#        pr('started telnet session: %s' % telnet)
+        op = telnet.read_until( '>' )
+
+#         telnet.write('mdb 0x20000000 256\n')
+#
+#         op = telnet.read_until( '>' )
+#        pr( op )
+
+        return telnet
+
         
-    #--------------------------------------------------------------------------------    
-    def pr( self, txt ):  
+#--------------------------------------------------------------------------------    
+def pr( txt ):  
 
-        if 0 and not self.parent_window.uartStopped:
-            if self.parent_window != None:
-                self.parent_window._buffer.AppendUpdate('%s' % txt)
-                self.parent_window._buffer.FlushBuffer()
-            else:
-                print txt,
-
-        
-
-          
-          
+    opstr =  '[mpy find_stlink] %s' %  txt
+    try:
+        util.Log(opstr)
+    except:
+        print opstr
+      
+      
         
     
 ########################################################################
@@ -245,13 +423,34 @@ class find_stlink( object ):
 
 if __name__ == '__main__':
     
-    
-    
-       stlink = find_stlink(None,
-                  config_pattern=r'stm*discovery.cfg',
-                  config_file_guess='stm32ldiscovery.cfg',
-                  openocd_exe=r'C:\openocd-0.7.0\openocd-0.7.0\bin-x64\openocd-x64-0.7.0.exe',
-                  openocd_popen=None)
 
-       print 'done', stlink.config_file, stlink.stlink_device, stlink.openocd_popen
-    
+       if 1:
+           stlink = find_stlink(None,
+                      config_pattern=r'stm*discovery.cfg',
+                      config_file_guess='stm32ldiscovery.cfg',
+                      openocd_exe=r'C:\openocd-0.7.0\openocd-0.7.0\bin-x64\openocd-x64-0.7.0.exe',
+                      )
+
+           print 'done', stlink.config_file, stlink.stlink_device, stlink.openocd_popen
+
+#            stlink.telnet_session.set_debuglevel(7)
+#            stlink.telnet_session.write( "debug_level 3\r\n")
+#            time.sleep(0.01)
+#            op = stlink.telnet_session.read_until( '>', 1 )
+#            print 'c=%d{%s}' % (-1,op)
+           count = 0
+           for i in range(40):
+               for j in range(40):
+#                   stlink.telnet_session.write( "debug_level 0\r\n")
+#                   stlink.telnet_session.write( "mdb 0x2000000 1\r\n")
+#                   time.sleep(0.01)
+#                   op = stlink.telnet_session.read_until( '>', 1 )
+#                   print 'c=%d{%s}' % (count,op)
+                   print stlink.get_mpy_data() ,
+#                    print stlink.read_mem(MPY_STATUS_FLAG_ADDR, 1) ,
+                   count += 1
+               print ''
+           print stlink.send_telnet_command('flash probe 0')
+#           stlink.telnet_session.close()
+#           time.sleep(30)
+#           stlink.kill_openocd_session()
