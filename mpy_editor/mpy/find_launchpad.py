@@ -73,6 +73,7 @@ class find_launchpad( object ):
     #-----------------------------------------------------------------------------------------
     def find_comport(self, device_id):
 
+
         # scan for active ports in the registry
         all_ports=scan_ports.comscan()
         

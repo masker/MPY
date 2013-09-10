@@ -114,7 +114,6 @@ class find_stlink( object ):
 
 
     def __init__( self, 
-                  parent_window, 
                   config_pattern=None,
                   config_file_guess=None,
                   openocd_exe=None, ):
@@ -128,7 +127,6 @@ class find_stlink( object ):
         @param  openocd_exe     Full pathname for the openocd exe
         '''
 
-        self.parent_window  = parent_window
         self.stlink_device  = None
         self.config_file    = None
         self.openocd_exe    = openocd_exe
@@ -137,32 +135,30 @@ class find_stlink( object ):
         self.comport_name   = None
 
 
-        self.openocd_dir    = r'C:\openocd-0.7.0\openocd-0.7.0'
-        scripts_dir         = os.path.join( self.openocd_dir, 'scripts' )
-        config_dir          = os.path.join( scripts_dir, 'board' )
+        # If this is called without the openocd_exe value then we cannot start
+        # start the openocd session, assume that it is already running
+        # (this is the case when we flash the part from the prog_stm script)
+        if openocd_exe != None:
+            self.openocd_dir    = r'C:\openocd-0.7.0\openocd-0.7.0'
+            scripts_dir         = os.path.join( self.openocd_dir, 'scripts' )
+            config_dir          = os.path.join( scripts_dir, 'board' )
 
 
-        # if the config_file_guess is not a fullpath then prepend with the config_dir
-        if not (re.search(r'\\.', config_file_guess) or 
-                re.search(r'\/.', config_file_guess)):
-              config_file_guess = os.path.join(config_dir, config_file_guess)
+            # if the config_file_guess is not a fullpath then prepend with the config_dir
+            if not (re.search(r'\\.', config_file_guess) or
+                    re.search(r'\/.', config_file_guess)):
+                  config_file_guess = os.path.join(config_dir, config_file_guess)
 
 
-        # Forcefully kill any previously running openocd process (windows only)
-        try:
-           os.system('taskkill /f /im "openocd*"')
-        except:
-           pass
+            # Forcefully kill any previously running openocd process (windows only)
+            runcmd( 'taskkill /f /im "openocd*"' )
 
+            self.find_config_top( config_dir, config_pattern, config_file_guess)
 
-        self.find_config_top( config_dir, config_pattern, config_file_guess)
-                    
-        if self.config_file:           
-            pr("    found stlink config %s" % self.config_file)
-#            time.sleep(0.5)
-            self.openocd_popen  = self.start_openocd_session(self.config_file)
-#            time.sleep(0.5)
-            self.telnet_session = self.start_telnet_session()
+            if self.config_file:
+                pr("found stlink config %s" % self.config_file)
+                self.openocd_popen  = self.start_openocd_session(self.config_file)
+#                self.telnet_session = self.start_telnet_session()
 
 
         
@@ -227,15 +223,8 @@ class find_stlink( object ):
 
         # Read the flag up to 10 times to ensure that we get a good
         # read (in case of bad communication)
-        count = 0
-        while count < 10:
-             byte = self.read_mem(MPY_STATUS_FLAG_ADDR, 1)
-             if byte != None:
-                break
-             count += 1
+        byte = self.read_mem(MPY_STATUS_FLAG_ADDR, 1)
 
-        if count > 0:
-            pr('(get_mpy_flag_status) got <%s> data from read_mem %d times' % (byte,count))
 
         if byte != None:
             byte = byte[0]
@@ -281,6 +270,50 @@ class find_stlink( object ):
         return mem_list
 
     #---------------------------------------------------------------------------
+    def flash_program(self, flash_prog):
+        '''Function that flashes a program onto the microcontroller'''
+
+        op = '(flash_program) not run'
+
+        # Don't try to program the part if we can't find the flash file
+        if not os.access( flash_prog, os.R_OK):
+             pr( "(flash_prog) Cannot flash program, file not found '%s'" \
+                 % flash_prog )
+
+        else: # We have found the flash_file
+
+            op = ''
+
+            # Change the directory seperators char from \ to / to be
+            # compatible with openocd
+            flash_prog = re.sub(r'\\', '/', flash_prog)
+            sector = 0   # only program the first sector (May need to update <<)
+
+            # Create a list of commands to perform the flash
+            commands_str = r'''
+            reset halt
+            poll
+            flash probe 0
+            flash protect 0 0 %s off
+            flash erase_sector 0 0 %s
+            flash write_image "%s"
+            flash protect 0 0 %s on
+            soft_reset_halt
+            ''' % (sector, sector, flash_prog, sector)
+
+            # Break the commands_str into a list of separate commands and
+            # and feed them one by one into the openocd telnet connection
+            commands = commands_str.split('\n')
+            op = ''
+            for cmd in commands:
+                cmd = cmd.strip()
+                if len(cmd) > 0:
+                    pr( cmd )
+                    op += self.send_telnet_command(cmd)
+
+        return op
+
+    #---------------------------------------------------------------------------
     def send_telnet_command(self, cmd):
         '''Sends a command to the telnet session and waits for a response
         @param cmd: command line to be sent, (no \n need, added in this func)
@@ -292,13 +325,14 @@ class find_stlink( object ):
 
         try:
             self.telnet_session.write(cmd)
-#            time.sleep(0.001)
             op = self.telnet_session.read_until( '>', 1 )
         except EOFError:
             op = None
         except AttributeError:
             op = None
 
+        # Remove the trailing space characters and the '>'
+        op = re.sub(r'\S*>\S*$', '', op)
         return op
 
     #-----------------------------------------------------------------------------------------
@@ -327,15 +361,19 @@ class find_stlink( object ):
     def kill_openocd_session(self):
         '''Tries to kill an openocd process'''
 
+        pr( '(kill_openocd_session) trying to kill openocd' )
         if self.openocd_popen and not self.openocd_popen.poll():
             self.openocd_popen.kill()
             self.openocd_popen = None
+            pr( '(kill_openocd_session) killed openocd' )
 
     #-----------------------------------------------------------------------------------------
     def close_telnet_session(self):
         '''Tries to kill the running telnet session'''
 
         if self.telnet_session:
+            self.send_telnet_command('exit')
+            pr('closing telnet session: %s' % self.telnet_session)
             self.telnet_session.close()
             self.telnet_session = None
 
@@ -343,7 +381,6 @@ class find_stlink( object ):
 
     #-----------------------------------------------------------------------------------------
     def find_openocd_config(self, config):
-    
     
         cmd = self.openocd_exe
         cmd_opts = r'-f "%s" -c "shutdown"' % config 
@@ -395,7 +432,7 @@ class find_stlink( object ):
         PORT = 4444
         telnet = telnetlib.Telnet(HOST,PORT)
 
-#        pr('started telnet session: %s' % telnet)
+        pr('started telnet session: %s' % telnet)
         op = telnet.read_until( '>' )
 
 #         telnet.write('mdb 0x20000000 256\n')
