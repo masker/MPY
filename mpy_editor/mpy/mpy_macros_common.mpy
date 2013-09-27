@@ -87,12 +87,12 @@ macro( _dirinp1(portpin),  'resetbit(P1DIR, portpin); resetbit(P1SEL,portpin); r
 macro( _dirinp2(portpin),  'resetbit(P2DIR, portpin); resetbit(P2SEL,portpin); resetbit(P2REN,portpin)' )
 
 macro( dirinpd(portpin),    'if(portpin<0x20): _dirinpd1(portpin) else: _dirinpd2(portpin)' )
-macro( _dirinpd1(portpin),  'resetbit(P1DIR, portpin); setbit(P1REN,portpin);   resetbit(P1OUT, portpin)')
-macro( _dirinpd2(portpin),  'resetbit(P2DIR, portpin); setbit(P2REN,portpin);   resetbit(P2OUT, portpin)')
+macro( _dirinpd1(portpin),  'resetbit(P1DIR, portpin); resetbit(P1SEL,portpin); setbit(P1REN,portpin);   resetbit(P1OUT, portpin)')
+macro( _dirinpd2(portpin),  'resetbit(P2DIR, portpin); resetbit(P2SEL,portpin); setbit(P2REN,portpin);   resetbit(P2OUT, portpin)')
 
 macro( dirinpu(portpin),    'if(portpin<0x20): _dirinpu1(portpin) else: _dirinpu2(portpin)' )
-macro( _dirinpu1(portpin),  'resetbit(P1DIR, portpin); setbit(P1REN,portpin);   setbit(P1OUT, portpin)')
-macro( _dirinpu2(portpin),  'resetbit(P2DIR, portpin); setbit(P2REN,portpin);   setbit(P2OUT, portpin)')
+macro( _dirinpu1(portpin),  'resetbit(P1DIR, portpin); resetbit(P1SEL,portpin); setbit(P1REN,portpin);   setbit(P1OUT, portpin)')
+macro( _dirinpu2(portpin),  'resetbit(P2DIR, portpin); resetbit(P2SEL,portpin); setbit(P2REN,portpin);   setbit(P2OUT, portpin)')
 
 macro( dirsel(portpin),  'if(portpin<0x20): _dirsel1(portpin) else: _dirsel2(portpin)' )
 macro( _dirsel1(portpin),  'setbit(P1SEL,portpin)'  )

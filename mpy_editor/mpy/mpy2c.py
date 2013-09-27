@@ -1235,7 +1235,9 @@ void main (void) {
     P2DIR = 0;
     P2REN = 0xFF;
     P2OUT = 0;
-   
+    P1SEL = 0;
+    P2SEL = 0;
+
 '''    
                 opn.append(t)
                 

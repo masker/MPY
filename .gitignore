@@ -13,6 +13,7 @@ www.mpyprojects.com/*
 *.o
 mpy_examples/*.c
 *.map
+mpy_play/
 
 #################
 ## Eclipse
