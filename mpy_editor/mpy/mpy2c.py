@@ -408,10 +408,7 @@ class mpy2c( object ):
             # inside a quoted string, in which case we should ignore it. 
             
             if re.findall(r'^\s*(\S*print)[\s|\(]',line):
-#            if re.match(r'^\s*print[(|\s]', line):
-#                print '(replace_print) found print line = ', line
                 (blanked_line, quoted_strings) = self.blank_strings_and_comments(line)
-#                print '(replace_print) blanked_line = ', blanked_line, quoted_strings
                 cmds = blanked_line.split(';')
                 new_cmds = []
                 for cmd in cmds:
@@ -435,11 +432,9 @@ class mpy2c( object ):
                         else:
                             fnd_function = False
                             
-                            
                         pars = cmd.split(',')
-#                        print '(replace_print) pars=', pars
-                        
-                        # Change the command from 'print' to 'print___mpy__' 
+
+                        # Change the command from 'print' to 'print___mpy__'
                         if fnd_function:
                             pars[0] = re.sub('\S*print', 'print__mpy__', pars[0])
                         else:
@@ -469,9 +464,7 @@ class mpy2c( object ):
                                 do_nl = False
                             else:
                                 do_nl = True
-                         
-#                        print '(replace_print) found print   fnd_function=', fnd_function, '  do_nl=', do_nl
-                        
+
                         # Add newline if needed to last pars
                         # but be careful if it is a function to add it before the last ')'
                         if do_nl:
@@ -484,16 +477,12 @@ class mpy2c( object ):
                         if not fnd_function:
                             pars[-1] += ' )'
 
-#                       print '(replace_print) new pars=', pars
-                        
-                           
                         new_cmd = ','.join(pars)
                         
                     new_cmds.append(new_cmd)
                 
                 blanked_line = ';'.join(new_cmds)
                 new_line = self.reinsert_strings_and_comments(blanked_line, quoted_strings)
-#                print '(replace_print) reinserted line = ', new_line
             new_lines.append(new_line)
             
 
@@ -1162,7 +1151,7 @@ class mpy2c( object ):
         
 
         if replace_state != 'done':
-            print '*** ERROR *** (mpy2c failed) Cannot identify MSP430 chip'
+            print '*** ERROR *** (mpy2c failed) Cannot identify microcontroller chip'
 
         print '%s  %s' % ( '@@MMCU@@:', self.micro_name )
 
@@ -1184,12 +1173,7 @@ class mpy2c( object ):
             # main function definition. (but make sure it is not at the end of the
             # file)
             
-#             if found:
-#                 main_insert_idx = idx
-#                 main_insert_tok = t[:]
-#                 found = None
 
-                
             if t[5] in ['body_end', 'define_micro_end'] and idx < len(self.op) - 5:
                 main_insert_idx = idx
                 main_insert_tok = t[:]

@@ -7,9 +7,7 @@
 # 
 ######################################################################
 
-
-define_micro('msp430g2231')
-
-print( 'Hello World\n')    # Prints to the Launchpad PIN2 (P1_1 TXD)
+while 1:
+    print( 'Hello World')    # Prints to the Launchpad PIN2 (P1_1 TXD)
 
 

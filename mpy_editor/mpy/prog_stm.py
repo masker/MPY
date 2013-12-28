@@ -286,22 +286,6 @@ if 1:
         micro.close_telnet_session()
 
 
-#         if not re.search("Done, \d+ bytes total",op):   # v0.20
-#             print '\n\n    *** (mspdebug FAILED) ***\n'
-#
-#             status == 'failed mspdebug'
-#
-#             if re.search("unable to find a device matching",op):
-#                 print '*** ERROR *** Launchpad not connected, or driver not installed (click Install Launchpad Driver, or run mpy_driver_install.exe)'
-#             elif re.search('Could not find device',op):
-#                 print '*** ERROR *** MSP430 chip could not be found, make sure msp430 is plugged into socket and that it is the correct way round\n'
-#             else:
-#                 print op
-#         else:
-#             print '(mspdebug passed)   ',
-#             num_bytes = re.findall('(\d+ bytes total)', op)
-#             print num_bytes[0], 'to ', chip_id
-
 else:    
     print '*** ERROR *** open and select the .mpy file to be programmed'
     status = 'no file'
