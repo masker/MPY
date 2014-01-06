@@ -1,6 +1,6 @@
 
 
-define_micro('msp430g2553')
+####define_micro('msp430g2553')
 
 
 macro( 'M1CE_HIGH',   'P1OUT |=  BIT3' )
@@ -93,17 +93,17 @@ def stop():
 	TURN_MOTORIN_LOW
 
 def backward():
-	stop()
-  	WALK_MOTORCE_HIGH
+        stop()
+        WALK_MOTORCE_HIGH
     
 def forward():
-	stop()
-	WALK_MOTORCE_HIGH
-	WALK_MOTORIN_HIGH
+        stop()
+        WALK_MOTORCE_HIGH
+        WALK_MOTORIN_HIGH
 
 def turn_right():
-	stop()
-  	TURN_MOTORCE_HIGH
+        stop()
+        TURN_MOTORCE_HIGH
 
 def turn_left():
 	stop()

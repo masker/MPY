@@ -14,13 +14,13 @@
 #     GNU General Public License for more details.
 # 
 #     You should have received a copy of the GNU General Public License
-#     along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
+#     along with mpyEditor.  If not, see <http://www.gnu.org/licenses/>.
 #
 #     (C) Copyright 2013 Mike Asker    mike.asker@gmail.com
 #
 ###########################################################################
 #
-#   mpyfunctions.c
+#   mpy_functions.c
 #   
 #   This file is a collection of general purpose hardware functions for
 #   controlling MSP430 peripherals using the MPY Editor and MPY Language

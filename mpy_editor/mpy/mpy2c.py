@@ -77,6 +77,7 @@ class mpy2c( object ):
         # this is most easily done before we pass the code to the ast parser
         code = self.replace_print( code ) 
 
+
         if full_conversion:
             self.micro_name = chip_id   
             
@@ -128,17 +129,18 @@ class mpy2c( object ):
         self.walk_node( None, self.code_ast, None, None, None, None, 'TOP', filename=filename)  
                 
 
-        if full_conversion:         
+        if full_conversion:
             self.reorder_functions()
-           
+
         self.convert_for_statements()
         # Look for the print statements and convert them into the variable argument format that is
         # compatible with C
         if full_conversion:
-           self.convert_print_statements()
+            self.convert_print_statements()
 
         self.remove_last_commas()
-        
+
+
         # now process the macros (only do this once on the main code)
         if full_conversion:
             self.replace_define_micro()
@@ -147,7 +149,6 @@ class mpy2c( object ):
             
             self.remove_includes()
 
-            
             # Do an in-line replacement for the 'macro' statements (the mpy #define function)
             self.get_macros()
             self.add_mpy_macros()  # add macros for OUT IN etc
@@ -172,11 +173,8 @@ class mpy2c( object ):
                 print "  endless macro loop detected, last macro = '%s'" % (last_replace)
             
 
-
-                
             self.add_variable_definitions()
 
-            
             self.process_interrupt_functions()
             
         if debug:
@@ -565,7 +563,7 @@ class mpy2c( object ):
     def add_element(self, optxt, vartf=None):
     
         #                 text   variable  scope  level, linenum
-        
+
         self.op.append( [ optxt , vartf,   self.scope, self.level, self.current_lineno, None, self.indent, self.current_node_name, self.filename ])
      
     ########################################################################
@@ -675,83 +673,126 @@ class mpy2c( object ):
 
         self.tok_num = len(self.op)
 
+
     ########################################################################    
     def add_variable_definitions(self):
-    
-        # go through all the toks and build a dict of variables
-        
-        
-        self.var_d = {}
-        in_args = False
-        
-        # Look for all elements where the vardef is True
-        # and add the element text to the var_d dict
-        for t in self.op:
+        '''This function is responsible for determining the type of all the
+        variables in the code and adding the type declaration into the self.op
+        '''
 
-            scope = t[2]
-            if t[5] == 'func_args_start':
-                in_args = True
-            if t[5] == 'func_args_end':
-                in_args = False
+        # Find all the assigned-to variables, and add them into dict self.var_d
+        self.add_var_info()
 
-            if t[1] == True:
-                if scope not in self.var_d:
-                    self.var_d[scope] = {}
-                    
-                
-                # Add the variable to the var_d dict, but not if 
-                #   the variable is in the standard variable list, or
-                #   the vartable is an argument of a function
-                if t[0] not in self.standard_var_list:
-                    # Also test whether this vairiable is in the global_var list for this scop. If it is do not add it.
-                    if scope not in self.global_vars or t[0] not in self.global_vars[scope]:
-                        # to start lets assume that 'all' variables are int's
-                        # this will be upgraded later to add strings and lists (hopefully)
-                        #                             typename  done_flag
-                        if self.is_var_num_str( t[0] ) == 'variable':
-                            self.var_d[scope][ t[0] ]  = [ 'int',    None ]
+        # Find all function calls and add them into dict self.call_d
+        self.add_call_info()
 
-            # add the function arguments as variables to be declared
-            if in_args == True:
-                if scope not in self.var_d:
-                    self.var_d[scope] = {}
-                if t[0] not in self.standard_var_list:
-                    if self.is_var_num_str( t[0] ) == 'variable':
-                        self.var_d[scope][ t[0] ]  = [ 'int',    None ]
-                        t[1] = True
-                
-        opn = []
-        
-        
-        # Add any global variable definition to the __top_level__ (if they are not already present)
-#        print '(add_variable_definitions) global_vars=', self.global_vars
-        for k in self.global_vars:
-            gvl = self.global_vars[k]
-            if len(gvl) > 0:
-                for gv in gvl:
-                     scope = 'main'
-                     if scope not in self.var_d:
-                         self.var_d[scope] = {}
-                     if gv not in self.var_d[scope]:
-                         self.var_d[scope][ gv ]  = [ 'int',    None ]
-        
-        
+
         if debug:
-            print 'var_d 1 =', self.var_d
-            
+            print 'VAR_D START'
+            for dbgscope in self.var_d:
+                print '   scope ', dbgscope
+                for dbgvar in self.var_d[ dbgscope ]:
+                          print   '             ',  self.var_d[ dbgscope ][dbgvar]
+            print 'global_vars=', self.global_vars
         
-        
-            
-            
-        # Go through the variables and change the types to be either 'int'  'char'  or 'int []'     
-        
-        self.change_variable_types()
-        
-                
-        # Then add the variable declaration to the body_start or to the function definition arguments
+        # Go through the assigned variables and find all the dependencies
+        # and add them to self.var_d as a list.
+        # Also get the types (int, str, float, list etc) of those dependencies
+        self.find_variable_dependencies()
+
+        # Update the var_d type info for assigned variables and dependencies
+        # run this itteratively to propagate the definitions when there are multiple
+        # chained assignments
+        undefined_count = 1
+        i = 0
+        while undefined_count > 0 and i < 30:
+            undefined_count, update_count = self.update_variable_types_from_dependencies()
+            self.update_dependency_types_from_variables()
+            self.update_param_types_from_call_info()
+            if debug:
+                print 'UPDATING VARIABLE TYPES undefined_count, update_count', i, undefined_count, update_count
+            i += 1
+
+        # Find any remaining undefined variable types and print out error message
+        if  undefined_count > 0:
+            self.update_variable_types_from_dependencies( write_undefined_errors=True)
+
+
+        self.add_const_info()
+
+        # Add the type decalarations into the output buffer self.op
+        self.add_typ_decalarions()
+
+
+        if debug:
+            print 'VAR_D END'
+            for dbgscope in self.var_d:
+                print '   scope ', dbgscope
+                for dbgvar in self.var_d[ dbgscope ]:
+                          dv =  self.var_d[ dbgscope ][dbgvar]
+                          print   '             ',  dbgvar, dv[:4] , dv[5:]
+                          for dbgdep in dv[4]:
+                              print   '                  ',  dbgdep
+
+    ############################################################################
+    def add_const_info(self):
+        '''Add const flag in the self.var_d for all variables that
+            are only assigned once and are assigned an absolute value
+        '''
+
+        for scope in self.var_d:
+            for var in self.var_d[scope]:
+                info =  self.var_d[scope][var]
+                const = None
+
+                # If it is only assigned to once and not a globally declared variable
+                if info[2] == 1 and \
+                   not self.is_global_var(var)   and \
+                   not self.is_augmented_assign(scope,var):
+                    # look at all the dependencies
+                    deps = info[4]
+
+                    const = 'const'
+                    for dep in deps:
+                        if dep[1] != 'abs':
+                            const = None
+                    if len(deps) == 0:
+                        const = None
+                info[3] = const
+
+
+    ############################################################################
+    def is_augmented_assign(self, scope, var):
+        '''Determine if the assignment of variable var is an augmented assinment
+        '''
+
+        if scope in self.var_assigns and var in self.var_assigns[scope]:
+            i = 0
+            for tok in self.var_assigns[scope][var][0]:
+                if tok[0] == '':
+                    continue
+                if i == 1:
+                    if tok[0] == '=':
+                        return False
+                    elif len(tok[0])==2 and tok[0][1]== '=':
+                        return True
+                    else:
+                        return None
+                i += 1
+
+
+
+    ############################################################################
+    def add_typ_decalarions(self):
+        '''Using the self.var_d info add the typ decalration into the self.op
+        '''
+
+        # Add the variable declaration to the body_start or to the function definition arguments
+        opn = []
         in_funct_def = False
+        typ = None
+        do_op = True
         for t in self.op:
-        
             if t[5] == 'func_args_start':
                 in_funct_def = True
             if t[5] == 'func_args_end':
@@ -763,95 +804,704 @@ class mpy2c( object ):
                 # check the token v is not a function definition name and check that it has not been done already
                 if v not in self.var_d and self.var_d[scope][v][1] == None:
                     typ = self.var_d[scope][v][0]
+                    if typ in [None, 'None']:
+                        typ = 'int'
                     tv = t[:]
                     tv[0] = '%s ' % typ
-                    tv[1] = False
+                    tv[1] = None
                     opn.append(tv)
                     self.var_d[scope][v][1] = 'done'
-        
-            opn.append(t)
+
+            # Add the variable type declaration
+            if not in_funct_def and t[1]:
+
+                v = t[0]
+
+                # update the scope imediately when the scope and the variable are
+                # the same name, (this happens when we are doing the function name definition)
+                if v == t[2]:
+                   scope = t[2]
+
+                #
+                # Check the token v
+                #    it exists in self.var_d
+                #    is not declared as a global by some function
+                #    check that it has not been done already
+                #    check the variable is not the keyword 'return'
+#                if not self.is_global_var(v) and v not in self.var_d and self.var_d[scope][v][1] == None and v != 'return':
+                if   scope in self.var_d             and \
+                     v in self.var_d[scope]          and \
+                     not self.is_global_var(v)       and \
+                     self.var_d[scope][v][1] == None and \
+                     v != 'return':
+
+                    # All consts are declared and intitialized at the start of the
+                    # block. Therefore we need to remove the const assignment from
+                    # the body of the block
+                    if self.var_d[scope][v][3] == 'const':
+                       if 1 or scope in ['__top_level__', 'main']:
+                            do_op = False
+                       else:
+                          tv = t[:]
+                          tv[0] = 'const'
+                          tv[5] = 'var_const'
+                          if do_op:
+                              opn.append(tv)
+
+
+                    # If we are doing the function name definition then
+                    # substitute the type of its return statment
+                    if v == scope:
+                        scope = t[2]
+                        if 'return' in  self.var_d[scope]:
+                            v = 'return'
+
+                    typ = self.var_d[scope][v][0]
+                    if typ == 'str':
+                        typ = 'char'
+                    if typ in [None, 'None']:
+                        typ = 'int'
+                    tv = t[:]
+                    tv[0] = '%s ' % typ
+                    tv[1] = None
+                    if do_op:
+                        opn.append(tv)
+                    self.var_d[scope][v][1] = 'done'
+
+
+            if do_op:
+                opn.append(t)
+
+                # place an [] after the declaring a char string
+                if typ == 'char':
+                    tv = tv[:]
+                    tv[0] = '[]'
+                    opn.append(tv)
+                    typ = None
+
+            # re-enable the output when we get to the end of an assignment line
+            if not do_op and t[0] in [';','{']:
+                do_op = True
+
             scope = t[2]
 #            if t[5] == 'body_start':
             # Add the variable declarations at the start of each function definition
             # but if we are in the the top_level do the  main then add the main variables as globals
             # in the __top_level__ at the define_micro_end position
-            if t[5] == 'body_start'       and scope != '__top_level__' and scope != 'main' or \
-               t[5] == 'define_micro_end' and scope == '__top_level__' :
+            if (t[5] == 'body_start'       and scope != '__top_level__' and scope != 'main') or \
+               (t[5] == 'define_micro_end' and scope == '__top_level__' ):
                 scope = t[2]
-                
+
                 # pretend we are in the main scope when we are actually in the top_level
-                if t[5] == 'define_micro_end' and scope == '__top_level__' : 
+                if t[5] == 'define_micro_end' and scope == '__top_level__' :
                     scope = 'main'
-                    t_newline  = t[:]                  
-                    t_newline[6] = 0                
+                    t_newline  = t[:]
+                    t_newline[6] = 0
                     t_newline[0] = '\n'
                     t_newline[5] = ''
                     opn.append(t_newline)
-                    
+
                 if debug:
                     print 'found body_start for ', scope, ' on line ', t[4]
                 if scope in self.var_d:
                     for v in self.var_d[scope]:
-                    
-                        # Skip this variable definition if a global ('main') variable of 
+
+                        # Skip this variable definition if a global ('main') variable of
                         # the same name has been defined in this function scope
                         if scope != 'main'           and \
                            'main' in self.var_d      and \
                            v in  self.var_d['main']  and \
                           (scope in self.global_vars and v in self.global_vars[scope]):
-                            continue         
-                       
-                    
+                            continue
+
+
                         typ = self.var_d[scope][v][0]
-                        # check the token v is not a function definition name and check that it has not been done already
+                        if  self.var_d[scope][v][5] and len(self.var_d[scope][v][5]) >= 8:
+                            tlnum = self.var_d[scope][v][5][4]
+                            tfilename = self.var_d[scope][v][5][8]
+                        else:
+                            tlnum = ''
+                            tfilename = 0
+
+                        if typ in [None, 'None']:
+                            typ = 'int'
+                        # Check the token v is not a function definition name and check that it has not been done already
                         if v not in self.var_d and self.var_d[scope][v][1] == None:
                             if debug:
-                                  print '  adding var definition for ', v 
-                            tv = t[:]
-                            tv[0] = '%s' % ( typ)
-                            tv[5] = 'var_type'
-                            opn.append(tv)
-                            tv = t[:]
-                            tv[0] = '%s' % (v)
-                            tv[5] = 'var_def'
-                            opn.append(tv)
-                            tv = t[:]
-                            tv[0] = ';'
-                            tv[5] = None
-                            opn.append(tv)                            
-                            self.var_d[scope][v][1] = 'done'
+                                  print '  adding var definition for ', scope, v, self.var_d[scope][v]
+
+                            # If this variable is identified as a const (one assignment from an abs value)
+                            # may declare it as a 'const' to save memory
+
+                            # However we have to assign the value when we declare it
+                            # therfore we need to use the assignment from self.var_assign
+                            # And when we find the assignment in the main block we
+                            # need to remove it.
+                            if self.var_d[scope][v][3] == 'const':
+
+                                if v in self.var_assigns[scope] and len(self.var_assigns[scope][v])>=1:
+                                   tv = t[:]
+                                   tv[0] = 'const'
+                                   tv[1] = None
+                                   tv[5] = 'var_const'
+                                   opn.append(tv)
+                                   tv = t[:]
+                                   tv[0] = '%s' % ( typ)
+                                   tv[1] = None
+                                   tv[5] = 'var_type'
+                                   opn.append(tv)
+                                   # write out the constant definition from var_assign
+                                   for tok in self.var_assigns[scope][v][0]:
+                                       opn.append(tok)
+                                   tv = tok[:]
+                                   tv[0] = ';'
+                                   tv[1] = None
+                                   tv[5] = None
+                                   opn.append(tv)
+#                                   self.var_d[scope][v][1] = 'done'
+                            else:
+                                tv = t[:]
+                                tv[0] = '%s' % ( typ)
+                                tv[1] = None
+                                tv[5] = 'var_type'
+                                opn.append(tv)
+                                tv = t[:]
+                                tv[0] = '%s' % (v)
+                                tv[1] = None
+                                tv[5] = 'var_def'
+                                tv[4] = tlnum
+                                tv[8] = tfilename
+                                opn.append(tv)
+                                tv = t[:]
+                                tv[0] = ';\n'
+                                tv[1] = None
+                                tv[5] = None
+                                opn.append(tv)
+                                self.var_d[scope][v][1] = 'done'
 
                 # pretend we are in the main scope when we are actually in the top_level
-                if t[5] == 'define_micro_end' and scope == 'main' : 
+                if t[5] == 'define_micro_end' and scope == 'main' :
                     opn.append(t_newline)
 
         self.op = opn
-        
+
+
+    ############################################################################
+    def add_var_info(self):
+        '''Go through all the self.op buffer looking for any
+        assigned variables, and add them into self.var_d
+
+        Also find any variables that are defined as a 'global' and add those
+        into self.var_d also
+        '''
+
+        # Look for all elements where the vardef is True
+        # and add the element text to the var_d dict
+        self.var_d = {}
+        in_args = False
+        in_fundef = False
+        for t in self.op:
+
+            scope = t[2]
+            if t[5] == 'FunctionDef':
+                in_fundef = True
+            if t[5] == 'func_args_start':
+                in_args = True
+                in_fundef = False
+                arg_position = 1
+            if t[5] == 'func_args_end':
+                in_args = False
+
+            if t[1] == True:
+                if scope not in self.var_d:
+                    self.var_d[scope] = {}
+
+
+                # Add the variable to the var_d dict, but not if
+                #   the variable is in the standard variable list, or
+                #   the vartable is an argument of a function
+                if t[0] not in self.standard_var_list:
+                    # Also test whether this vairiable is in the global_var list for this scop. If it is do not add it.
+                    if scope not in self.global_vars or t[0] not in self.global_vars[scope]:
+                        # to start lets assume that 'all' variables are int's
+                        # this will be upgraded later to add strings and lists (hopefully)
+                        #                             typename  done_flag
+                        if self.is_var_num_str( t[0] ) == 'variable':
+                            self.add_var_d( scope, t[0], t, 0 )
+
+            # Add the function arguments as variables to be declared
+            if in_args == True:
+                if scope not in self.var_d:
+                    self.var_d[scope] = {}
+                if t[0] not in self.standard_var_list:
+                    if self.is_var_num_str( t[0] ) == 'variable':
+                        self.add_var_d( scope, t[0], t, arg_position )
+                        arg_position += 1
+                        t[1] = True
+
+            # Add the function name itself as a variable
+            if in_fundef == True and t[1] == False:
+                if t[0] == scope:
+                   self.add_var_d( 'main', t[0],  t, 0 )
+
+
+
+
+        # Add any global variable definition to the __top_level__ (if they are not already present)
+#        print '(add_variable_definitions) global_vars=', self.global_vars
+        for k in self.global_vars:
+            gvl = self.global_vars[k]
+            if len(gvl) > 0:
+                for gv in gvl:
+                     scope = 'main'
+                     if scope not in self.var_d:
+                         self.var_d[scope] = {}
+                     if gv not in self.var_d[scope]:
+                        self.add_var_d( scope, gv,  None, 0 )
+
+
+    ############################################################################
+    def add_var_d( self, scope, varname, tok, arg_position, const_type=None ):
+        '''Add a varaible to the var_d dict
+        and increment the use count by one
+        '''
+
+        vartype = '--?--'
+
+        if scope not in  self.var_d:
+            self.var_d[scope] = {}
+
+        if  varname not in  self.var_d[scope]:
+            #                                 type        Done  Count, Const, Dependency list
+            self.var_d[scope][ varname ]  = [ vartype,    None, 1, const_type, [], tok, arg_position ]
+        else:
+            vari = self.var_d[scope][ varname ]
+            vari[2] += 1
+            if const_type != None:
+                vari[3] = const_type
+            self.var_d[scope][ varname ] = vari
+
+    ########################################################################
+    def add_call_info(self):
+        '''creates dict of calls - self.call_d
+        For every call found in the source create an entry containing the
+
+           scope
+           line_number
+           paramter_list
+
+        paramter_list is an
+        an ordered list of the parameters, each parameter in turn is a list of
+        elements that make up the paramter
+        '''
+
+        self.call_d = {}
+
+
+
+
+        # Look for all Calls and build a call dict
+        self.call_d = {}
+        in_args = False
+        for t in self.op:
+
+            scope = t[2]
+            if t[5] == 'Call':
+                in_args = True
+                arg_position = 0
+            if t[5] == 'Call_end':
+                in_args = False
+
+                clist[2] = elist
+                self.call_d[callname].append(clist)
+
+            if t[5] == 'arg_start':
+                arg_position += 1
+
+
+            if in_args and t[1] == False:
+
+                if arg_position == 0:
+                   callname = t[0]
+                   scope    = t[2]
+                   if callname not in self.call_d:
+                        self.call_d[callname] = []
+
+                   clist = [ scope, t, [] ]
+                   elist = []
+                else:   # for the next arguments
+                   element = t[0]
+                   tok     = t
+                   typ = None
+                   var_func_absvalue, typ, local_global  =  self.get_typ_info( element, scope, t[7] )
+                   elist.append( [ element, arg_position, typ, var_func_absvalue, local_global, tok ] )
+
         if debug:
-            print 'var_d=', self.var_d
+            print 'CALL_D='
+            for callname in self.call_d:
+                 print '  ',  callname,  self.call_d[callname]
+                 for  clist in self.call_d[callname]:
+
+                      print '      ', len(clist), clist[:2]
+                      elist = clist[2]
+                      for ele in elist:
+                          print '               ', ele
+
+    ########################################################################
+    def is_global_var(self, var):
+        '''Check to see if this var is a global var,
+        returns
+           scopes: list containing all scopes where this var is defined as a global
+        '''
+
+        scope_list = []
+        for scope in self.global_vars:
+            if var in self.global_vars[scope]:
+                scope_list.append(var)
+
+        return scope_list
+
+
+    ########################################################################
+    def find_variable_dependencies(self):
+        '''Go thru all the self.op buffer looking at each variable assignment
+        and add a list of dependencies for each varaible found in
+        self.var_d[scoep[varname]
+        Also create a separate var_assign[scope][varname] list of the assignment commands.
+        This is done so that we can relocate the const decalarations assignments
+        at the beginning of the __top_level__
+        '''
+
+        self.var_assigns = {}
+        # Look for all elements where the vardef is True
+        # and add the element text to the var_d dict
+        in_assign = False
+        assign_start = False
+        for t in self.op:
+
+             if t[1] == True:
+                varname = t[0]
+                scope   = t[2]
+                # Get the variable definition in the local scope
+                # if not found use the global definition
+                if varname in  self.var_d[scope]:
+                    vardef  =  self.var_d[scope][varname]
+                else:
+                    vardef  =  self.var_d['main'][varname]
+                in_assign = True
+                assign_start = True     # used to increment an assingment counter within the add_dependency_info()
+                assign_toks = []
+             if in_assign and t[0] in [';','{']:
+                 if scope not in self.var_assigns:
+                      self.var_assigns[scope] = {}
+                 if varname not in self.var_assigns[scope]:
+                      self.var_assigns[scope][varname] = []
+                 self.var_assigns[scope][varname].append(assign_toks)
+                 in_assign = False
+                 varname = None
+                 scope   = None
+
+             # If we are in an assignment
+             # build a list of dependency elements for this assignment
+             # save the
+             #    element name,
+             #    whether it is a variable, funct, or absolute value,
+             #    type of the element (variable, number, float, string, list)
+             #    scope ( this function, or global)
+             if in_assign:
+                if t[1] == False  and t[0] != '':
+                    #                                 type        Done  Count, Const, Dependency list
+                    #self.var_d[scope][ varname ]  = [ vartype,    None, 1, const_type, [] ]
+                    self.add_dependency_info( scope, varname, t[0], t[7], assign_start )
+                    assign_start = False
+                assign_toks.append(t)
+
+    ########################################################################
+    def add_dependency_info(self, scope, varname, dependency, node_name, assign_start):
+        '''Add info for a dependency to the assigned variable in the
+        #                                 type        Done  Count, Const, Dependency list
+        #self.var_d[scope][ varname ]  = [ vartype,    None, 1, const_type, [] ]
+
+        Dependency_list = [ dependency,  var_funct_absvalue, type, local_global ]
+        '''
+
+        # Get the variable definition in the local scope
+        # if not found use the global definition
+        if varname in  self.var_d[scope]:
+            vardef  =  self.var_d[scope][varname]
+        else:
+            vardef  =  self.var_d['main'][varname]
+
+        deps   = vardef[4]
+        if len(deps) == 0:
+            assign_count = 0
+        else:
+            # use the same count as the last assignment element, unless its the start of a new assignment
+            assign_count = deps[-1][4]
+            if assign_start:
+                assign_count += 1
+
+        var_func_absvalue, typ, local_global  =  self.get_typ_info( dependency, scope, node_name )
+
+
+        deps.append( [dependency,  var_func_absvalue, typ, local_global, assign_count] )
 
 
 
-    ########################################################################    
-    def change_variable_types(self):
-        '''Go thru all the var_d lists and redefine the type depending on the 
+    ########################################################################
+    def get_typ_info( self, element, scope, node_name ):
+        '''Determine the type of an element, based on the node_name data'''
+
+        local_global = None
+        typ = node_name
+        var_func_absvalue  = 'abs'
+
+        # If we have a node_name of str this could be an actual string value
+        # or it could be then name of a variable or function call.
+        # a string would be enclosed with ", if it isn't then we have
+        # a varaible or a function
+
+        if scope in self.var_d and node_name == 'str' and element[0] != '"':
+            if element in self.var_d[scope]:
+                var_func_absvalue = 'var'
+                local_global = scope
+                typ = None
+            elif element in self.var_d['main']:
+                var_func_absvalue = 'var'
+                local_global = 'main'
+                typ = None
+
+            # If it didn't match any variables
+            # look for a function (func_local or func_extern)
+            # Function names are defined as variables in the
+            # scope of the function
+            if local_global == None :
+                if element in self.var_d:
+                    var_func_absvalue = 'func'
+                    local_global = element
+                    typ = None
+                else:
+                    # external functions default to ints! NEEDS TO BE UPDATED!!! TBD
+                    var_func_absvalue = 'func_extern'
+                    typ = 'int'
+
+
+
+        return var_func_absvalue, typ, local_global
+
+    ########################################################################
+    def update_variable_types_from_dependencies(self, write_undefined_errors=False):
+        '''Go thru all the var_d lists and redefine the type depending on the
         tokens that follow.
-        If we see a " after the = , as in a = 'qwerty', then it is definitly a string type.
-        If we see a [ after the = , as in b = [ 1,2,3,4]' , then it is definitly a list of ints type.
-        Else we leave it as an int type (but may have to change as it might be a pointer to string or list.
-        
-        We then have to go through the remainder of the statement to find the size
-        of the string or list.
-        
-        After that we need to build a tree of variables whose types are
-        ''' 
+        '''
 
         
         # Look for all elements where the vardef is True
         # and add the element text to the var_d dict
-        for t in self.op:
-             pass
-        
+
+        # go through all the var_d variables and determine the type of the
+        # variable based on the dependency types
+        # if they are all defined and all the same then the variable is the
+        # same as its dependency types
+
+        #                                   type        Done  Count, Const,     Dependency list
+        # self.var_d[scope][ varname ]  = [ vartype,    None,     1, const_type, [deps] ]
+        # dep = [dependency,  var_func_absvalue, typ, local_global ]
+
+        undefined_count = 0
+        updated_count = 0
+        for scope in self.var_d:
+            for var in self.var_d[scope]:
+                deps =  self.var_d[scope][var][4]
+                typ = self.var_d[scope][var][0]
+
+                # The starting off type name is '--?--' (this is for debug
+                # purposes so that it is easily recognized if we miss any
+                # Make it a None to start with
+                if typ == '--?--':
+                    typ = None
+
+                # If the variable name is the same as the scope name then
+                # we are trying to determine the return type for the function
+                # in this case use the type for the 'return' variable
+                if var == scope:
+                    if 'return' in self.var_d[scope]:
+                        typ =  self.var_d[scope]['return'][0]
+                        if typ in [None, 'None']:
+                            typ = 'void'
+                    else:
+                        # clear the typ for functions which don't have a return
+                        # this is so that an interrupt function definition
+                        # does not get an illegal void definition
+                        typ = ''
+
+
+
+
+                # Work out what it is by looking at all the assignments and what the
+                # types are for each of the elements in the RHS assignment values
+                if var != scope:
+                    undefined_count += 1
+                    defd = True
+
+                    # At the end we must print out any undefined variables as
+                    # errors (there should not be any undefined vars)
+                    if write_undefined_errors and typ == None:
+                        # If this scope has not been called (redundant code)
+                        # then dont bother writing out an error (but not if its 'main' though)
+                        if scope == 'main' or scope in self.call_d:
+                            print '*** error *** Undefined variable %s in %s' % (var, scope)
+                            print '*** error *** ', self.var_d[scope][var]
+                            py_file = self.var_d[scope][var][5][8]
+                            py_linenum = self.var_d[scope][var][5][4]
+                            print '*** error *** File "%s", line %s ' % (py_file, py_linenum)
+
+                    # Find the number of assigns we have for this variable
+                    if len(deps) > 0:
+                       nassigns = deps[-1][4] +1
+                    else:
+                       nassigns = 0
+                    for asn in range(nassigns):
+                        for dep in deps:
+                            if dep[4] == asn:
+                                # If the dep var name is the same as the assign var name
+                                # skip the test and continue onto the next dep
+                                if dep[0] == var:
+                                    continue
+                                # If any dep type is not defined then the result is not
+                                # defined also and exit the loop
+                                if dep[2] == None:
+                                    defd = False
+                                    typ = None
+                                    break
+                                # If the current type for the var is none and the dep
+                                # var is set then, set the var to the dep type
+                                if typ == None:
+                                    typ = dep[2]
+                                # If any dep type is different to the previous dep type
+                                # promote to float if we have an int and a float or else
+                                # then exit the loop with None type
+                                if dep[2] != typ:
+                                    if dep[2] == 'float' and typ == 'int'   or \
+                                       dep[2] == 'int'   and typ == 'float' :
+                                        defd = True
+                                        typ = 'float'
+                                    else:
+                                        defd = False
+                                        typ = None
+                                        break
+#                            print 'doing dep', scope, var, asn, dep, typ
+                        if typ != None:
+                            break
+
+
+                if typ != None:
+                    updated_count +=1
+                self.var_d[scope][var][0] = typ
+        return  undefined_count, updated_count
+
+    ########################################################################
+    def update_dependency_types_from_variables(self):
+        '''Go through all the var dependencies and if they have types defined in
+        the var_d then update the dependency type info
+        '''
+
+        #                                   type        Done  Count, Const,     Dependency list
+        # self.var_d[scope][ varname ]  = [ vartype,    None,     1, const_type, [deps] ]
+        # dep = [dependency,  var_func_absvalue, typ, local_global ]
+
+        for scope in self.var_d:
+            for var in self.var_d[scope]:
+                deps =  self.var_d[scope][var][4]
+                typ = None
+                defd = True
+                for dep in deps:
+                    if 1 or dep[2] == None:  # ignore the original type, override it with the latest
+
+                       dscope = dep[3]
+                       depvar = dep[0]
+                       depabs = dep[1]
+                       # if the dependent variable is in the var_d dict then use the typ
+                       # for this and put it into the dependent variable typ
+                       if dscope in self.var_d and depvar in self.var_d[dscope]:
+                            typ = self.var_d[dscope][depvar][0]
+                            dep[2] = typ
+                    # WARNING THIS IS HARD CODED - TBD
+                    # ALL EXTERNAL FUNCTIONS RETURN AN INT!
+                    elif  dep[1] == 'func_extern':
+                      dep[2] = 'int'
+
+
+    ########################################################################
+    def update_param_types_from_call_info(self):
+        '''Go through all the var dependencies and if they have types defined in
+        the var_d then update the dependency type info
+        '''
+
+        #                                   type        Done  Count, Const,     Dependency list
+        # self.var_d[scope][ varname ]  = [ vartype,    None,     1, const_type, [deps] ]
+        # dep = [dependency,  var_func_absvalue, typ, local_global ]
+
+        for scope in self.var_d:
+            for var in self.var_d[scope]:
+                if self.var_d[scope][var][6] > 0:   # parameter position number
+                    typ2 = self.find_call_param_type( scope,  self.var_d[scope][var][6] )
+                    typ1 =  self.var_d[scope][var][0]
+                    if typ2 != None and typ1 == None:
+                        self.var_d[scope][var][0] = typ2
+
+    ########################################################################
+    def find_call_param_type(self, callname, param_position):
+        '''Look through the self.call_d  for the the function call, and the
+        and the parameter_postition. Find the parameter arguments for each
+        call.
+
+        If there is only one definition and its type is not-None then return the
+        type, If there are multiple calls, and multiple elements in the parameter
+        make sure they are all the same.
+        '''
+
+        if debug:
+           print 'Searching for the arg type in function %s position %d' % \
+                               (callname, param_position)
+
+        # loop round the self.call_d
+        typ = None
+        ctyp = []
+        vtyp = []
+        if callname in self.call_d:
+            calls = self.call_d[callname]
+            for call in calls:
+                param_list = call[2]
+                for param in param_list:
+                   if param[1] == param_position:
+                       # add the type for this parameter, if it is known
+                       if param[2] != None and param[2] not in ctyp:
+                            ctyp.append(param[2])
+                       depvar = param[0]
+                       scope = param[4]
+                       if      scope != None and \
+                               scope in self.var_d and \
+                               depvar in self.var_d[scope] and \
+                               self.var_d[scope][depvar]:
+                           vt = self.var_d[scope][depvar][0]  # get the type for this depvar
+                           if vt != None and vt not in vtyp:
+                               vtyp.append(vt)
+
+            if debug:
+                print 'ctyp = ', ctyp
+                print 'vtyp = ', vtyp
+
+
+        else:
+            print "(find_call_param_type) callname '%s' not found in self.call_d" % callname
+
+        if len(ctyp) == 1:
+            return ctyp[0]
+        if len(vtyp) == 1:
+            return vtyp[0]
+
+        return None
         
     ########################################################################    
     def convert_for_statements(self):
@@ -869,6 +1519,8 @@ class mpy2c( object ):
         for_state = None
         for t in self.op:
         
+            if t[5] == 'for_start':
+                for_state = 'start'
             if t[5] == 'for_name':
                 for_state = 'name'
             if for_state == 'name' and t[7] == 'str':
@@ -882,7 +1534,7 @@ class mpy2c( object ):
             if for_state == None:
                 opn.append ( t )
 
-            if t[5] == 'for_list' and for_state == 'call':
+            if t[5] == 'for_end' and for_state == 'call':
                 for_state = None
                 tn = t[:]
                 
@@ -929,7 +1581,7 @@ class mpy2c( object ):
 # make the for loop conditon dependant on the polarity of the inc variable                
 #                  ((inc > 0 and lv < max) or (inc < 0 and lv > max))
                 
-                for_txt = ' %s = %s ; ( ( %s > 0 && %s < %s ) || ( %s < 0 && %s > %s ) ) ;  %s = %s + %s ) {' % (
+                for_txt = ' %s = %s ; for ( ; ( ( %s > 0 && %s < %s ) || ( %s < 0 && %s > %s ) ) ;  %s = %s + %s ) {' % (
                             lv, min,
                             inc, lv, max,  inc, lv, max,  
                             lv, lv, inc    )
@@ -943,8 +1595,11 @@ class mpy2c( object ):
                 for txt in for_txt_wds:
                     tn = t[:]
                     tn[0] = str(txt) 
-                    if i == 0:
+                    if i in [0,29]:
                         tn[1] = True # set the vardef flag for the loop variable
+                    if i in [2]:
+                        tn[1] = False # set the vardef rhs value
+                        tn[7] = 'int' # force it to be an int
                     opn.append( tn )
                     i += 1
         
@@ -1135,7 +1790,7 @@ class mpy2c( object ):
             self.add_element('#include "%s"\n' % file ) 
             self.add_marker('define_micro_end')
             
-            if debug:
+            if debug_reduced:
                 # Load a debug specific macro file which can include only the macros needed for the debug session
                 # this cuts down the volume of log output, making it easier to see what's going on
                 self.add_mpy_include( '%s\mpy_macros_common_debug.mpy' % script_dir )
@@ -1650,6 +2305,9 @@ void main (void) {
                     if tr[0] in self.standard_var_list:
                         tr[1] = False
                         
+                    if tr[0] == '':
+                        tr[1] = None
+
 #                     vns =  self.is_var_num_str(tr[0], tr[7])
 #                     if vns == 'variable':
 #                         tr[1] = True
@@ -1846,7 +2504,8 @@ void main (void) {
             lineno  = '?'  
 
         #                                 0        1                2              3             4            5          6             7                    8               9    10
-        if debug : print '(walk_node) ', pfx, node_or_field, parent_node_name, node_name, parent_arg_name, arg_name, node0_name, first_node_name, parent_first_node_name, node, typ
+        if debug : print '(walk_node) ', pfx, node_or_field, parent_node_name, node_name, parent_arg_name, arg_name, node0_name,       first_node_name, parent_first_node_name, node, typ
+#    def walk_node( self,                                    parent_node_name, node,      parent_arg_name, arg_name,                   first_node_name, parent_first_node_name, node_or_field, filename=None):
 
 
 
@@ -1860,16 +2519,34 @@ void main (void) {
             self.add_marker('FunctionDef')
 
 
-        ##### mark the element as a variable ######
+        ##### mark the element as a variable  ######
+        # and use vardef to indicate whether the varaible is the LHS of an assignment
 #        if node_name == 'str' and parent_arg_name in [None, 'target', 'value'] and arg_name == 'id':
         if node_name == 'str' and parent_arg_name in [None, 'target'] and arg_name == 'id' and parent_first_node_name == 'Assign' and str(node) not in self.standard_var_list:
             vardef = True
         else:
             vardef = False
+
+        # Look for the augmented assigned varaibles
+        if node_name == 'str' and parent_arg_name in ['target'] and arg_name == 'id' and parent_first_node_name == 'Name' and str(node) not in self.standard_var_list:
+            vardef = True
+
+
+
+        # Look for the function name definitions
+        #                   n/f  parentnodename  node_name parentargname arg_name  Node0name  firstnodename  parentfirstname    node
+        #                   Fld FunctionDef      str        None          name      None        str          Module             ghost_dance
+        if node_name == 'str' and parent_node_name == 'FunctionDef' and arg_name == 'name' and parent_first_node_name == 'Module' and str(node) not in self.standard_var_list:
+            vardef = True
+
+        if node == '':
+            vardef = None
+
         
         # when we encounter the macro_micro command then we will be adding the main() function
         if parent_arg_name in ['func'] and node == 'include' and self.scope == '__top_level__':
             self.add_marker('include_start')
+
 
         #####   VALUE    ########
         if arg_name in ['n', 'id', 'name', 's']:
@@ -1881,9 +2558,9 @@ void main (void) {
                 node_str = re.sub('\r', '\\\\r' ,  node_str )
                 node_str = re.sub('\t', '\\\\t' ,  node_str )
                 node_str = re.sub('\a', '\\\\a' ,  node_str )
-                self.add_element( r'"%s"' % node_str)
+                self.add_element( r'"%s"' % node_str, vartf=vardef)
             elif arg_name == 'n':
-                self.add_element( '%s'   % str(node))
+                self.add_element( '%s'   % str(node), vartf=vardef)
             else:
                 self.add_element( '%s'   % str(node), vartf=vardef )
                 
@@ -1903,13 +2580,21 @@ void main (void) {
                 pass
 
 
-
+        # add the 'for' statement start marker
+        # NOD list For body None None FunctionDef str <_ast.For object at 0x0253AAD0> F
+#        if  parent_node_name=='list' and node_name=='For' and first_node_name in ['FunctionDef', 'Module', 'If'] :
+        if  parent_node_name=='list' and node_name=='For':
+            self.add_marker('for_start')
 
 
         ######   FUNCTION    ########
 #        if node_name in ['While', 'For', 'FunctionDef', 'Return', 'Print' ]:
         if node_name in ['While', 'For', 'Return', 'Print', 'Break', 'Continue' ]:
-            self.add_element( '%s' % node_name.lower() )
+            if node_name == 'Return':
+                vardef = True
+            else:
+                vardef = None
+            self.add_element( '%s' % node_name.lower(), vartf=vardef )
             
         #####  IF ELSEIF  ELSE  #######
 #        if parent_node_name in ['list'] and node_name     in ['If', ] and arg_name == 'body':
@@ -1965,14 +2650,13 @@ void main (void) {
             self.add_marker('func_args_start')
 
 
-
         if parent_node_name in ['For']:
             if node_name == 'Name':
                 self.add_marker('for_name')
             if node_name == 'Call':
                 self.add_marker('for_call')
             if node_name == 'list':
-                self.add_marker('for_list')
+                self.add_marker('for_end')
             
             
         ###### Look for 'global' keyword definitions
@@ -2131,7 +2815,7 @@ if len(sys.argv) > 2:
     chip_id = sys.argv[2]
 if chip_id in [ '', 'Un-recognized']:
     chip_id = None
-    
+
 hfile = None
 if len(sys.argv) > 3:
     hfile = sys.argv[3]
@@ -2170,6 +2854,7 @@ if lines[0].strip() == '':
 
 jlines = ''.join(lines)
 jlines = re.sub(r'\r','',jlines)
+
 
 
 uc = mpy2c( jlines, filename=file, chip_id=chip_id, hfile=hfile )

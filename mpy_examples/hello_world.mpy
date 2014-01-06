@@ -7,7 +7,10 @@
 # 
 ######################################################################
 
+
+
 while 1:
     print( 'Hello World')    # Prints to the Launchpad PIN2 (P1_1 TXD)
+    wait(400)
 
 

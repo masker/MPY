@@ -205,6 +205,8 @@ def do_move_circle(clockwise, number_of_rotations, time_per_rotation):
     
 def do_jig():
     
+    pass
+
 
 
 pwm_enable(10000)  # configure Timer0 and Timer1 for PWM with a period of 20000 clocks

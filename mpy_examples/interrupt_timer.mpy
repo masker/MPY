@@ -52,7 +52,7 @@ def toggle_led():
 
 x = 0             # variable holding the LED state, set it off to start with
 dirout(P1_0)      # set the REDLED pin as an output
-interrupt_setup( WATCHDOG_TIMER, WDT_ADLY_250, toggle_led)    # setup an interval timer interrupt which will run the toggle_led function 
+interrupt_setup( WATCHDOG_TIMER, WDT_ADLY_16, toggle_led)    # setup an interval timer interrupt which will run the toggle_led function 
 eint()           # no need for enable Global Interrupt Enable when using the WATCHDOG_TIMER.
 
 

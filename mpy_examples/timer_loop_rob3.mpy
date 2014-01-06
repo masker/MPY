@@ -6,7 +6,7 @@
 # ( Mike Asker 22-Jul-2012 www.mpyprojects.com)
 # 
 ######################################################################
-
+# __mpy_verbose_debug_on__
 
 macro( AIN1, P1_6 )     # also the green LED
 macro( AIN2, P1_7 )

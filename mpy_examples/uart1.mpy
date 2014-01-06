@@ -1,4 +1,6 @@
 
+# __mpy_verbose_debug_on__
+
 
 def read_bt():
     global c_hex

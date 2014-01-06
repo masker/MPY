@@ -273,6 +273,10 @@ if file != None:
             print '\n\n  *** (mpy2c FAILED) ***\n'
             print op
             status = 'failed mpy2c'
+        if re.search('\*\*\* error \*\*\*',op):
+            print '\n\n  *** (mpy2c FAILED) ***\n'
+            print op
+            status = 'failed mpy2c'
         elif re.search('mpy2c failed|SyntaxError:',op):
             print '\n\n    *** (mpy2c FAILED) ***\n'
             print op
@@ -311,7 +315,7 @@ if file != None:
         #print macro_def
         install_dir = r'%s\%s' % (mpy_dir, mspgcc_ver)
         cmd      = r'%s\bin\msp430-gcc.exe' % install_dir
-        cmd_opts = r'%s -L"%s\msp430\lib\ldscripts\%s"   -mmcu=%s -Os -fdata-sections -ffunction-sections -o "%s.elf" "%s.c" -Wl,--gc-sections -Wl,--strip-all' % ( macro_def, install_dir, chip_id, chip_id, fileroot, fileroot )
+        cmd_opts = r'%s -L"%s\msp430\lib\ldscripts\%s"  -std=c99 -mmcu=%s -Os -fdata-sections -ffunction-sections -o "%s.elf" "%s.c" -Wl,--gc-sections -Wl,--strip-all' % ( macro_def, install_dir, chip_id, chip_id, fileroot, fileroot )
         command_line = '"%s" %s' % (cmd,cmd_opts)
         op = runcmd( command_line )
         if re.search(': error:',op)              or \

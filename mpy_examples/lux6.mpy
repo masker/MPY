@@ -7,8 +7,8 @@
 # 
 ######################################################################
 
-define_micro('msp430g2553')   # Tell the compiler which msp430 microcontroller to program
-
+#define_micro('msp430g2553')   # Tell the compiler which msp430 microcontroller to program
+# __mpy_verbose_debug_on__
 
 # There are 3 separate pwm blocks pwm_a, pwm_b, pwm_c, each pwm can be 
 # connected to following pins  

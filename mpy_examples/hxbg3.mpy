@@ -1,6 +1,6 @@
 
 
-define_micro('msp430g2553')
+#define_micro('msp430g2553')
 
 
 macro( M1CE_HIGH,   'out1(P1_3)' )

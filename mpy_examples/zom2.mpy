@@ -7,7 +7,7 @@
 # 
 ######################################################################
 
-def map( val, ri1, ri2, ro1, ro2 ):
+def map2( val, ri1, ri2, ro1, ro2 ):
     if abs(ro2-ro1) > 150:
           scale = abs(ro2-ro1)
     else: 

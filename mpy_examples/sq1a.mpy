@@ -1,11 +1,13 @@
 
 
-define_micro('msp430g2231')   # we are using this microcontroller, MPY needs to know
-
+#define_micro('msp430g2231')   # we are using this microcontroller, MPY needs to know
+# _xx_mpy_verbose_debug_on__
 
 macro( flash(led), 'out1(led); wait(100); out0(led); wait(100)' )  # Macro to flash an led
 
-macro(GRNLED, GREENLED)
+GRNLED = P1_6
+REDLED = P1_0
+SWITCH = P1_3
    
 # Set the direction of the pins
 dirout(GRNLED)               # Set the LED pin to be an output
