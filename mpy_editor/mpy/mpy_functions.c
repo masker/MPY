@@ -60,6 +60,8 @@ void __dirout(int portpin);
 void __setout(int portpin, int value);
 void _lcd2w_shift_1bit(int bit_value);
 
+int _lcd_enable( void );
+
 
 //---------------------------------------------------------------------------------------
 // global varaibles used for the LCD interface
@@ -228,6 +230,7 @@ void _lcd_4bit_write( int value, int rs_value )
     }
 }
 
+///////////////////////////////////////////////////////////////////////
 void _lcd2w_shift_1bit(int bit_value)
 {
     __out(_lcd_DATA, bit_value );  __out(_lcd_CLOCK, 1 ); __out(_lcd_CLOCK, 0 );
@@ -241,6 +244,7 @@ void _lcd_control( int value, int dly )
     wait( dly );
 }
 
+///////////////////////////////////////////////////////////////////////
 void _lcd_clear()
 //Clears both lines of LCD, and returns cursor
 {
@@ -296,6 +300,7 @@ int lcd2w_enable( int DATA, int CLOCK)
 }
 
 
+///////////////////////////////////////////////////////////////////////
 int _lcd_enable()
 // function to enable the 6wire lcd interface
 {
@@ -320,6 +325,7 @@ int _lcd_enable()
 }
 
 
+///////////////////////////////////////////////////////////////////////
 #ifdef MPY_ADC
 int adc(int pin) {
 //    if ((pin & 15) > 7) { ADC10CTL0 |= (REFON | REF2_5V); } // turn on the Ref generator for the Temp sensor (shouldn't need to do this!)
@@ -382,7 +388,7 @@ int   limit( int val, int lim1, int lim2 ) {
           }
 
 
-
+///////////////////////////////////////////////////////////////////////
 /* Generic mpy print function 
    The low-level character output write function is passed in a the first argument 'func'
    The second parameter is the format string which determines the number and types of the
@@ -424,7 +430,7 @@ void print__mpy__( int (*func)(int), char *fmt, ... )
 }
 
 
-
+///////////////////////////////////////////////////////////////////////
 void print_str( int (*func)(int), char *string)
 {
     unsigned int __mpy_TxByte;
@@ -434,7 +440,7 @@ void print_str( int (*func)(int), char *string)
     }
 }
 
-
+///////////////////////////////////////////////////////////////////////
 void print_hex( int (*func)(int), unsigned int num, unsigned int bit_count)
 {
     unsigned int __mpy_TxByte;
@@ -448,7 +454,7 @@ void print_hex( int (*func)(int), unsigned int num, unsigned int bit_count)
     }
 }
 
-
+///////////////////////////////////////////////////////////////////////
 void print_num( int (*func)(int), int num)
 {
     unsigned int __mpy_TxByte;
@@ -485,7 +491,7 @@ void print_num( int (*func)(int), int num)
 
 
 
-
+///////////////////////////////////////////////////////////////////////
 // Function __mpy_Transmits Character from __mpy_TxByte
 void __mpy_write_uart_TxByte(unsigned int __mpy_TxByte)
 {
@@ -538,8 +544,209 @@ void __mpy_write_lcd_TxByte(unsigned int value)
         _lcd_char_count = 0;    
     }
 }
+///////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
 
 
+//  Tone
+
+int tone( int portpin, int note_period_us, int note_duration_ms, int note_value, int note_volume ) {
+//  Outputs a tone on the output pin portpin. A speaker can be connected to the
+//  portpin to hear the tone.
+//  The tone frequency is controlled by adjusting the note_period parameter
+//  period (the wider the pulse width the
+//  louder the tone)
+//  The duration is controlled by counting the number of periods
+//  @param portpin           Pin number used for the audio output
+//  @param note_period_us    Period of the output note tone (in us)
+//  @param note_duration_ms  Duration of the tone (in ms)
+//  @param note_value        How long the note is on within the note_duration (0-100)
+//  @param note_volume       Volume of the tone, adjusts the pulse width
+//                           thus increasing the energy of the pulse, 0-100
+
+
+    int loop_period = (note_period_us - 156)/3;
+
+    int on_count  = note_volume;
+    int off_count = loop_period - on_count;
+
+    // note_value of 0 is a 1/4 of beat
+    int cycles_total =  (int)( ((long)note_duration_ms * 1000) / (long)note_period_us );
+    int cycles_on    =  (int)( ((long)cycles_total * (long)note_value)/100);
+    int cycles_off   =  cycles_total - cycles_on;
+
+    // initialize the port, (TDB remove, or subtract time from note_duration)
+    __dirout( portpin );
+    __out( portpin, 0 );
+
+    // calculate on period_on_time,  period_off_time, and num_cycles
+    int cycle_count = 0;
+
+    while (cycle_count < cycles_on) {
+         __out( portpin, 1 );
+         wait_cycles( on_count);
+         __out( portpin, 0 );
+         wait_cycles( off_count);
+         cycle_count++;
+    }
+
+    cycle_count = 0;
+    while (cycle_count < cycles_off) {
+         __out( portpin, 0 );
+         wait_cycles( on_count);
+         __out( portpin, 0 );
+         wait_cycles( off_count);
+         cycle_count++;
+    }
+
+    return on_count;
+}
+
+///////////////////////////////////////////////////////////////////////////
+int playnote( int portpin, int note, int accidental, int octave, int note_length, int duration_ms, int volume ) {
+///  Plays a single note from a tune.
+//  @param portpin           Pin number used for the audio output
+//  @param char note         The note to be played, character 'A' to 'G'
+//  @param accidental        Whether the note is a Flat or Sharp, flat is -1, sharp is +1
+//  @param octave            The octave of the note from 1 to 9
+//  @param note_length       The length of the note quaver is 0
+//  @param duration_ms       The duration of a full note (in ms)
+//
+//  The note and accidental are used as the index into table of musical note
+//  frequency periods which is used together with the scale to calculate the
+//  period in uS for the note
+
+
+    // Note Time Period list for a full octave of 12 notes including the sharps
+    // from 'C C# D D# ... A# B'
+    // (These periods were calculated using a spreadsheet and scaled so that the
+    // first value is the largest value that can fit into a 16 bit int variable.
+    // This allows the values to be divided by two multiple times to get the
+    // higher octaves while minimizing the rounding errors)
+    int note_period_list[]  = {
+        32107,
+        30305,
+        28604,
+        26999,
+        25483,
+        24053,
+        22702,
+        21428,
+        20226,
+        19090,
+        18019,
+        17008         };
+
+    // Index into the note_period_list. The note character specified is mapped
+    // to an index of the note_period_list table.
+    //                  A   B   C   D   E   F   G
+    char note_idx[] = { 9,  11, 0,  2,  4,  5,  7 };
+
+    // The accidental value (sharp or flat) is used to increment the position in the table
+    char idx = note_idx[ (char)note - 'A' ] + (char)accidental;
+    // The base period is read and then shifted to the right by the octave number
+    int period = note_period_list[ idx ] >> octave;
+
+    // The note_length must be converted into a 0-100 value
+    // +ve note_length denotes the number of 1/4 lengths
+    // -3 => (1/32) =>  3
+    // -2 => (1/16) =>  6
+    // -1 => (1/8)  => 12
+    // 0  => (1/4)  => 25
+    // 1  => (1/4)  => 25
+    // 2  => (2/4)  => 50
+    // 3  => (3/4)  => 75
+    // 4  => (4/4)  => 100
+    // 5  => (4/4 + 1/4)  => 125
+    int note_value;
+    if (note_length > 0){
+        for (int i=0; i< (note_length)/4; i++ ){
+            tone(portpin, period, duration_ms , 100, volume );
+        }
+        note_value =  25 * (note_length%4);
+    } else {
+        note_value =  100 >> (2-note_length);
+    }
+    if (note_value > 0) {
+        tone(portpin, period, duration_ms , note_value, volume );
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
+//
+int playtune( int portpin, char *tune_str, int note_duration_ms ) {
+//
+//  Plays a tune specified in tune_str on a speaker attached to portpin.
+//  The format for the tune_str loosely based on ABC notation
+//  where each note is described by a sequence of note letters and various
+//  other characters for sharps, flats, octave, and note duration
+// (see  http://abcnotation.com/wiki/abc:standard:v2.1#the_tune_body )
+//
+//  @param portpin           Pin number used for the audio output
+//  @param char *tune_str    Period of the output note tone (in us)
+//  @param note_duration_ms  Default duration for the notes (in ms)
+
+    char note = 0;
+    int  octave = 0;
+    int  volume = 1;
+    int  accidental = 0;
+    int  note_length = 1;
+    char *ptr, p, pn;
+    ptr = tune_str;
+
+    // Loop through the tune_str a character at a time collecting all the values
+    // needed to describe the note. If the next character is the start of the
+    // new note (or the end of the tune_str) then output the current note
+    // using the playnote() function
+    while (*ptr!=0){
+
+        // read the current and next characters
+        p  = *ptr++;
+        pn = *ptr;
+
+        // Count of the number of flat or sharp characters, (they can be stacked)
+        if (p == '_') { accidental--; }
+        if (p == '^') { accidental--; }
+
+        // A note character
+        if (p >= 'A' && p <= 'G') {
+            note = p;
+            octave = 3;
+        // A note chacter of the next scale up
+        }
+        if (p >= 'a' && p <= 'g') {
+            note = p - ('a'-'A');      // change the note back to uppercase
+            octave = 4;                // and set the octave one higher
+        }
+        if (p >= 'Z') {
+            note = 'A';
+            volume = 0;
+        }
+
+        // Increment or decrement the octave (they can be stacked)
+        if (p == ',' ) { octave--; }
+        if (p == '\'') { octave++; }
+
+        // Modify the note length,
+        if (p == '/') { note_length = -1; }
+        if (p >='0' && p <= '9') { note_length = note_length * (int)(p-'0');  }
+
+        // If we have a note to play and the next
+        // character is another note or the end of the string
+        // then play the current note
+        if (note != 0 && (pn == 0 || pn == '_' || pn == '^' ||
+            (pn >= 'A' && pn <= 'G') ||
+            (pn >= 'a' && pn <= 'g') )) {
+
+            playnote( portpin, note, accidental, octave, note_length, note_duration_ms, volume );
+            note = 0;
+            accidental = 0;
+            note_length = 1;
+            volume = 1;
+        }
+    }
+}
 
 //---------------------------------------------------------------------------
 void interrupt_setup( int portpin_intr, int param, int (*func)(int) )
