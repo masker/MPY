@@ -568,13 +568,20 @@ int tone( int portpin, int note_period_us, int note_duration_ms, int note_value,
 
     int loop_period = (note_period_us - 156)/3;
 
-    int on_count  = note_volume;
-    int off_count = loop_period - on_count;
 
     // note_value of 0 is a 1/4 of beat
     int cycles_total =  (int)( ((long)note_duration_ms * 1000) / (long)note_period_us );
     int cycles_on    =  (int)( ((long)cycles_total * (long)note_value)/100);
     int cycles_off   =  cycles_total - cycles_on;
+
+    if (note_volume == 0) {
+        cycles_on = -1;
+        cycles_off = cycles_total;
+        note_volume = 1;
+    }
+
+    int on_count  = note_volume;
+    int off_count = loop_period - on_count;
 
     // initialize the port, (TDB remove, or subtract time from note_duration)
     __dirout( portpin );
@@ -719,7 +726,7 @@ int playtune( int portpin, char *tune_str, int note_duration_ms ) {
             note = p - ('a'-'A');      // change the note back to uppercase
             octave = 4;                // and set the octave one higher
         }
-        if (p >= 'Z') {
+        if (p == 'z') {
             note = 'A';
             volume = 0;
         }
@@ -735,7 +742,7 @@ int playtune( int portpin, char *tune_str, int note_duration_ms ) {
         // If we have a note to play and the next
         // character is another note or the end of the string
         // then play the current note
-        if (note != 0 && (pn == 0 || pn == '_' || pn == '^' ||
+        if (note != 0 && (pn == 0 || pn == '_' || pn == '^' ||  pn == 'z' ||
             (pn >= 'A' && pn <= 'G') ||
             (pn >= 'a' && pn <= 'g') )) {
 
