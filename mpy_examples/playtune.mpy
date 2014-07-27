@@ -1,0 +1,46 @@
+######################################################################
+#
+# playtune.mpy  
+# 
+# Program to play a tune using the playtune command. The output is on pin 
+# P1_7 which can be connected to a 100-300ohm speaker. Pressing the Launchpad
+# button P1_3 will start the tune.
+#
+# The tune is specified as a string parameter to the palytune command. 
+# The tune string is in ABC notation (see http://www.abcnotation.com/)
+# Notes are described using letters A-G which may be preceeded with
+# ^ or _ for sharp or flat. The note length, note width and the key
+# signature are also specified.
+#
+# ABC tunes available on the net can be pasted 
+# into the command.
+#
+# The playtune command uses bit banging to toggle an output pin with
+# a square wave. It does not use any timers, and works with 1MHz clock
+# (although other clock frequencies may work with some adjustment to the tune)
+# An external RC filter can be used to make the output less harsh.
+
+#
+# ( Mike Asker 27-July-2014 www.mpyprojects.com)
+# 
+######################################################################
+
+
+
+pindir(P1_7, OUT)     # Tune Output. Use a 100-300ohm speaker from this pin to ground to hear the output 
+pindir(P1_3, INPU)    # Input switch used to start the tune
+
+while 1:                       # Enter the perpetual loop 
+    if inp(P1_3) == 0:         # If the switch is pressed then play the tune
+
+        playtune( P1_7,'''
+        X:1
+        K:D
+        D DFA | A2.a  .a2.f  |  .f2D  DFA |A2.a  .a2.g  |  .g2C  CEB |
+        |B2.b  .b2.g  |  .g2C CE.B | B2.b  .b2.f  |  .f2D  DFA |
+        | d2.d' .d'2.a |  .a2D  DFA | d2.d' .d'2.b |  .b2E  EGB |
+        |B3-    B^GA  | f3- fdF | F2E B2A  | .D>DD D2 |
+        .d.c | .c.B.B z.B.^A | .^A.B.B         z.E.E | F2E z.E.E | B2A z.d.c |
+        | .c.B.B z.B.c  |  .e.d.d z.^G.B | B2A ^G3/F/D/B,/ | F/F/FE A4 z z z 
+                       ''', 300)
+
