@@ -611,14 +611,14 @@ int tone( int portpin, int note_period_us, int note_duration_ms, int note_value,
 }
 
 ///////////////////////////////////////////////////////////////////////////
-int playnote( int portpin, int note, int accidental, int octave, int note_length, int duration_ms, int volume ) {
+int playnote( int portpin, int note, int key, int accidental, int octave, int note_width, int duration_ms, int volume ) {
 ///  Plays a single note from a tune.
 //  @param portpin           Pin number used for the audio output
 //  @param char note         The note to be played, character 'A' to 'G'
 //  @param accidental        Whether the note is a Flat or Sharp, flat is -1, sharp is +1
 //  @param octave            The octave of the note from 1 to 9
-//  @param note_length       The length of the note quaver is 0
-//  @param duration_ms       The duration of a full note (in ms)
+//  @param note_length_ms    The length of the note
+//  @param note_width        quiet is 0, stacatto is 25, normal (quaver) is 50, notes running together 100
 //
 //  The note and accidental are used as the index into table of musical note
 //  frequency periods which is used together with the scale to calculate the
@@ -650,34 +650,35 @@ int playnote( int portpin, int note, int accidental, int octave, int note_length
     //                  A   B   C   D   E   F   G
     char note_idx[] = { 9,  11, 0,  2,  4,  5,  7 };
 
+    //Modify the note depending on the Key
+    if (accidental == 0 &&
+        (( key == 'G' && ( note == 'F' )) ||
+         ( key == 'D' && ( note == 'F' || note == 'C' )) ||
+         ( key == 'A' && ( note == 'F' || note == 'C' || note == 'G' )) ||
+         ( key == 'E' && ( note == 'F' || note == 'C' || note == 'G' || note == 'D')) ||
+         ( key == 'B' && ( note == 'F' || note == 'C' || note == 'G' || note == 'D' || note == 'A' )))
+        ){
+        accidental = 1;
+    }
+    if (accidental == 0 &&
+        (( key == 'd' && ( note == 'B' )) ||
+         ( key == 'g' && ( note == 'B' || note == 'E' )) ||
+         ( key == 'c' && ( note == 'B' || note == 'E' || note == 'A' )) ||
+         ( key == 'f' && ( note == 'B' || note == 'E' || note == 'A' || note == 'D')))
+        ){
+        accidental = -1;
+    }
+
+    if (accidental == 99) { accidental = 0; }
+
     // The accidental value (sharp or flat) is used to increment the position in the table
     char idx = note_idx[ (char)note - 'A' ] + (char)accidental;
     // The base period is read and then shifted to the right by the octave number
     int period = note_period_list[ idx ] >> octave;
 
-    // The note_length must be converted into a 0-100 value
-    // +ve note_length denotes the number of 1/4 lengths
-    // -3 => (1/32) =>  3
-    // -2 => (1/16) =>  6
-    // -1 => (1/8)  => 12
-    // 0  => (1/4)  => 25
-    // 1  => (1/4)  => 25
-    // 2  => (2/4)  => 50
-    // 3  => (3/4)  => 75
-    // 4  => (4/4)  => 100
-    // 5  => (4/4 + 1/4)  => 125
-    int note_value;
-    if (note_length > 0){
-        for (int i=0; i< (note_length)/4; i++ ){
-            tone(portpin, period, duration_ms , 100, volume );
-        }
-        note_value =  25 * (note_length%4);
-    } else {
-        note_value =  100 >> (2-note_length);
-    }
-    if (note_value > 0) {
-        tone(portpin, period, duration_ms , note_value, volume );
-    }
+
+    tone(portpin, period, duration_ms, note_width, volume );
+
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -696,11 +697,17 @@ int playtune( int portpin, char *tune_str, int note_duration_ms ) {
 
     char note = 0;
     int  octave = 0;
-    int  volume = 1;
     int  accidental = 0;
-    int  note_length = 1;
+    int  note_length;
+    int  note_length_num = 1;
+    int  note_length_den = 1;
+    int  note_width;
+    int  note_slur = 0;
     char *ptr, p, pn;
     ptr = tune_str;
+    int volume = 1;
+    char key = 'C';
+    char ignore_rest_of_line = 0;
 
     // Loop through the tune_str a character at a time collecting all the values
     // needed to describe the note. If the next character is the start of the
@@ -712,45 +719,115 @@ int playtune( int portpin, char *tune_str, int note_duration_ms ) {
         p  = *ptr++;
         pn = *ptr;
 
+        // Any of these chacacters are settings that are ignored
+        // and causes all characters to the end of the line to be
+        // ignored
+        if (p == '\n') {
+            ignore_rest_of_line = 0;
+            continue;
+        }
+        if (p == '%') {
+            ignore_rest_of_line = 1;
+        }
+        if ((p == 'X' || p == 'T' || p == 'R' || p == 'M' || p == 'L'|| p == 'Q' || p == 'Z') && (pn == ':')) {
+            ignore_rest_of_line = 1;
+        }
+        if (ignore_rest_of_line == 1) { continue; }
+
+        // Look for the Key setting
+        // Only single character key signatures are recognised
+        // Uppercase is a major key, lowercase a minor key.
+        if (p == 'K') {
+           key = 0;
+           continue;
+        }
+        if (key == 0 && p == ':') {
+           key = 1;
+           continue;
+        }
+        if (key == 1 && ((p >= 'A' && p <= 'G') || (p >= 'a' && p <= 'g')) ) {
+           key = p;
+           ignore_rest_of_line = 1;
+           continue;
+        }
+
+
+
+
         // Count of the number of flat or sharp characters, (they can be stacked)
         if (p == '_') { accidental--; }
-        if (p == '^') { accidental--; }
+        if (p == '^') { accidental++; }
+        if (p == '=') { accidental == 99; }
 
         // A note character
         if (p >= 'A' && p <= 'G') {
             note = p;
             octave = 3;
-        // A note chacter of the next scale up
         }
+
+        // A note chacter of the next scale up
         if (p >= 'a' && p <= 'g') {
             note = p - ('a'-'A');      // change the note back to uppercase
             octave = 4;                // and set the octave one higher
         }
-        if (p == 'z') {
+
+        // A rest character has a note of 'A' but the note_width is set to 0
+        // to make it not sound
+        if (p == 'z' || p == 'x' || p == 'Z' || p == 'X') {
             note = 'A';
-            volume = 0;
+            note_width = 0;
+        }
+
+        // Stocatto shorttens the note_width
+        if (p == '.') {
+            note_width = 25;
+        }
+
+        // '(' and ')' starts and stops the slurring of notes so there is no gap
+        // between them. Which is the same as making the note_width 100.
+        if (p == '(') {
+            note_slur = 100;
+        }
+        if (p == ')') {
+            note_slur = 0;
         }
 
         // Increment or decrement the octave (they can be stacked)
         if (p == ',' ) { octave--; }
         if (p == '\'') { octave++; }
 
-        // Modify the note length,
-        if (p == '/') { note_length = -1; }
-        if (p >='0' && p <= '9') { note_length = note_length * (int)(p-'0');  }
+        // Modify the note length, look for  N/D characters
+        // look for the numerator before the '/', by itself it denotes a half value
+        if (p == '/') { note_length_den = 2; }
+        if (p >='0' && p <= '9') {
+            if (note_length_den == 2){
+                note_length_den = (int)(p-'0');
+            } else {
+                note_length_num  = (int)(p-'0');
+            }
+        }
 
         // If we have a note to play and the next
         // character is another note or the end of the string
         // then play the current note
-        if (note != 0 && (pn == 0 || pn == '_' || pn == '^' ||  pn == 'z' ||
+        if (note != 0 && (pn == 0 || pn == '_' || pn == '^' || pn == '=' || pn == 'z' ||  pn == '.' ||
             (pn >= 'A' && pn <= 'G') ||
             (pn >= 'a' && pn <= 'g') )) {
 
-            playnote( portpin, note, accidental, octave, note_length, note_duration_ms, volume );
+            // If we are slurring the notes make the note_width 100%
+            if (note_slur == 100 && note_width == 50) {
+                note_width = 100;
+            }
+
+            note_length = note_duration_ms * note_length_num / note_length_den;
+            playnote( portpin, note, key, accidental, octave, note_width, note_length, volume);
+
+            // Set up the defaults for the next note
             note = 0;
             accidental = 0;
-            note_length = 1;
-            volume = 1;
+            note_length_num = 1;
+            note_length_den = 1;
+            note_width = 50;
         }
     }
 }
