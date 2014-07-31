@@ -299,6 +299,8 @@ class mpy2c( object ):
         quoted_strings = []
         ch_end = None
         i = 0
+
+        print '(blank_strings_and_comments)' , line
         for ch in line:
         
             # Start here! Look for an openning quote
@@ -318,6 +320,7 @@ class mpy2c( object ):
                    ch = ''   # Clear the ch (ch_end), we do not want it being added to the opline.
                    quoted_strings.append(current_quoted_string)
 #                   print '(blank_strings_and_comments) end  ', i, ch, str_count, in_comment, in_str
+                   continue_quote = None
 
             # Look for trailing comment
             if not in_comment and not in_str and ch == '#':
@@ -332,6 +335,7 @@ class mpy2c( object ):
                
             # We are in a quoted string therefore add the character to the current quoted string
             # else add the character to output line
+
             if in_str or in_comment:
                current_quoted_string += ch
             else:
@@ -342,7 +346,7 @@ class mpy2c( object ):
 #         if in_comment:
 #             quoted_strings.append(current_quoted_string)
             
-        return (opline, quoted_strings)
+        return (opline, quoted_strings, continue_quote)
 
     #########################################################################
     def reinsert_strings_and_comments(self, line, quoted_strings):
@@ -399,8 +403,6 @@ class mpy2c( object ):
         for line in lines:
             new_line = line
             
-            
-                
             # Look for a possible print line
             # this search may not definitively find a print command, as it is possible for 'print' to be contained
             # inside a quoted string, in which case we should ignore it. 
@@ -487,6 +489,33 @@ class mpy2c( object ):
         
         return '\n'.join(new_lines)
 
+    #########################################################################
+    def escape_embedded_quote_characters( self, line, quote_char=None ):
+        '''Looks for any embedded quote characters in strings and escapes them.
+        It returns the escaped line and the quote_char
+
+        If the line is a continuation of the previous line then the quote_char
+        indicates the quote character that terminates the string.
+        If the line contains an unterminated string then the quote_char needed
+        to terminate is return and is used again in this function
+        on subsequent lines
+        '''
+
+        opline = ''
+        for ch in line:
+
+            if  ch in [ '"', "'" ]:
+                if ch == quote_char:
+                    quote_char = None
+                elif quote_char == None:
+                    quote_char = ch
+                else:
+                    ch = '\\\\\\\\' + ch
+
+            opline += ch
+        print '(escape_embedded_quote_characters opline):', opline
+
+        return  (opline, quote_char)
 
     #########################################################################
     def setup_hfile_variables_list(self, hfile):
@@ -2558,6 +2587,7 @@ void main (void) {
                 node_str = re.sub('\r', '\\\\r' ,  node_str )
                 node_str = re.sub('\t', '\\\\t' ,  node_str )
                 node_str = re.sub('\a', '\\\\a' ,  node_str )
+                node_str = re.sub('"', '\\\\"' ,  node_str )
                 self.add_element( r'"%s"' % node_str, vartf=vardef)
             elif arg_name == 'n':
                 self.add_element( '%s'   % str(node), vartf=vardef)

@@ -701,38 +701,58 @@ int playtune( int portpin, char *tune_str, int note_duration_ms ) {
     int  note_length;
     int  note_length_num = 1;
     int  note_length_den = 1;
-    int  note_width;
+    int  note_width = 50;
     int  note_slur = 0;
     char *ptr, p, pn;
-    ptr = tune_str;
     int volume = 1;
     char key = 'C';
     char ignore_rest_of_line = 0;
+    int in_quote = 0;
+
+
+    char *chord_start;
+    int chord_note_count = 0;
+    int chord_note_length = 0;
+    int chord_state = 0;
+
 
     // Loop through the tune_str a character at a time collecting all the values
     // needed to describe the note. If the next character is the start of the
     // new note (or the end of the tune_str) then output the current note
     // using the playnote() function
+    ptr = tune_str;
     while (*ptr!=0){
 
         // read the current and next characters
         p  = *ptr++;
         pn = *ptr;
 
+
         // Any of these chacacters are settings that are ignored
         // and causes all characters to the end of the line to be
         // ignored
         if (p == '\n') {
             ignore_rest_of_line = 0;
-            continue;
+            in_quote = 0;
+//            continue;
         }
+
         if (p == '%') {
             ignore_rest_of_line = 1;
         }
-        if ((p == 'X' || p == 'T' || p == 'R' || p == 'M' || p == 'L'|| p == 'Q' || p == 'Z') && (pn == ':')) {
+        if ((p=='X' || p=='T' || p=='R' || p=='M' || p=='L'|| p=='Q' || p=='Z' || p=='C' || p=='P' ) && (pn==':')) {
             ignore_rest_of_line = 1;
         }
+
         if (ignore_rest_of_line == 1) { continue; }
+        if (p == '"') {
+            if (in_quote == 0) {
+               in_quote = 1;
+            } else {
+               in_quote = 0;
+            }
+        }
+        if (in_quote == 1) { continue; }
 
         // Look for the Key setting
         // Only single character key signatures are recognised
@@ -750,8 +770,6 @@ int playtune( int portpin, char *tune_str, int note_duration_ms ) {
            ignore_rest_of_line = 1;
            continue;
         }
-
-
 
 
         // Count of the number of flat or sharp characters, (they can be stacked)
@@ -792,6 +810,8 @@ int playtune( int portpin, char *tune_str, int note_duration_ms ) {
             note_slur = 0;
         }
 
+
+
         // Increment or decrement the octave (they can be stacked)
         if (p == ',' ) { octave--; }
         if (p == '\'') { octave++; }
@@ -807,10 +827,47 @@ int playtune( int portpin, char *tune_str, int note_duration_ms ) {
             }
         }
 
+
+
+        // Look for a chord or unison (notes that should be played together)
+        // We will play all the notes in the chord in quick succession in the
+        // the same time as a single note width (choosing the the longest note in the chord)
+        // First save the start of the chord ( a '[' character
+        // then scan to the end ']' without acutually playing out the notes,
+        // count the notes and find the longest note. Then go back to the starting
+        // chord note and play them out with the newly calculated note_length.
+
+        // Look for the start of the chord
+//        if (p=='[' && pn!='|') {
+        if (*(ptr-1)=='[' && p!='|') {
+            chord_start = ptr;
+            if (chord_state==0) {
+                chord_note_count = 0;
+                chord_note_length = 0;
+            }
+            chord_state++;
+        }
+
+        // Look for the end of the chord
+//        if (p!='|' && pn!=']') {
+        if (*(ptr-1)!='|' && p==']') {
+            // The second time we encounter it we will force a 'z' rest,
+            // this is done to make up the note_width, as all the notes in the
+            // chord are played together at note_width of 100%
+            if (chord_state==2) {
+                note_width = 0;
+                note = 'A';
+                pn = '.';
+            }
+            chord_state++;
+        }
+
+
         // If we have a note to play and the next
         // character is another note or the end of the string
         // then play the current note
-        if (note != 0 && (pn == 0 || pn == '_' || pn == '^' || pn == '=' || pn == 'z' ||  pn == '.' ||
+        if (note != 0 &&
+            (pn == 0 || pn == '_' || pn == '^' || pn == '=' || pn == 'z' ||  pn == '.' || pn == '['  ||
             (pn >= 'A' && pn <= 'G') ||
             (pn >= 'a' && pn <= 'g') )) {
 
@@ -818,9 +875,52 @@ int playtune( int portpin, char *tune_str, int note_duration_ms ) {
             if (note_slur == 100 && note_width == 50) {
                 note_width = 100;
             }
-
+            // Calculate the note_length based on the numerator and denomintor
+            // values for the note
             note_length = note_duration_ms * note_length_num / note_length_den;
-            playnote( portpin, note, key, accidental, octave, note_width, note_length, volume);
+
+
+
+
+            // Look out for a chord, if we have started with a chord don't
+            // play it first time round (chord_state=1), we will rescan it again when we know
+            // how long it will be.
+
+            // Find the longest note in the chord
+            if (note_length > chord_note_length) { chord_note_length = note_length; }
+
+            // Start of the chord, first time round
+            if (chord_state==1) {
+                // Count the notes in the chord
+                chord_note_count++;
+
+            // End of chord, first time
+            } else if (chord_state==2) {
+                // move the loop pointer just to the start of the chord
+                ptr = chord_start;
+                chord_state++;
+
+            // Start chord, second time round, we will play it out
+            } else if (chord_state==3 || chord_state == -2) {
+                // We know how many notes in the chord, so re-calc the length
+                // of each note in the chord
+                note_length = chord_note_length / (2 * chord_note_count);
+                note_width = 100;
+                chord_state = -2;
+
+
+            // End of chord, second time round, play out the final 'z' rest
+            } else if (chord_state==-1) {
+                // We know how many notes in the chord, so re-calc the length
+                // of each note in the chord
+                note_length = chord_note_length /2;
+                // reset everything ready for the next chord
+                chord_state = 0;
+            }
+
+            if (chord_state <= 0) {
+                playnote( portpin, note, key, accidental, octave, note_width, note_length, volume);
+            }
 
             // Set up the defaults for the next note
             note = 0;
