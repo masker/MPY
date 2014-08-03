@@ -320,7 +320,6 @@ class mpy2c( object ):
                    ch = ''   # Clear the ch (ch_end), we do not want it being added to the opline.
                    quoted_strings.append(current_quoted_string)
 #                   print '(blank_strings_and_comments) end  ', i, ch, str_count, in_comment, in_str
-                   continue_quote = None
 
             # Look for trailing comment
             if not in_comment and not in_str and ch == '#':
@@ -346,7 +345,7 @@ class mpy2c( object ):
 #         if in_comment:
 #             quoted_strings.append(current_quoted_string)
             
-        return (opline, quoted_strings, continue_quote)
+        return (opline, quoted_strings)
 
     #########################################################################
     def reinsert_strings_and_comments(self, line, quoted_strings):
