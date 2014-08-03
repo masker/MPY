@@ -184,7 +184,10 @@ def get_macro_def( chip_id ):
 
 
 python_exe   = r'%s\python.exe' % ( sys.exec_prefix )
-idx = sys.argv[0].index(  r'\mpy_editor\mpy\prog.py' )
+try:
+    idx = sys.argv[0].index(  r'\mpy_editor\mpy\prog.py' )
+except ValueError:
+    idx = sys.argv[0].index(  r'/mpy_editor/mpy/prog.py' )
 mpy_dir = sys.argv[0][:idx]
 
 

@@ -498,8 +498,8 @@ void __mpy_write_uart_TxByte(unsigned int __mpy_TxByte)
   unsigned int i, k;
   P1DIR |= BIT1; 
   P1REN &= ~BIT1;          
-  __mpy_TxByte |= 0x100;         // Add stop bit to __mpy_TxByte (which is logical 1)
-  __mpy_TxByte = __mpy_TxByte << 1;    // Add start bit (which is logical 0)
+  __mpy_TxByte |= 0x100;             // Add stop bit to __mpy_TxByte (which is logical 1)
+  __mpy_TxByte = __mpy_TxByte << 1;  // Add start bit (which is logical 0)
 
 //  __mpy_TxByte = 0x255;
   
@@ -681,9 +681,10 @@ int playnote( int portpin, int note, int key, int accidental, int octave, int no
 
 }
 
-//////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
 //
-int playtune( int portpin, char *tune_str, int note_duration_ms ) {
+int playtune( int portpin, char *tune_str, int note_duration_ms, int (*func)(int) ) {
 //
 //  Plays a tune specified in tune_str on a speaker attached to portpin.
 //  The format for the tune_str loosely based on ABC notation
@@ -694,6 +695,19 @@ int playtune( int portpin, char *tune_str, int note_duration_ms ) {
 //  @param portpin           Pin number used for the audio output
 //  @param char *tune_str    Period of the output note tone (in us)
 //  @param note_duration_ms  Default duration for the notes (in ms)
+//  @param func              Function to call when the a '@' is found in the data
+//                           (define this as 0 or NULL if is not used)
+//
+//  The following extention has been added to the ABC syntax to enable it to
+//  handle running of external functions, whenever a '@' is encountered in the
+//  tune_str this will cause the external function to be called, any following
+//  number characters are converted into an integer (signed) by combining
+//  the number charcters into the integer (eg @1234 ). No spaces are allowed
+//  between the @ and any of the number characters. The integer value is passed
+//  as an input parameter into the external function. If no number is given
+//  then a number which is one greater than the previous number will be
+//  passed
+
 
     char note = 0;
     int  octave = 0;
@@ -708,13 +722,13 @@ int playtune( int portpin, char *tune_str, int note_duration_ms ) {
     char key = 'C';
     char ignore_rest_of_line = 0;
     int in_quote = 0;
-
+    int func_arg = 0;
+    int new_func_arg = 0;
 
     char *chord_start;
     int chord_note_count = 0;
     int chord_note_length = 0;
     int chord_state = 0;
-
 
     // Loop through the tune_str a character at a time collecting all the values
     // needed to describe the note. If the next character is the start of the
@@ -740,7 +754,7 @@ int playtune( int portpin, char *tune_str, int note_duration_ms ) {
         if (p == '%') {
             ignore_rest_of_line = 1;
         }
-        if ((p=='X' || p=='T' || p=='R' || p=='M' || p=='L'|| p=='Q' || p=='Z' || p=='C' || p=='P' ) && (pn==':')) {
+        if ((p=='X' || p=='T' || p=='R' || p=='M' || p=='L'|| p=='Q' || p=='Z' || p=='C' || p=='P' || p=='N' ) && (pn==':')) {
             ignore_rest_of_line = 1;
         }
 
@@ -862,6 +876,26 @@ int playtune( int portpin, char *tune_str, int note_duration_ms ) {
             chord_state++;
         }
 
+        // Run an external function, but only if an external function has been
+        // defined.
+        if (p == '@' && func != 0) {
+            // scan any numbers that follow and pass it as a argument into
+            // the external function, but if none is defined use.
+            // a number which is one larger than the last call
+            new_func_arg = 0;
+            while ((*(ptr)>='0') && (*(ptr)<='9')) {
+                new_func_arg = 10 * new_func_arg;
+                new_func_arg = new_func_arg + (int)(*(ptr) - '0' );
+                func_arg = new_func_arg;
+                ptr++;
+            }
+            // If the external function returns -1 then break out of the tune!
+            if ( (func)(func_arg) == -1) {
+               break;
+            }
+            func_arg++;
+            continue;
+        }
 
         // If we have a note to play and the next
         // character is another note or the end of the string

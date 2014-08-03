@@ -1026,6 +1026,7 @@ class mpy2c( object ):
         # Look for all elements where the vardef is True
         # and add the element text to the var_d dict
         self.var_d = {}
+        self.var_d['main'] = {}  # add the main as we will need it in advance
         in_args = False
         in_fundef = False
         for t in self.op:
@@ -1130,6 +1131,8 @@ class mpy2c( object ):
 
         # Look for all Calls and build a call dict
         self.call_d = {}
+        # Add an empty main, as we need it available ahead of time
+        self.call_d['main'] = []
         in_args = False
         for t in self.op:
 
