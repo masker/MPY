@@ -620,7 +620,7 @@ int playnote( int portpin, int note, int key, int accidental, int octave, int no
 //  @param note_length_ms    The length of the note
 //  @param note_width        quiet is 0, stacatto is 25, normal (quaver) is 50, notes running together 100
 //
-//  The note and accidental are used as the index into table of musical note
+//  The note and accidental are used as the index into a table of musical note
 //  frequency periods which is used together with the scale to calculate the
 //  period in uS for the note
 
@@ -632,18 +632,19 @@ int playnote( int portpin, int note, int key, int accidental, int octave, int no
     // This allows the values to be divided by two multiple times to get the
     // higher octaves while minimizing the rounding errors)
     int note_period_list[]  = {
-        32107,
-        30305,
-        28604,
-        26999,
-        25483,
-        24053,
-        22702,
-        21428,
-        20226,
-        19090,
-        18019,
-        17008         };
+        32107,                        //  0   C
+        30305,                        //  1   C#
+        28604,                        //  2   D
+        26999,                        //  3   D#
+        25483,                        //  4   E
+        24053,                        //  5   F
+        22702,                        //  6   F#
+        21428,                        //  7   G
+        20226,                        //  8   G#
+        19090,                        //  9   A
+        18019,                        //  10  A#
+        17008                         //  11  B
+    };
 
     // Index into the note_period_list. The note character specified is mapped
     // to an index of the note_period_list table.
@@ -651,6 +652,7 @@ int playnote( int portpin, int note, int key, int accidental, int octave, int no
     char note_idx[] = { 9,  11, 0,  2,  4,  5,  7 };
 
     //Modify the note depending on the Key
+    // Upper case key value is a major 'Ionian' key
     if (accidental == 0 &&
         (( key == 'G' && ( note == 'F' )) ||
          ( key == 'D' && ( note == 'F' || note == 'C' )) ||
@@ -660,6 +662,7 @@ int playnote( int portpin, int note, int key, int accidental, int octave, int no
         ){
         accidental = 1;
     }
+    // Lower case key value is a minor 'Ionian' key
     if (accidental == 0 &&
         (( key == 'd' && ( note == 'B' )) ||
          ( key == 'g' && ( note == 'B' || note == 'E' )) ||
@@ -693,20 +696,39 @@ int playtune( int portpin, char *tune_str, int note_duration_ms, int (*func)(int
 // (see  http://abcnotation.com/wiki/abc:standard:v2.1#the_tune_body )
 //
 //  @param portpin           Pin number used for the audio output
-//  @param char *tune_str    Period of the output note tone (in us)
+//  @param char *tune_str    ABC format string containing the tune to be played
 //  @param note_duration_ms  Default duration for the notes (in ms)
-//  @param func              Function to call when the a '@' is found in the data
-//                           (define this as 0 or NULL if is not used)
+//  @param func              Function to call when the an '@' is found in the
+//                           tune_str. The function should have a single integer
+//                           parameter. Define this paramater as 0 when an
+//                           external function not used define.
 //
-//  The following extention has been added to the ABC syntax to enable it to
-//  handle running of external functions, whenever a '@' is encountered in the
-//  tune_str this will cause the external function to be called, any following
-//  number characters are converted into an integer (signed) by combining
-//  the number charcters into the integer (eg @1234 ). No spaces are allowed
-//  between the @ and any of the number characters. The integer value is passed
-//  as an input parameter into the external function. If no number is given
-//  then a number which is one greater than the previous number will be
-//  passed
+//  An external function 'func' can be run while the tune is being played. If
+//  'func' parameter is defined as a function, the function will run whenever
+//  an '@' is found in the tune_str.
+//
+//  When using an external function it must be defined in the mpy program as
+//  normal function (using a 'def' statement). It must have a single integer
+//  parameter.
+//
+//  The '@' may be followed by integer digits, (eg @1234 )
+//  which are passed as a parameter into the external function as an integer value.
+//  No spaces are allowed between the '@' and any of the number characters.
+//  If no number is specified after the '@' then an incrementing number will
+//  be used starting with 0.
+//
+//  The external function may return a value which which will then be returned
+//  by the playtune function. If the return value is < 0 the tune immediately
+//  stops and playtune returns the external functions negative return value.
+//
+//  The external function allows the microcontroller to control and synchronize
+//  other actions while the tune is playing. Note that while the external
+//  function is running it interrupts the tune. Care must be taken to ensure
+//  the external function does not run too long and the tune still plays with
+//  acceptable timing.
+//
+// (Note, the '@' is a non-standard extention to the
+//  ABC syntax, and the tune_str may not work with other ABC programs)
 
 
     char note = 0;
@@ -724,6 +746,7 @@ int playtune( int portpin, char *tune_str, int note_duration_ms, int (*func)(int
     int in_quote = 0;
     int func_arg = 0;
     int new_func_arg = 0;
+    int ret_val = 0;
 
     char *chord_start;
     int chord_note_count = 0;
@@ -890,7 +913,8 @@ int playtune( int portpin, char *tune_str, int note_duration_ms, int (*func)(int
                 ptr++;
             }
             // If the external function returns -1 then break out of the tune!
-            if ( (func)(func_arg) == -1) {
+            ret_val = (func)(func_arg);
+            if (ret_val < 0) {
                break;
             }
             func_arg++;
@@ -964,6 +988,7 @@ int playtune( int portpin, char *tune_str, int note_duration_ms, int (*func)(int
             note_width = 50;
         }
     }
+    return ret_val;
 }
 
 //---------------------------------------------------------------------------
