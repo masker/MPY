@@ -1,0 +1,145 @@
+######################################################################
+#
+# ws2811_lib.mpy  
+# 
+# Functions to control a ws2811 serial LED display panel 
+# ( Mike Asker 3-Aug-2014 www.mpyprojects.com)
+# 
+######################################################################
+
+
+
+
+pindir(WS2812, OUT) 
+pindir(TRIG, OUT)
+
+
+def write_led_bit0():
+    out(WS2812,1); out(WS2812,0); 
+        
+def write_led_bit1():
+    out(WS2812,1); out(WS2812,1); out(WS2812,0)
+        
+
+
+
+
+def write_led( r,g,b ):
+    '''Writes rgb data to a WS2812 LED as a series of pulses.
+    The serial data is a sequence of 24 pulses 8 per RGB color
+    The pulse width determines the bit value (<0.6us == 0; >0.6us == 1)
+    If the low period is >5us then a Load is performed. 
+    One requirement for this function is to ensure that the initial low and the final
+    low is as short as possible (so as to give the calling function enough
+    time to do its functions), therefore we try to advance the first pulse output
+    rising edge, and delay the last pulse falling edge.
+    '''
+
+    # Output the first Green bit with minimum delay
+    # If the MSB is set then write a 1 pulse else write a 0 pulse
+    if g & 128:
+        write_led_bit1()
+    else:
+        write_led_bit0()
+    # Shift the Green value by one bit position, and mask off the upper bits leaving only 8 bits
+    g = (g % 256) << 1
+
+    # Loop through the remaining 7 Green bits.
+    # If they are set write a 1 pulse else write a 0 pulse
+    for i in range(1,8):
+        g = (g % 256) << 1        
+        if g & 256:
+            write_led_bit1()
+        else:
+            write_led_bit0()
+
+    # Loop through all 8 Red bits
+    for i in range(8):
+        r = (r % 256) << 1
+        if r & 256:
+            write_led_bit1()
+        else:
+            write_led_bit0()
+
+    # Loop through 7 of the Blue bits, leave off the last bit
+    # it will be done later.
+    for i in range(7):
+        b = (b % 256) << 1
+        if b & 256:
+            write_led_bit1()
+        else:
+            write_led_bit0()
+
+
+
+def write_all_leds():
+    '''Write the complete stream serial data to the WS2812 LED chain.
+    The row and coloumn LEDs are written out sequentially and the colour
+    intensity is modified depending on the LED being written.
+
+    A diamond shape is drawn centered at the location x,y, and with size s.
+    A border is drawn, and a background middle region.  
+    '''
+
+    # Disable the interrupts so that LED serial data does not get interrupted
+    dint()
+
+    # Up the CPU clock frequency to 16MHz, the WS2811 needs short sub-uS pulses 
+    BCSCTL1 = CALBC1_16MHZ
+    DCOCTL  = CALDCO_16MHZ
+
+    # Output a trigger pulse (for debug purposes)
+    out(TRIG,1)
+    out(TRIG,0)
+    out(WS2812,0)
+
+    # Loop through the rows (ys) and columns (xs)
+    # writing serial data pulses out to the LED chain
+    for ys in range(8):
+        for xs in range(16):
+            if abs(xs-x) + abs(ys-y) < s:
+                write_led( block_r,block_g,block_b )
+            elif xs  == 0 or xs == 15 or ys == 0 or ys == 7:
+                write_led( border_r,border_g,border_b ) 
+            else:
+                write_led( middle_r,middle_g,middle_b)
+            # Ignore the last Blue LSB bit write it out as a 0 to defer the last falling edge
+            # as long as possibl
+            out(WS2812,1)
+            out(WS2812,0)
+
+    # Revert the clock frequency back to the default 1MHz
+    BCSCTL1 = CALBC1_1MHZ
+    DCOCTL  = CALDCO_1MHZ
+    # Enable the interrupts so that the rest of the program timers will work again
+    eint()
+
+s = 3
+s_max = 5
+s_min = 1
+s_inc = 1
+
+x_max = 12
+x_min = 3
+x_inc = 1
+
+y_max = 5
+y_min = 2
+y_inc = 1
+x = 3
+y = 4
+count = 0
+
+# Colours for the 
+block_r = 12
+block_g = 35
+block_b = 5
+
+border_r = 10
+border_g = 5
+border_b = 5
+
+middle_r = 0
+middle_b = 2
+middle_g = 1
+

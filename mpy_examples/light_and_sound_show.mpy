@@ -1,0 +1,57 @@
+######################################################################
+#
+# light_and_sound_show.mpy  
+# 
+# Mpy program to play a tune and control a WS2811 serial LED dispaly
+# ( Mike Asker 3-Aug-2014 www.mpyprojects.com)
+# 
+######################################################################
+
+WS2812 = P1_4
+TRIG = P1_7
+include('ws2812_lib.mpy')
+
+
+pindir(P1_7, OUT)     # Tune Output. Use a 100-300ohm speaker from this pin to ground to hear the output 
+pindir(P1_3, INPU)    # Input switch used to start the tune
+
+
+
+def panel_update( val ):
+    global x,y,s
+    global block_r,block_g,block_b
+
+#    print 'val=', val
+
+    c = (val/1000) 
+    x = (val/100) % 10
+    x = x + 3
+    y = (val/10) % 10
+    s = val % 10
+    if c == 0:
+       block_r = 10 
+       block_g = 30 
+       block_b = 10 
+    elif c == 1:
+       block_r = 30 
+       block_g = 10 
+       block_b = 30 
+    elif c == 2:
+       block_r = 10 
+       block_g = 30 
+       block_b = 30 
+    write_all_leds()        
+
+
+while 1:                       # Enter the perpetual loop 
+    if inp(P1_3) == 0:         # If the switch is pressed then play the tune
+
+        playtune( P1_7,'''
+            K:G
+
+           b2 @111 g2 @911 e2 @961 d2 @161 |"D" d @0 ABc "G" BAG2 | b2  @1111 g2 @1911 e2 @1961 d2 @1161  |"D" ^c @0 def "G" agg2:||
+
+             @110 z4 G4 @431 AcBA |  d2 @2433 d2 @0 deBc | A2 @1433 A2 @0 AcBA | 
+            G @731 g @631 f @531 e @431 d @331 c @231 B @131 A @0|
+ ''', 200, panel_update)
+
